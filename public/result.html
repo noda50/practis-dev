@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<title>hoge</title>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  /* shape-rendering: crispEdges; */
+  shape-rendering: auto;
+}
+
+.dot {
+  stroke: #000;
+}
+
+</style>
+<body>
+<p>Select X axis parameter: <select id="x-parameter"></select>
+Select Y axis parameter: <select id="y-parameter"></select>
+Select result: <select id="result"></select></p>
+<p>min ----- max<div id="color-map"></div></p>
+<script src="js/d3.v3.js"></script>
+<script src="js/result/result.js"></script>

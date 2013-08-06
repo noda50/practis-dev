@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
+
+require 'optparse'
+
+require 'practis'
+require 'practis/executor'
+
+
+# Parse command line options.
+options = {:debug => false}
+
+OptionParser.new do |o|
+  o.on("-a ADDRESS", "--addr=ADDRESS",
+       "specify the IP address of the manager") {|v| options[:addr] = v}
+  o.on("-d", "--debug", "debug option") {|v| options[:debug] = true}
+  o.on("-m MANAGER_ADDRESS", "--maddr=MANAGER_ADDRESS",
+       "specify the IP address of the manager") {|v| options[:maddr] = v}
+  o.on("-p PARALLEL", "--parallel=PARALLEL",
+       "specify the degree of parallel execution") {|v|
+       options[:parallel] = v.to_i}
+
+  begin
+    o.parse!
+  rescue
+    STDERR.puts "Invalid option."
+    STDERR.puts options
+    exit
+  end
+end
+
+addr, maddr, parallel = nil, nil, nil
+
+if (addr = options[:addr]).nil?
+  addr = "localhost"
+end
+if (maddr = options[:maddr]).nil?
+  maddr = "localhost"
+end
+if (parallel = options[:parallel]).nil?
+  parallel = 1
+end
+
+executor = Practis::Executor.new(maddr, addr, parallel, options[:debug])
+executor.loop

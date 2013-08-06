@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
+
+require 'optparse'
+
+require 'practis'
+require 'practis/manager'
+
+
+# Parse command line options.
+options = {}
+
+OptionParser.new do |o|
+  o.on("-D DIRECTORY", "--directory=DIRECTORY",
+       "specify the directory that configurations are placed.") {|v|
+       options[:directory] = v}
+  o.on("-a ADDRESS", "--addr=ADDRESS",
+       "specify the IP address of the manager") {|v| options[:addr] = v}
+  o.on("-c CONFIG_FILE", "--config=CONFIG_FILE",
+       "specify the practis config file") {|v| options[:config] = v}
+  o.on("-d DATABASE_FILE", "--database=DATABASE_FILE",
+       "specify the practis database file") {|v| options[:database] = v}
+  o.on("-p PARAMETER_FILE", "--parameter=PARAMETER_FILE",
+       "specify the practis parameter file") {|v| options[:parameter] = v}
+  o.on("-r RESULT_FILE", "--result=RESULT_FILE",
+       "specify the practis result file") {|v| options[:result] = v}
+
+  begin
+    o.parse!
+  rescue
+    STDERR.puts "Invalid option."
+    STDERR.puts "options: #{o}"
+    exit
+  end
+end
+
+addr = options[:addr]
+
+config_file, database_file, parameter_file, result_file = nil, nil, nil, nil
+
+if (directory = options[:directory]) and File.directory?(directory)
+  config_file = File.join(directory, "practis_configuration.xml")
+  database_file = File.join(directory, "practis_database.xml")
+  parameter_file = File.join(directory, "practis_parameters.xml")
+  result_file = File.join(directory, "practis_result.xml")
+  unless File.exist?(config_file) and File.exist?(database_file) and
+      File.exist?(parameter_file) and File.exist?(result_file)
+    config_file, database_file, parameter_file, result_file = nil, nil, nil, nil
+  end
+end
+if config_file.nil?
+  if (config_file = options[:config]).nil?
+    config_file = "sample/default/practis_configuration.xml"
+  end
+end
+if database_file.nil?
+  if (database_file = options[:database]).nil?
+    database_file = "sample/default/practis_database.xml"
+  end
+end
+if parameter_file.nil?
+  if (parameter_file = options[:parameter]).nil?
+    parameter_file = "sample/default/practis_parameters.xml"
+  end
+end
+if result_file.nil?
+  if (result_file = options[:result]).nil?
+    result_file = "sample/default/practis_result.xml"
+  end
+end
+
+# Run PRACTIS using configurations.
+manager = Practis::Manager.new(config_file, parameter_file, database_file,
+                               result_file, addr)
+manager.loop

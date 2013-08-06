@@ -1,0 +1,198 @@
+<!DOCTYPE HTML>
+<html lang="us">
+<head>
+  <meta charset="utf-8">
+  <title>practis web</title>
+  <link href="css/blitzer/jquery-ui-1.10.2.custom.css" rel="stylesheet">
+  <script type="text/javascript" src="js/jquery-1.9.1.js"></script>
+  <script type="text/javascript" src="js/jquery-ui-1.10.2.custom.js"></script>
+  <script>
+  $(function() {
+    $( "#accordion" ).accordion();
+
+    var availableTags = [
+      "ActionScript",
+      "AppleScript",
+      "Asp",
+      "BASIC",
+      "C",
+      "C++",
+      "Clojure",
+      "COBOL",
+      "ColdFusion",
+      "Erlang",
+      "Fortran",
+      "Groovy",
+      "Haskell",
+      "Java",
+      "JavaScript",
+      "Lisp",
+      "Perl",
+      "PHP",
+      "Python",
+      "Ruby",
+      "Scala",
+      "Scheme"
+    ];
+    $( "#autocomplete" ).autocomplete({
+      source: availableTags
+    });
+
+    $( "#button" ).button();
+    $( "#radioset" ).buttonset();
+
+    $( "#tabs" ).tabs();
+
+    $( "#dialog" ).dialog({
+      autoOpen: false,
+      width: 400,
+      buttons: [
+        {
+          text: "Ok",
+          click: function() {
+            $( this ).dialog( "close" );
+          }
+        },
+        {
+          text: "Cancel",
+          click: function() {
+            $( this ).dialog( "close" );
+          }
+        }
+      ]
+    });
+
+    // Link to open the dialog
+    $( "#dialog-link" ).click(function( event ) {
+      $( "#dialog" ).dialog( "open" );
+      event.preventDefault();
+    });
+
+    $( "#datepicker" ).datepicker({
+      inline: true
+    });
+
+    $( "#slider" ).slider({
+      range: true,
+      values: [ 17, 67 ]
+    });
+
+    $( "#progressbar" ).progressbar({
+      value: 20
+    });
+
+    // Hover states on the static widgets
+    $( "#dialog-link, #icons li" ).hover(
+      function() {
+        $( this ).addClass( "ui-state-hover" );
+      },
+      function() {
+        $( this ).removeClass( "ui-state-hover" );
+      }
+    );
+
+    $("#inmenu").menu(
+      {
+        position: {
+          my: "left top",
+          at: "right-6 top+4"
+        }
+      }
+    );
+  });
+  </script>
+  <style>
+  body{
+    font: 62.5% "Trebuchet MS", sans-serif;
+    margin: 50px;
+  }
+  .demoHeaders {
+    margin-top: 2em;
+  }
+  #dialog-link {
+    padding: .4em 1em .4em 20px;
+    text-decoration: none;
+    position: relative;
+  }
+  #dialog-link span.ui-icon {
+    margin: 0 5px 0 0;
+    position: absolute;
+    left: .2em;
+    top: 50%;
+    margin-top: -8px;
+  }
+  #icons {
+    margin: 0;
+    padding: 0;
+  }
+  #icons li {
+    margin: 2px;
+    position: relative;
+    padding: 4px 0;
+    cursor: pointer;
+    float: left;
+    list-style: none;
+  }
+  #icons span.ui-icon {
+    float: left;
+    margin: 0 4px;
+  }
+  .fakewindowcontain .ui-widget-overlay {
+    position: absolute;
+  }
+  .ui-menu {
+    /*width: 30%;*/
+  }
+  div.menu {
+    float: left;
+    width: 10%;
+  }
+  div.content {
+    float: right;
+    width: 90%;
+  }
+  div.whole {
+    clear: both;
+  }
+  </style>
+</head>
+<body>
+  <h1>practis web</h1>
+  <p>practis is a middleware that controls exhaustive executions on a cluster. This web page enables users to check the current states of practis execution.</p>
+  <p>The source code and samples are available on <a href="http://github.com">Github</a>. If you want to get a full source code, please get it from Github.</p>
+  <!--div class="menu">
+    <ul id="inmenu">
+      <li class="ui-state-disabled"><a href="#">practis menu</a></li>
+      <li><a href="#">project</a></li>
+      <li><a href="#">execution</a>
+        <ul>
+          <li class="ui-state-disabled"><a href="#">hoge</a></li>
+          <li class="ui-state-disabled"><a href="#">poge</a></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  <div class="content"-->
+  <div class="whole">
+    <div id="tabs">
+      <ul>
+        <li><a href="#cluster">cluster
+        </a></li>
+        <li><a href="#parameter">parameter</a></li>
+        <li><a href="#parameter-progress">parameter progress</a></li>
+        <li><a href="#result">result</a></li>
+      </ul>
+      <div id="cluster">
+        <iframe src="cluster.html" width="100%" seamless></iframe>
+      </div>
+      <div id="parameter">
+      </div>
+      <div id="parameter-progress">
+        <iframe src="parameter-progress.html" width="100%" height="960" seamless></iframe>
+      </div>
+      <div id="result">
+      </div>
+    </div>
+  </div>
+</body>
+</html>

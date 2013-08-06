@@ -1,0 +1,65 @@
+{
+ "total_parameters" : 36,
+ "finished_parameters" : 18,
+ "variables" : [
+  {"name": "m", "values": [1, 2, 3]},
+  {"name": "s", "values": [1, 2, 3, 4]},
+  {"name": "t", "values": [1, 2, 3]}
+ ],
+ "progress" : [
+ {
+   "variable_pair" : ["m", "s"],
+   "patterns" : [3, 4],
+   "total" : 3,
+   "each_finish" : [
+      {"value" : [1, 1], "finish" : 3},
+      {"value" : [1, 2], "finish" : 2},
+      {"value" : [1, 3], "finish" : 2},
+      {"value" : [1, 4], "finish" : 2},
+      {"value" : [2, 1], "finish" : 1},
+      {"value" : [2, 2], "finish" : 0},
+      {"value" : [2, 3], "finish" : 0},
+      {"value" : [2, 4], "finish" : 0},
+      {"value" : [3, 1], "finish" : 0},
+      {"value" : [3, 2], "finish" : 1},
+      {"value" : [3, 3], "finish" : 2},
+      {"value" : [3, 4], "finish" : 2}
+   ]
+ },
+ {
+   "variable_pair" : ["s", "t"],
+   "pattern" : [4, 3],
+   "total" : 3,
+   "each_finish" : [
+      {"value" : [1, 1], "finish" : 2},
+      {"value" : [1, 2], "finish" : 1},
+      {"value" : [1, 3], "finish" : 0},
+      {"value" : [2, 1], "finish" : 1},
+      {"value" : [2, 2], "finish" : 1},
+      {"value" : [2, 3], "finish" : 3},
+      {"value" : [3, 1], "finish" : 2},
+      {"value" : [3, 2], "finish" : 0},
+      {"value" : [3, 3], "finish" : 1},
+      {"value" : [4, 1], "finish" : 2},
+      {"value" : [4, 2], "finish" : 0},
+      {"value" : [4, 3], "finish" : 1}
+   ]
+ },
+ {
+   "variable_pair" : ["t", "m"],
+   "pattern" : [3, 3],
+   "total" : 3,
+   "each_finish" : [
+      {"value" : [1, 1], "finish" : 0},
+      {"value" : [1, 2], "finish" : 0},
+      {"value" : [1, 3], "finish" : 1},
+      {"value" : [2, 1], "finish" : 3},
+      {"value" : [2, 2], "finish" : 3},
+      {"value" : [2, 3], "finish" : 0},
+      {"value" : [3, 1], "finish" : 1},
+      {"value" : [3, 2], "finish" : 2},
+      {"value" : [3, 3], "finish" : 0}
+   ]
+ }
+ ]
+}

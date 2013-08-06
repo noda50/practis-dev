@@ -1,0 +1,52 @@
+{
+ "node_type" : "manager",
+ "node_id" : 1,
+ "execution_id" : 29,
+ "address" : "192.168.0.1",
+ "parent" : 0,
+ "parallel" : 1,
+ "queueing" : 12,
+ "executing" : 9,
+ "state" : "running",
+ "finished" : 13,
+ "total" : 64,
+ "children": [
+  {
+   "node_type" : "controller",
+   "node_id" : 11,
+   "execution_id" : 29,
+   "address" : "192.168.0.2",
+   "parent" : 1,
+   "parallel" : 1,
+   "queueing" : 3,
+   "executing" : 3,
+   "state" : "running",
+   "children": [
+    {
+     "node_type" : "agent", "node_id" : 101, "execution_id" : 29, "address" : "192.168.0.2", "parent" : 11,
+     "parallel" : 1, "queueing" : 0, "executing" : 1, "state" : "running", "children": []
+    },
+    {
+     "node_type" : "agent", "node_id" : 102, "execution_id" : 29, "address" : "192.168.0.2", "parent" : 11,
+     "parallel" : 1, "queueing" : 0, "executing" : 1, "state" : "running", "children": []
+    },
+    {
+     "node_type" : "agent", "node_id" : 103, "execution_id" : 29, "address" : "192.168.0.2", "parent" : 11,
+     "parallel" : 1, "queueing" : 0, "executing" : 1, "state" : "running", "children": []
+    }
+   ]
+  },
+  {
+   "node_type" : "agent", "node_id" : 104, "execution_id" : 29, "address" : "192.168.0.3", "parent" : 1,
+   "parallel" : 2, "queueing" : 1, "executing" : 2, "state" : "running", "children": []
+  },
+  {
+   "node_type" : "agent", "node_id" : 105, "execution_id" : 29, "address" : "192.168.0.4", "parent" : 1,
+   "parallel" : 3, "queueing" : 1, "executing" : 3, "state" : "running", "children": []
+  },
+  {
+   "node_type" : "agent", "node_id" : 106, "execution_id" : 29, "address" : "192.168.0.5", "parent" : 1,
+   "parallel" : 1, "queueing" : 0, "executing" : 1, "state" : "running", "children": []
+  }
+ ]
+}
