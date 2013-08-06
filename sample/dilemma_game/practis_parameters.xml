@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<practis>
+  <exhaustive>
+    <variables>
+      <variable name="Noise" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>0.04</end>
+            <step>0.04</step>
+          </condition>
+        </conditions>
+      </variable>
+      <variable name="NumOfGameIteration" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>10</start>
+            <end>100</end>
+            <step>90</step>
+          </condition>
+        </conditions>
+      </variable>
+      <variable name="seed" data_type="Integer"> 
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0</start>
+            <end>4</end>
+            <step>1</step>
+          </condition>
+        </conditions>
+      </variable>
+    </variables>
+  </exhaustive>
+</practis>
