@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  This is a sample result schema file.
+-->
+<practis>
+  <results>
+    <result name="value" data_type="Float" null="NO"></result>
+  </results>
+</practis>
