@@ -24,6 +24,13 @@ OptionParser.new do |o|
        options[:directory] = v}
   o.on("-a ADDRESS", "--addr=ADDRESS",
        "specify the IP address of the manager") {|v| options[:addr] = v}
+  ##<<<[2013/08/30 I.Noda]
+  ## add to specify web address and port
+  o.on("-w ADDRESS", "--web-addr=ADDRESS",
+       "specify the IP address of web server") {|v| options[:webAddr] = v}
+  o.on("--web-port=PORT",
+       "specify the TCP/IP port of web server") {|v| options[:webPort] = v}
+  ##>>>[2013/08/30 I.Noda]
   o.on("-c CONFIG_FILE", "--config=CONFIG_FILE",
        "specify the practis config file") {|v| options[:config] = v}
   o.on("-d DATABASE_FILE", "--database=DATABASE_FILE",
@@ -43,6 +50,11 @@ end
 
 
 addr = options[:addr]
+##<<<[2013/08/30 I.Noda]
+## add to specify web address and port
+$webAddr = options[:webAddr] || options[:addr]
+$webPort = options[:webPort] || 4567 # default of sinatra
+##>>>[2013/08/30 I.Noda]
 
 config_file, database_file, parameter_file, result_file = nil, nil, nil, nil
 
@@ -94,6 +106,12 @@ class ManagerWeb < Sinatra::Base
   end
 
   set :public_folder, "public"
+
+  ##<<<[2013/08/30 I.Noda]
+  ## add to specify web address and port
+  set :bind, $webAddr
+  set :port, $webPort 
+  ##>>>[2013/08/30 I.Noda]
 
   get '/' do
     send_file File.join('public', 'index.html')
