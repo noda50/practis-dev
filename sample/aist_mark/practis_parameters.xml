@@ -8,7 +8,8 @@
             <start>-1.2</start>
             <end>1.4</end>
 <!--            <step>0.001</step> --> <!-- not work well. to many values -->
-            <step>0.01</step> 
+<!--            <step>0.01</step>  -->
+            <step>0.05</step>
           </condition>
         </conditions>
       </variable>
@@ -18,7 +19,8 @@
             <start>-0.2</start>
             <end>1.1</end>
 <!--            <step>0.001</step> --> <!-- not work well. to many values -->
-            <step>0.01</step>
+<!--            <step>0.01</step> -->
+            <step>0.05</step>
           </condition>
         </conditions>
       </variable>
