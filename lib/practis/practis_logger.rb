@@ -8,6 +8,10 @@ require 'practis'
 module Practis
   class PractisLogger
 
+    ## <<< [2013/08/30 I.Noda]
+    ##  log の出力先を複数許すために、追加。
+    ##  ただ、引数の並びは気に入らない。
+    ## >>> [2013/08/30 I.Noda]
     #def initialize(out=STDERR, level=Logger::DEBUG, *auxLogger)
     def initialize(out=STDERR, level=Logger::WARN, *auxLoggers)
 #      @logger = Logger.new(out)
@@ -15,7 +19,6 @@ module Practis
       auxLoggers.each{|aux| 
         if(!aux.nil?) then
           log = Logger.new(aux)
-          p [aux, log];
           @loggerList.push(log) ;
         end
       }
