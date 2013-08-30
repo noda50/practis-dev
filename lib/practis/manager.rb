@@ -11,7 +11,7 @@ require 'practis/database_connector'
 require 'practis/message_handler'
 require 'practis/net'
 require 'practis/parameter_parser'
-require 'practis/result_paraser'
+require 'practis/result_parser'
 
 module Practis
 
