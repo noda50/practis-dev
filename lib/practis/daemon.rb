@@ -62,7 +62,8 @@ module Practis
         end
         unless $logger
           $logger = Practis::PractisLogger.new(@config.get_debug_output,
-                                               @config.get_debug_level)
+                                               @config.get_debug_level,
+                                               @config.get_debug_logfile)
         end
         #debug("current configurations: #{@config.configurations}")
       end
