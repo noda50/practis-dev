@@ -91,7 +91,11 @@ function load_parameter_progress(url) {
 
     // set default selection
     if (variables.length > 1) {
-      d3.select('#column-variable').node().selectedIndex = 1;
+      // <<< [2013/08/30 I.Noda]
+      // switch row and column order
+      //d3.select('#column-variable').node().selectedIndex = 1;
+      d3.select('#row-variable').node().selectedIndex = 1;
+      // >>> [2013/08/30 I.Noda]
     }
 
     progress = json.progress;
@@ -116,6 +120,10 @@ function load_parameter_progress(url) {
           });
         }
       });
+      // <<< [2013/08/30 I.Noda]
+      rows = rows.reverse() ;
+      // >>> [2013/08/30 I.Noda]
+
       var columns = [];
       variables.forEach(function (v, i) {
         if (v.name == column_v) {

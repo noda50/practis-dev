@@ -11,7 +11,7 @@ require 'practis/database_connector'
 require 'practis/message_handler'
 require 'practis/net'
 require 'practis/parameter_parser'
-require 'practis/result_paraser'
+require 'practis/result_parser'
 
 module Practis
 
@@ -474,8 +474,13 @@ module Practis
       l = @variable_set.variable_set.length
       (0..l - 2).each do |i|
         (i + 1..l - 1).each do |j|
-          v1 = @variable_set.variable_set[i]
-          v2 = @variable_set.variable_set[j]
+          ## <<<< [2013/08/30 I.Noda]
+          ## to fit axis in result tab, exchange variables.
+          #v1 = @variable_set.variable_set[i]
+          #v2 = @variable_set.variable_set[j]
+          v2 = @variable_set.variable_set[i]
+          v1 = @variable_set.variable_set[j]
+          ## >>>> [2013/08/30 I.Noda]
           hash_progress = {}
           hash_progress[:variable_pair] = [v1.name, v2.name]
           hash_progress[:total] = total / v1.parameters.length / \
@@ -498,6 +503,7 @@ module Practis
       end
       begin
         json = JSON.generate(hash)
+#        debug(json)
         return json
       rescue Exception => e
         error("fail to generate parameter progress json. #{e.message}")
