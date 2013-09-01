@@ -516,6 +516,82 @@ module Practis
       return nil
     end
 
+    def get_parameter_progress2 ### to reduce redundant loop
+      ## <<< [2013/09/01 I.Noda]
+      ## to return suitable value in the case when no finished simulation.
+#      finished = nil
+      finished = [] ; 
+      ## >>> [2013/09/01 I.Noda]
+      if (retval = @database_connector.read_column(
+          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+        finished = retval
+      end
+      hash = {}
+      total = @variable_set.get_total
+      hash[:total_parameters] = total
+      hash[:finished_parameters] = @finished_parameters
+      va = []
+      @variable_set.variable_set.each do |v|
+        va.push({:name => v.name, :values => v.parameters})
+      end
+      hash[:variables] = va
+      pa = []
+      hash[:progress] = pa
+      l = @variable_set.variable_set.length
+      (0..l - 2).each do |i|
+        (i + 1..l - 1).each do |j|
+          ## <<<< [2013/08/30 I.Noda]
+          ## to fit axis in result tab, exchange variables.
+          #v1 = @variable_set.variable_set[i]
+          #v2 = @variable_set.variable_set[j]
+          v2 = @variable_set.variable_set[i]
+          v1 = @variable_set.variable_set[j]
+          ## >>>> [2013/08/30 I.Noda]
+          hash_progress = {}
+          hash_progress[:variable_pair] = [v1.name, v2.name]
+          hash_progress[:total] = total / v1.parameters.length / \
+              v2.parameters.length
+          ## <<< [2013/09/01 I.Noda]
+          ## to reduce nested loop
+          ## prepare count table
+          countTable = {};
+          v1.parameters.each{|p1|
+            v2.parameters.each{|p2|
+              countTable[[p1,p2]] = 0 ;
+            }
+          }
+          ## count up
+          maxCount = 0 ; ## !!! this should be set by config. !!!
+          finished.each{|f|
+            p1 = f[v1.name] ;
+            p2 = f[v2.name] ;
+            countTable[[p1,p2]] += 1 ;
+            maxCount = countTable[[p1,p2]] if(maxCount < countTable[[p1,p2]]) ;
+          }
+          ## generate efa table
+          efa = []
+          v1.parameters.each do |p1|
+            v2.parameters.each do |p2|
+              count = countTable[[p1,p2]].to_f / maxCount.to_f;
+              efa.push({:value => [p1, p2], :finish => count})
+            end
+          end
+          ## >>> [2013/09/01 I.Noda]
+          hash_progress[:each_finish] = efa
+          pa.push(hash_progress)
+        end
+      end
+      begin
+        json = JSON.generate(hash)
+#        debug(json)
+        return json
+      rescue Exception => e
+        error("fail to generate parameter progress json. #{e.message}")
+        error(e.backtrace)
+      end
+      return nil
+    end
+
     #=== generate the result in JSON.
     def get_results
       hash = {}
