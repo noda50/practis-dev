@@ -45,8 +45,11 @@
 
      * script と Manager のインタフェースは、bin/manager-web の中の、
        
-	  get '/parameter-progress.json' do
+          get '/parameter-progress.json' do
 
        あたりの定義。html や java script からサーバ経由でこれを呼び出している
        らしい。
+
+   * web page で、parameter progress のページ、軸の入れ替えとy軸の方向
+     を、result のページに合わせる。
 

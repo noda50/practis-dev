@@ -455,7 +455,11 @@ module Practis
     end
 
     def get_parameter_progress
-      finished = nil
+      ## <<< [2013/09/01 I.Noda]
+      ## to return suitable value in the case when no finished simulation.
+#      finished = nil
+      finished = [] ; 
+      ## >>> [2013/09/01 I.Noda]
       if (retval = @database_connector.read_column(
           :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
         finished = retval
