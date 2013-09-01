@@ -454,7 +454,9 @@ module Practis
       return nil
     end
 
-    def get_parameter_progress
+    ## <<< [2013/09/01 I.Noda >>>
+    ## this is obsolute !!! change to get_parameter_progress2
+    def get_parameter_progress 
       ## <<< [2013/09/01 I.Noda]
       ## to return suitable value in the case when no finished simulation.
 #      finished = nil
