@@ -4,6 +4,7 @@
 require 'rubygems'
 require 'json'
 #require 'thread'
+require 'pp' ;
 
 require 'practis/cluster'
 require 'practis/daemon'
@@ -13,11 +14,14 @@ require 'practis/net'
 require 'practis/parameter_parser'
 require 'practis/result_parser'
 
+##======================================================================
 module Practis
 
-  #=== Manager of practis.
+  ##============================================================
+  # Manager of practis.
   class Manager < Practis::Daemon
 
+    ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     # message handler
     attr_reader :message_handler
     # variables definition with VariableSet class.
@@ -42,6 +46,7 @@ module Practis
 
     attr_reader :finished_parameters
 
+    ##------------------------------------------------------------
     def initialize(config_file, parameter_file, database_file, result_file,
                    myaddr = nil)
       super(config_file)
@@ -169,7 +174,8 @@ module Practis
       debug("Manager initialized.")
     end
 
-    #=== generate executable command.
+    ##------------------------------------------------------------
+    # generate executable command.
     def create_executable_command
       executable_command = String.new
       executable_command << @config.read("executable_command")
@@ -184,6 +190,7 @@ module Practis
       return executable_command
     end
 
+    ##------------------------------------------------------------
     #Determine where the new node is put into the tree.
     def allocate_node(node_type, address, id=nil, parallel=nil)
       # Temporaly simple star topology.
@@ -209,6 +216,7 @@ module Practis
       return partial_tree
     end
 
+    ##------------------------------------------------------------
     #=== Allocate requested number of parameters.
     def allocate_parameters(request_number, src_id)
       parameters = []   # allocated parameters
@@ -282,6 +290,7 @@ module Practis
       return parameters
     end
 
+    ##------------------------------------------------------------
     #=== update the started parameter state.
     def update_started_parameter_state(parameter_id, executor_id)
       if (timeval = @database_connector.read_time(:parameter)).nil?
@@ -299,6 +308,7 @@ module Practis
       return 0
     end
 
+    ##------------------------------------------------------------
     #=== update the node state on node database.
     #node_id :: node id
     #queueing :: a number of queueing parameter
@@ -318,6 +328,7 @@ module Practis
       return 0
     end
 
+    ##------------------------------------------------------------
     def upload_result(msg)
       result_id = msg[:result_id].to_i
       if (retval = @database_connector.read_column(
@@ -340,6 +351,7 @@ module Practis
       return 0
     end
 
+    ##------------------------------------------------------------
     def update
       cluster_tree.root.children.each do |child|
         decrease_keepalive(child)
@@ -381,6 +393,7 @@ module Practis
       end
     end
 
+    ##------------------------------------------------------------
     def decrease_keepalive(node)
       if node.keepalive < 0
         cluster_tree.delete(:id, node.id)
@@ -400,6 +413,7 @@ module Practis
       end
     end
 
+    ##------------------------------------------------------------
     def finalize
       info("Manager finalizing process")
       begin
@@ -417,6 +431,7 @@ module Practis
       super
     end
 
+    ##------------------------------------------------------------
     #=== provide the cluster tree in JSON object.
     def get_cluster_json
       hash = nil
@@ -454,6 +469,7 @@ module Practis
       return nil
     end
 
+    ##------------------------------------------------------------
     ## <<< [2013/09/01 I.Noda >>>
     ## this is obsolute !!! change to get_parameter_progress2
     def get_parameter_progress 
@@ -518,6 +534,7 @@ module Practis
       return nil
     end
 
+    ##------------------------------------------------------------
     def get_parameter_progress2 ### to reduce redundant loop
       ## <<< [2013/09/01 I.Noda]
       ## to return suitable value in the case when no finished simulation.
@@ -574,7 +591,9 @@ module Practis
           efa = []
           v1.parameters.each do |p1|
             v2.parameters.each do |p2|
-              count = countTable[[p1,p2]].to_f / maxCount.to_f;
+              count = ((maxCount == 0) ? 
+                       0 :
+                       countTable[[p1,p2]].to_f / maxCount.to_f) ;
               efa.push({:value => [p1, p2], :finish => count})
             end
           end
@@ -594,6 +613,261 @@ module Practis
       return nil
     end
 
+    ##<<<[2013/09/02 I.Noda]
+    ##============================================================
+    class ProgressCountTable
+      ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      attr :setupInfoA, true ;
+      attr :setupInfoB, true ;
+      attr :table, true ;
+      attr :maxTable, true ;
+
+      ##----------------------------------------
+      def initialize(varA, varB, stepMax)
+        setup(varA, varB, stepMax);
+      end
+
+      ##----------------------------------------
+      # setup by variable info.
+      def setup(varA, varB, stepMax = 20)
+        @varA = varA;
+        @varB = varB;
+        @stepMax = stepMax ;
+        @setupInfoA = setupInfoForVariable(varA);
+        @setupInfoB = setupInfoForVariable(varB);
+        prepareTable() ;
+      end
+
+      ##----------------------------------------
+      # get setup variable
+      def setupInfoForVariable(var)
+        sinfo = nil;
+        if(var.parameters.length <= @stepMax) then
+          axisCount = {} ;
+          var.parameters.each{|val| axisCount[val] = 1;}
+          sinfo = ({ :type => :direct,
+                     :axis => var.parameters,
+                     :valueAxis => var.parameters,
+                     :axisCount => axisCount,
+                     :variable => var }) ;
+        else
+          (min,max) = findMinMax(var) ;
+          step = ((max - min).to_f / @stepMax) ;
+          axisCount = Array.new(@stepMax,0) ;
+          valueAxis = Array.new(@stepMax,0) ;
+          sinfo = ({ :type => :step, :offset => min, :step => step,
+                     :axis => (0...@stepMax),
+                     :valueAxis => valueAxis,
+                     :axisCount => axisCount,
+                     :variable => var }) ;
+          var.parameters.each{|val| axisCount[indexFor(val, sinfo)] += 1 ;}
+          (0...@stepMax).each{|idx| valueAxis[idx] = axisValue(idx,sinfo);}
+        end
+        return sinfo ;
+      end
+
+      ##----------------------------------------
+      # prepare table
+      def prepareTable()
+        @table = prepareTableLine(@setupInfoA) ;
+        @maxTable = prepareTableLine(@setupInfoA) ;
+        axisA().each{|indexA|
+          line = prepareTableLine(@setupInfoB) ;
+          @table[indexA] = line ;
+          maxLine = prepareTableLine(@setupInfoB) ;
+          @maxTable[indexA] = maxLine ;
+          countA = @setupInfoA[:axisCount][indexA] ;
+          axisB().each{|indexB|
+            line[indexB] = 0 ;
+            maxLine[indexB] = countA * @setupInfoB[:axisCount][indexB] ;
+          }
+        }
+      end
+
+      ##----------------------------------------
+      # prepare list in table
+      def prepareTableLine(sinfo)
+        case(sinfo[:type])
+        when :direct ; return {} ;
+        when :step ; return [] ;
+        else
+          error("unknown setup info #{sinfo.inspect}");
+          raise("unknown setup info.") ;
+        end
+      end
+
+      ##----------------------------------------
+      # axis (index) for variable A and B
+      def axisA()
+        @setupInfoA[:axis]
+      end
+
+      def axisB()
+        @setupInfoB[:axis]
+      end
+
+      def valueAxisA()
+        @setupInfoA[:valueAxis] ;
+      end
+
+      def valueAxisB()
+        @setupInfoB[:valueAxis] ;
+      end
+
+      ##----------------------------------------
+      # get axis value
+      def axisValueA(index)
+        axisValue(index, @setupInfoA) ;
+      end
+
+      def axisValueB(index)
+        axisValue(index, @setupInfoB) ;
+      end
+
+      def axisValue(index,sinfo)
+        case(sinfo[:type])
+        when :direct ; return index ;
+        when :step ; return (sinfo[:offset] + index * sinfo[:step]) ;
+          error("unknown setup info #{sinfo.inspect}");
+          raise("unknown setup info.") ;
+        end
+      end
+
+      ##----------------------------------------
+      # get value
+      def getValue(valA, valB)
+        getValueByIndex(indexFor(valA, @setupInfoA),
+                        indexFor(valB, @setupInfoB)) ;
+      end
+
+      ##----------------------------------------
+      # get value by index
+      def getValueByIndex(idxA, idxB)
+        @table[idxA][idxB] ;
+      end
+
+      ##----------------------------------------
+      # get value by index
+      def getRatioByIndex(idxA, idxB)
+        @table[idxA][idxB].to_f / @maxTable[idxA][idxB].to_f;
+      end
+
+      ##----------------------------------------
+      # increment value
+      def incValue(valA, valB, step=1)
+        @table[indexFor(valA, @setupInfoA)][indexFor(valB, @setupInfoB)] += step;
+      end
+
+      ##----------------------------------------
+      # get setup variable
+      def indexFor(value, setupInfo)
+        case (setupInfo[:type])
+        when :direct ;
+          return value ;
+        when :step ;
+          idx = ((value - setupInfo[:offset])/setupInfo[:step]).to_i ;
+          idx = @stepMax-1 if(idx > @stepMax-1);
+          return idx ;
+        else
+          error("Unknown setup info. type: #{setupInfo.inspect}");
+          raise "unknown setup info";
+        end
+      end
+
+      ##----------------------------------------
+      # find min-max values
+      def findMinMax(var)
+        min = nil ; max = nil ;
+        var.parameters.each{|v|
+          min = v if(min.nil? || min > v);
+          max = v if(max.nil? || max < v);
+        }
+        return [min,max] ;
+      end
+    end ## class ProgressCountTable
+
+    ##------------------------------------------------------------
+    def get_parameter_progress_overview
+      # get finished results
+      finished = [] ; 
+      if (retval = @database_connector.read_column(
+          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+        finished = retval
+      end
+      # prepare result hash table.
+      hash = {}
+      # get total information
+      total = @variable_set.get_total
+      hash[:total_parameters] = total
+      hash[:finished_parameters] = @finished_parameters
+
+      # generate progress reports
+      pa = []
+      hash[:progress] = pa
+      l = @variable_set.variable_set.length
+
+      valueAxis = {} ;
+      # loop for all parameters combinations
+      (0..l - 2).each do |i|
+        (i + 1..l - 1).each do |j|
+          varB = @variable_set.variable_set[i]
+          varA = @variable_set.variable_set[j]
+          # total information for each combination
+          hash_progress = {}
+          hash_progress[:variable_pair] = [varA.name, varB.name]
+          hash_progress[:total] = total / varA.parameters.length / \
+              varB.parameters.length
+          # initialize countTable
+          stepMaxConf = @config.read("progress_overview_maxstep") ;
+          stepMax = (stepMaxConf ?
+                     stepMaxConf.to_i :
+                     DEFAULT_PROGRESS_OVERVIEW_MAXSTEP) ;
+          countTable = ProgressCountTable.new(varA, varB, stepMax) ;
+          # store value axis info
+          valueAxis[varA.name] ||= countTable.valueAxisA() ;
+          valueAxis[varB.name] ||= countTable.valueAxisB() ;
+          ## count up
+          finished.each{|f|
+            pA = f[varA.name] ;
+            pB = f[varB.name] ;
+            countTable.incValue(pA, pB) ;
+          }
+          ## generate efa table
+          efa = []
+          countTable.axisA.each do |idxA|
+            pA = countTable.axisValueA(idxA) ;
+            countTable.axisB.each do |idxB|
+              pB = countTable.axisValueB(idxB);
+              count = countTable.getRatioByIndex(idxA,idxB) ;
+              efa.push({:value => [pA, pB], :finish => count})
+            end
+          end
+          hash_progress[:each_finish] = efa
+          pa.push(hash_progress)
+        end
+      end
+      # variable set information.
+      va = []
+      @variable_set.variable_set.each do |v|
+        va.push({:name => v.name, :values => valueAxis[v.name]})
+      end
+      hash[:variables] = va
+
+      begin
+        json = JSON.generate(hash)
+#        pp hash ;
+#        pp json ;
+#        debug(json)
+        return json
+      rescue Exception => e
+        error("fail to generate parameter progress json. #{e.message}")
+        error(e.backtrace)
+      end
+      return nil
+    end
+    ##>>>[2013/09/02 I.Noda]
+
+    ##------------------------------------------------------------
     #=== generate the result in JSON.
     def get_results
       hash = {}
@@ -628,6 +902,7 @@ module Practis
       return json
     end
 
+    ##------------------------------------------------------------
     private
     def get_cluster_children(parent_id, mysql_results)
       a = []
@@ -644,5 +919,6 @@ module Practis
       end
       return a
     end
-  end
-end
+  end ## class Manager
+end ## module Practis
+

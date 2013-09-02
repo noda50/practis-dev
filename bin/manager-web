@@ -138,6 +138,15 @@ class ManagerWeb < Sinatra::Base
   end
   ## >>> [2013/09/01 I.Noda]
 
+  ## <<< [2013/09/02 I.Noda]
+  ## more efficient progress info.
+  get '/parameter-progress-overview.json' do
+    cors_headers
+    content_type 'application/json', :charset => 'utf-8'
+    [$manager.get_parameter_progress_overview]
+  end
+  ## >>> [2013/09/02 I.Noda]
+
 
   get '/results.json' do
     cors_headers

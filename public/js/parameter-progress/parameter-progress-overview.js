@@ -73,7 +73,7 @@ progress = [];
 
 // load_parameter_progress("data/parameter-progress-sample.json");
 // load_parameter_progress("http://localhost:4567/parameter-progress.json");
-load_parameter_progress("parameter-progress2.json");
+load_parameter_progress("parameter-progress-overview.json");
 
 function load_parameter_progress(url) {
 

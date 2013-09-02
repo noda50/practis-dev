@@ -19,6 +19,9 @@
     <!-- Logger file output option -->
     <config name="debug_logfile" type="String">log/aist_mark.%s.log</config>
 
+    <!-- Web Interface -->
+    <config name="progress_overview_maxstep" type="Integer">30</config>
+
     <!-- sleep time of Manager every loop -->
     <config name="loop_sleep_duration" type="Integer">1</config>
     <config name="message_handler_duration" type="Integer">10</config>
