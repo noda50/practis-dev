@@ -5,6 +5,10 @@ require 'rubygems'
 require 'json'
 require 'mysql2'
 require 'timeout'
+##<<<[2013/09/04 I.Noda]
+## for exclusive connection use
+require 'thread'
+##>>>[2013/09/04 I.Noda]
 
 require 'practis'
 require 'practis/database'
@@ -465,6 +469,10 @@ module Practis
         @database = database
         @table = table
         @query_retry = query_retry
+        ##<<<[2013/09/04 I.Noda]
+        ## for exclusive connection use
+        @mutex = Mutex.new() ;
+        ##>>>[2013/09/04 I.Noda]
         connect
       end
 
@@ -626,21 +634,23 @@ module Practis
       def query(query_string, option = nil)
         c = @query_retry
         while true
-          begin
-            if option.nil?
-              return @connector.query(query_string)
-            else
-              return @connector.query(query_string, option)
+          @mutex.synchronize(){  ###<<<[2013/09/04 I.Noda] for exclusive call>>>
+            begin
+              if option.nil?
+                return @connector.query(query_string)
+              else
+                return @connector.query(query_string, option)
+              end
+            rescue Mysql2::Error => e
+              error("failed to run query. #{e.message}")
+              error("failed query: #{query_string}")
+              error(e.backtrace)
+              sleep(QUERY_RETRY_DURATION)
+              raise e if c == 0
             end
-          rescue Mysql2::Error => e
-            error("failed to run query. #{e.message}")
-            error("failed query: #{query_string}")
-            error(e.backtrace)
-            sleep(QUERY_RETRY_DURATION)
-            raise e if c == 0
-          end
+          } ###<<<[2013/09/04 I.Noda]>>>
           c -= 1
-        end
+          end
       end
 
       def create(type, arg_hash, condition)
