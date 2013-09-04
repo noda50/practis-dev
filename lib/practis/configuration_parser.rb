@@ -25,6 +25,8 @@ module Practis
       DEBUG_OUTPUT_STDOUT = "STDOUT"
       DEBUG_OUTPUT_STDERR = "STDERR"
 
+      DEBUG_LOGFILE = "debug_logfile"
+
       attr_accessor :file
       attr_accessor :configurations
 
@@ -71,6 +73,15 @@ module Practis
           end
         end
       end
+
+      def get_debug_logfile
+        logfile = read(DEBUG_LOGFILE) ;
+        if(logfile.is_a?(String))
+          logfile = logfile % Time.now.strftime("%Y-%m-%dT%H-%M-%S");
+        end
+        logfile
+      end
+
     end
 
     #=== Parser of Practis configuration.

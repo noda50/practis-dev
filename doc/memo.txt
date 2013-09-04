@@ -1,0 +1,55 @@
+%%  -*- Mode: Memo -*-
+=begin
+
+= practis 改良メモ
+
+%%----------------------------------------------------------------------
+== [2013/08/28] by I.Noda
+
+   * github のテスト
+
+%%----------------------------------------------------------------------
+== [2013/08/30] by I.Noda
+
+   * 細かい修正。
+
+     * typo 修正
+
+     * Logger で、ファイルを追加できるように変更
+
+   * パラメータをバラすところのプロセスを解明。
+
+     * ParameterParser::parse で、config より パラメータ情報を取得。
+
+       * get_generic と parse_condition
+
+     * パラメータ情報は、Variable のインスタンスになる。
+
+       * Variable のインスタンスを作るところで、pattern_generate が呼ばれ、
+         値のリストにバラされる。
+         値は、@parameters という変数に配列で格納。
+
+     * パラメータの組み合わせは、ParameterScheduler の中。特に RoundRobin 
+       では、順繰りに回す。
+
+       * RoundRobinScheduler では、@variable_set が Variable の配列。
+         それと、@current_indexes で、次の組み合わせを見つけると思われる。
+
+   * web 表示のプロセスの解明。
+
+     * "public/js/parameter-progress/parameter-progress.js" などに script。
+
+     * データ取得などの実態は、"manager.rb"。
+
+       * def get_parameter_progress など。ここで json を作っている。
+
+     * script と Manager のインタフェースは、bin/manager-web の中の、
+       
+          get '/parameter-progress.json' do
+
+       あたりの定義。html や java script からサーバ経由でこれを呼び出している
+       らしい。
+
+   * web page で、parameter progress のページ、軸の入れ替えとy軸の方向
+     を、result のページに合わせる。
+

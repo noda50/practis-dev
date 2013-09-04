@@ -101,6 +101,11 @@ module Practis
   QUERY_RETRY_TIMES = 5           # times to retry
   QUERY_RETRY_DURATION = 1        # duration till retry
 
+  #== Web Interfaces
+  # parameter progress overview report max step
+  DEFAULT_PROGRESS_OVERVIEW_MAXSTEP = 10 ;
+
+
   # Convert a binary to a string.
   CONVERT_FORMAT = "H*"
 

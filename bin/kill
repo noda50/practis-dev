@@ -1,0 +1,7 @@
+#! /bin/csh
+set managerList = (`ps ax | grep ruby | grep bin/executor | awk '{print $1}'`)
+set executorList = (`ps ax | grep ruby | grep bin/manager | awk '{print $1}'`)
+set com = "kill -KILL $managerList $executorList"
+echo $com
+$com
+
