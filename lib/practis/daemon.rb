@@ -44,7 +44,7 @@ module Practis
       if config_file.nil?
         @config = nil
         @loop_sleep_duration = DEFAULT_LOOP_SLEEP_DURATION
-        debug ? $logger = Practis::PractisLogger.new(STDERR, Logger::DEBUG) :
+        debug ? $logger = Practis::PractisLogger.new(Logger::DEBUG, STDERR) :
           $logger = Practis::PractisLogger.new
       else
         case File.extname(config_file)
@@ -61,8 +61,9 @@ module Practis
           @loop_sleep_duration = DEFAULT_LOOP_SLEEP_DURATION
         end
         unless $logger
-          $logger = Practis::PractisLogger.new(@config.get_debug_output,
-                                               @config.get_debug_level)
+          $logger = Practis::PractisLogger.new(@config.get_debug_level,
+                                               @config.get_debug_output,
+                                               @config.get_debug_logfile)
         end
         #debug("current configurations: #{@config.configurations}")
       end

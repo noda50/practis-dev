@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Common database schema of practis database with MySQL or PostgreSQL.
+-->
+<practis>
+  <databases>
+    <database name="aist_mark">
+      <tables>
+        <table name="project">
+          <field field="project_id" type="int(11)" null="NO" key="PRI" default="" extra="" comment="" />
+          <field field="project_name" type="varchar(128)" null="NO" key="UNI" default="" extra="" comment="" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
+        <table name="execution">
+          <field field="execution_id" type="int(11)" null="NO" key="PRI" default="" extra="" comment="" />
+          <field field="execution_name" type="varchar(128)" null="NO" key="UNI" default="" extra="" comment="" />
+          <field field="project_id" type="int(11)" null="NO" key="MUL" default="" extra="" comment="" />
+          <field field="executable_command" type="varchar(1024)" null="NO" key="" default="" extra="" comment="" />
+          <field field="execution_status" type="enum('empty','ready','executing','suspend','finish')" null="NO" key="" default="'empty'" extra="" comment="" />
+          <field field="execution_progress" type="float" null="NO" key="" default="0" extra="" comment="" />
+          <field field="number_of_node" type="int(11)" null="NO" key="" default="0" extra="" comment="" />
+          <field field="number_of_parameter" type="int(11)" null="NO" key="" default="0" extra="" comment="" />
+          <field field="finished_parameter" type="int(11)" null="NO" key="" default="0" extra="" comment="" />
+          <field field="executing_parameter" type="int(11)" null="NO" key="" default="0" extra="" comment="" />
+          <constraint foreign_key="project_id" references="project(project_id)" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
+        <table name="executable">
+          <field field="executable_id" type="int(11)" null="NO" key="PRI" default="" extra="" comment="" />
+          <field field="execution_id" type="int(11)" null="NO" key="MUL" default="" extra="" comment="" />
+          <field field="executable_name" type="varchar(64)" null="NO" key="" default="" extra="" comment="" />
+          <field field="executable_path" type="varchar(128)" null="NO" key="" default="" extra="" comment="" />
+          <field field="executable_binary" type="longblob" null="YES" key="" default="" extra="" comment="" />
+          <constraint foreign_key="execution_id" references="execution(execution_id)" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
+        <table name="node">
+          <field field="node_id" type="int(11)" null="NO" key="PRI" default="" extra="" comment="" />
+          <field field="node_type" type="enum('manager','controller','executor')" null="NO" key="" default="" extra="" comment="" />
+          <field field="execution_id" type="int(11)" null="NO" key="MUL" default="" extra="" comment="" />
+          <field field="address" type="varchar(64)" null="NO" key="" default="" extra="" comment="" />
+          <field field="parent" type="int(11)" null="YES" key="" default="" extra="" comment="" />
+          <field field="parallel" type="int(11)" null="NO" key="" default="1" extra="" comment="" />
+          <field field="queueing" type="int(11)" null="NO" key="" default="0" extra="" comment="" />
+          <field field="executing" type="int(11)" null="NO" key="" default="0" extra="" comment="" />
+          <field field="state" type="enum('ready','waiting','running','timeout','finish')" null="NO" key="" default="" extra="" comment="" />
+          <constraint foreign_key="execution_id" references="execution(execution_id)" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
+        <table name="parameter">
+          <field field="parameter_id" type="int(11)" null="NO" key="PRI" default="" extra="" comment="" />
+          <field field="allocated_node_id" type="int(11)" null="YES" key="MUL" default="-1" extra="" comment="" />
+          <field field="executing_node_id" type="int(11)" null="YES" key="MUL" default="-1" extra="" comment="" />
+          <field field="allocation_start" type="datetime" null="YES" key="" default="" extra="" comment="" />
+          <field field="execution_start" type="datetime" null="YES" key="" default="" extra="" comment="" />
+          <field field="state" type="enum('ready','allocating','executing','finish')" null="NO" key="" default="'ready'" extra="" comment="" />
+          <constraint foreign_key="allocated_node_id" references="node(node_id)" />
+          <constraint foreign_key="executing_node_id" references="node(node_id)" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
+        <table name="result">
+          <field field="result_id" type="int(11)" null="NO" key="PRI" default="0" extra="" comment="" />
+          <field field="execution_time" type="float" null="NO" key="" default="" extra="" comment="" />
+          <constraint foreign_key="result_id" references="parameter(parameter_id)" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
+      </tables>
+    </database>
+  </databases>
+</practis>
