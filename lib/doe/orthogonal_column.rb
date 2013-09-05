@@ -6,6 +6,7 @@ class OrthogonalColumn
 	INSIDE = "inside"
 	BOTH_SIDE = "both side"
 
+	attr_reader :id
 	attr_reader :parameter_name
 	attr_reader :parameters
 	attr_reader :level
@@ -14,7 +15,8 @@ class OrthogonalColumn
 
 
 	# start 2 levels of parameter
-	def initialize(parameter_name, initial_parameters)
+	def initialize(id, parameter_name, initial_parameters)
+		@id = id
 		@parameter_name = parameter_name
 		@parameters = initial_parameters
 		@level = initial_parameters.size
@@ -97,5 +99,10 @@ class OrthogonalColumn
 	      @corresponds[bit] = parameters[i]
 	    end
 	  end
+	end
+
+	# 
+	def get_parameter(bit_string)
+		return @corresponds[bit_string]
 	end
 end

@@ -2,7 +2,11 @@
 class OrthogonalArray
 
   # アクセサ
-  attr_reader :digit_num, :factor, :l_size, :level, :table
+  attr_reader :digit_num
+  attr_reader :factor
+  attr_reader :l_size
+  attr_reader :level
+  attr_reader :table
 
   #初期化(直交表の生成)
   #level(水準), factor(因子)
@@ -25,10 +29,8 @@ class OrthogonalArray
     # 直交表
     @table = Array.new()
 
-#    print("L", @l_size, "(", @level,"^", @maxNumOfFactor,")\n")
 
     # 前置き基準の生成
-
     # まずベクトルを生成
     vector = Array.new()
 
@@ -40,7 +42,7 @@ class OrthogonalArray
 
     for i in 0...@l_size
       j = 0
-      sprintf("%0" + @digit_num.to_s + "b", i).split('').each do |ch| # キモい
+      sprintf("%0" + @digit_num.to_s + "b", i).split('').each do |ch| 
         vector[j].push(ch.to_i)
         j += 1
       end
@@ -74,21 +76,18 @@ class OrthogonalArray
         @table.push(tmp)
       }
     end
-#    p "table:" + @table.to_s
-
   end
 
   # 直交表にある要素の確認
   def get_OrthogonalTable(row, col)
-#    return @table[col]
     return @table[col][row] # 行列が列行の状態
   end
 
   # 直交表全体の確認
   def show_OrthogonalArray
-    for i in 0...@l_size
-      for j in 0...@maxNumOfFactor
-        print @table[j][i].to_s + "," #列,行の順番
+    for row in 0...@l_size
+      for col in 0...@maxNumOfFactor
+        print @table[col][row].to_s + "," #列,行の順番
       end
       puts
     end
