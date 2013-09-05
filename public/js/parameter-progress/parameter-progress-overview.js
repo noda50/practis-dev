@@ -47,7 +47,8 @@ function hslcolor(h, s, l) {
 }
 
 function pcolormap(v) {
-  return hslcolor(v * 180.0 + 180.0, 0.7 * v, 0.5);
+  return hslcolor(v * 180.0 + 180.0, 0.7 * v, 0.9 - v * 0.6);
+//  return hslcolor(v * 180.0 + 180.0, 0.7 * v, 0.5);
 }
 
 var cmap = d3.select('#color-map').append("svg")
