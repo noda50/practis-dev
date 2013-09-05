@@ -748,8 +748,14 @@ module Practis
 
       ##----------------------------------------
       # get value by index
-      def getRatioByIndex(idxA, idxB)
-        @table[idxA][idxB].to_f / @maxTable[idxA][idxB].to_f;
+      def getRatioByIndex(idxA, idxB, scale = :linear)
+        v = @table[idxA][idxB].to_f / @maxTable[idxA][idxB].to_f;
+        case(scale)
+        when :linear then return v ;
+        when :sqrt then return Math::sqrt(v) ;
+        else
+          raise "unknown scale type: #{scale.to_s}" ;
+        end
       end
 
       ##----------------------------------------
@@ -838,7 +844,7 @@ module Practis
             pA = countTable.axisValueA(idxA) ;
             countTable.axisB.each do |idxB|
               pB = countTable.axisValueB(idxB);
-              count = countTable.getRatioByIndex(idxA,idxB) ;
+              count = countTable.getRatioByIndex(idxA,idxB, :sqrt) ;
               efa.push({:value => [pA, pB], :finish => count})
             end
           end
