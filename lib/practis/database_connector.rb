@@ -557,39 +557,74 @@ module Practis
 
       def insert_column(arg_hash)
         arg_hash[:type] = "cinsert"
-        retq = query(@command_generator.get_command(
-          @database, @table, arg_hash))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, arg_hash))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, arg_hash)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # >>> [2013/09/05 I.noda]
       end
 
       def read_column(condition = nil)
-        retq = query(@command_generator.get_command(
-          @database, @table, {type: "rcolumn"}, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "rcolumn"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             {type: "rcolumn"}, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
       def delete_column(condition = nil)
-        retq = query(@command_generator.get_command(
-          @database, @table, {type: "dcolumn"}, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "dcolumn"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             {type: "dcolumn"}, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
       def update_column(arg_hash, condition = nil)
         arg_hash[:type] = "ucolumn"
-        retq = query(@command_generator.get_command(
-          @database, @table, arg_hash, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, arg_hash, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             arg_hash, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
       def inner_join_column(condition = nil)
-        retq = query(@command_generator.get_command(
-          @database, @table, {type: "rinnerjoin"}, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "rinnerjoin"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             {type: "rinnerjoin"}, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
-      def read(arg_hash, condition = nil)
-        query(@command_generator.get_command(
-          @database, @table, arg_hash, condition))
+      def read(arg_hash, condition = nil, &block)
+        query(@command_generator.get_command(@database, @table, 
+                                             arg_hash, condition),
+              &block)
       end
 
       #=== Close the database connection.
@@ -631,16 +666,25 @@ module Practis
       #=== Execute a query.
       #query_string :: mysql query.
       #returned value :: Mysql2 Result objects.
-      def query(query_string, option = nil)
+      def query(query_string, option = nil, &block)
         c = @query_retry
         while true
           @mutex.synchronize(){  ###<<<[2013/09/04 I.Noda] for exclusive call>>>
             begin
+              ## <<< [2013/09/05 I.Noda]
+              ## to introduce block call
+              res = nil ;
               if option.nil?
-                return @connector.query(query_string)
+                res = @connector.query(query_string)
               else
-                return @connector.query(query_string, option)
+                res = @connector.query(query_string, option)
               end
+              if(block) then
+                return block.call(res) ;
+              else
+                return res ;
+              end
+              ## >>> [2013/09/05 I.Noda]
             rescue Mysql2::Error => e
               error("failed to run query. #{e.message}")
               error("failed query: #{query_string}")
