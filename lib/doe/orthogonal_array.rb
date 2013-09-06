@@ -1,106 +1,148 @@
-# 直交表
+require './orthogonal_column'
+require 'pp'
+
+# extend 2 levels orthogonal array
 class OrthogonalArray
 
-  # アクセサ
-  attr_reader :digit_num
-  attr_reader :factor
-  attr_reader :l_size
-  attr_reader :level
   attr_reader :table
+  attr_reader :num_of_factor
+  attr_reader :l_size #experiment size
+  attr_reader :colums
 
-  #初期化(直交表の生成)
-  #level(水準), factor(因子)
-  def initialize(level, factor)
+  # 
+  def initialize(parameters)
+    level = 2
+    @table =[]
+    @colums = []
+    @num_of_factor = parameters.size
 
-    # 水準
-    @level = level
-    # 因子
-    @factor = factor
     l = 0
-    while level**l - 1 < factor
-      l += 1
-    end
-    # 実験回数
+    l += 1 while level**l - 1 < @num_of_factor
+
     @l_size = level**l
-    # 最大割り当て因子数
-    @maxNumOfFactor = level**l - 1
-    # 直交表生成のための桁数
-    @digit_num = @l_size.to_s(2).size - 1
-    # 直交表
-    @table = Array.new()
-
-
-    # 前置き基準の生成
-    # まずベクトルを生成
-    vector = Array.new()
-
-    # ベクトルの数 = @digit_num
-    @digit_num.times{
-      tmp = Array.new()
-      vector.push(tmp)
-    }
+    @max_assign_factor = level**l - 1
+    
+    vector = []
+    (@l_size.to_s(2).size - 1).times{ vector.push([]) }
 
     for i in 0...@l_size
       j = 0
-      sprintf("%0" + @digit_num.to_s + "b", i).split('').each do |ch| 
-        vector[j].push(ch.to_i)
+      sprintf("%0" + (@l_size.to_s(2).size - 1).to_s + "b", i).split('').each do |ch| 
+        vector[j].push(ch)
         j += 1
       end
     end
 
-    # 与えられたベクトルから，排他的論理和を満たす他のベクトルの生成追加
-    # "よくわかる実験計画法"の生成方法にもとづいて実装
     for i in 1..vector.size
       comb = vector.combination(i)
       col = 0
       comb.collect{|set|
-        tmp = Array.new()
-
+        tmp = []
         for j in 0...set[0].size
           if 1 < set.size then
             sum = 0
             for k in 0...set.size
-              sum += set[k][j]
+              sum += set[k][j].to_i(2)
             end
-            # 0/1を入れていく
-            if sum % 2 == 0 then
-              tmp.push(0)
-            else
-              tmp.push(1)
-            end
+            tmp.push((sum % 2 == 0) ? "0" : "1" )# 0/1を入れていく
           else
             tmp.push(set[0][j])
           end
         end
-
         @table.push(tmp)
+      }
+    end
+
+    id = 0
+    parameters.each{|prm|
+      oc = OrthogonalColumn.new(id , prm[:name], prm[:variables])
+      @colums.push(oc)
+      id += 1
+    }
+  end
+
+  # 
+  def extend_table(add_point_case, parameters)
+    old_level = 0
+    old_digit_num = 0
+    twice = false
+    @colums.each{ |oc|
+      if oc.parameter_name == parameters[:name]
+        old_level = oc.level        
+        oc.update_level(parameters[:variables].size)
+        old_digit_num = oc.digit_num
+        if oc.equal_digit_num(old_digit_num)
+          oc.padding(old_digit_num, old_level)
+          twice = true
+          copy = []
+          for i in 0...@table[oc.id].size
+            copy.push("1" + @table[oc.id][i])
+            @table[oc.id][i] = "0" + @table[oc.id][i]
+          end
+          @table[oc.id] += copy
+          @l_size *= 2
+        end
+        oc.check_alignment(add_point_case, parameters[:variables])
+        oc.assign_parameter(old_level, oc.parameters)
+        break
+      end
+    }
+    if twice 
+      @colums.each{|oc|
+        if oc.parameter_name != parameters[:name]
+          copy = []
+          @table[oc.id].each{ |b| copy.push(b) }
+          @table[oc.id] += copy
+        end
       }
     end
   end
 
-  # 直交表にある要素の確認
-  def get_OrthogonalTable(row, col)
-    return @table[col][row] # 行列が列行の状態
+  # col番目のベクトルのrow番目に記述されたn水準のうちの1つを示す値を返す
+  def get_index(col, row)
+    return @table[col][row].to_i(2)
   end
-
-  # 直交表全体の確認
-  def show_OrthogonalArray
-    for row in 0...@l_size
-      for col in 0...@maxNumOfFactor
-        print @table[col][row].to_s + "," #列,行の順番
-      end
-      puts
+  #
+  def get_parameter(row, col)
+    return @colums[col].get_parameter(@table[col][row])
+  end
+  # 
+  def get_parameter_set(row)
+    p_set = []
+    @colums.each{ |oc|
+      p_set.push(get_parameter(row, oc.id))
+    }
+    return p_set
+  end
+  #
+  def get_assigned_parameters
+    show = []
+    for i in 0...@table[0].size
+      show.push(get_parameter_set(i))
     end
+    return show
   end
-
+  # 直交表全体の確認 :TODO modify
+  def get_table
+    table_info = []
+    @table[0].size.times{ table_info.push([]) }
+    for i in 0...@table.size
+      for j in 0...@table[i].size
+        table_info[j].push(table[i][j])
+      end
+    end
+    return table_info
+  end
   #ベクトルの取得
   def get_vector(col)
     return @table[col]
   end
-
-  # col番目のベクトルのrow番目に記述されたn水準のうちの1つを示す値を返す
-  def get_level(col, row)
-    return @table[col][row]
+  # 
+  def get_row(row)
+    bits = []
+    @table.each{|col|
+      bits.push(col[row])
+    }
+    return bits
   end
-
 end
