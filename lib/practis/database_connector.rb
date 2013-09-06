@@ -160,12 +160,19 @@ module Practis
         connector.insert_column(arg_hash)
       end
 
-      def read_column(type, condition = nil)
+      ##--------------------------------------------------
+      ##--- read_column(type, [condition]) {|result| ...}
+      ##    Send query to get data wrt condition.
+      ##    If ((|&block|)) is given,  the block is called with 
+      ##    ((|result|)) data of the query.
+      ##    If ((|&block|)) is not given, it return an Array of the
+      ##    result.
+      def read_column(type, condition = nil, &block)
         if (connector = get_connector(type)).nil?
           error("invalid type: #{type}")
           return []
         end
-        connector.read_column(condition)
+        connector.read_column(condition,&block)
       end
 
       def inner_join_column(arg_hash)
@@ -568,16 +575,29 @@ module Practis
         # >>> [2013/09/05 I.noda]
       end
 
-      def read_column(condition = nil)
+      ##--------------------------------------------------
+      ##--- read_column([condition]) {|result| ...}
+      ##    send query to get data wrt condition.
+      ##    If ((|&block|)) is given,  the block is called with 
+      ##    ((|result|)) data of the query.
+      ##    If ((|&block|)) is not given, it return an Array of the
+      ##    result.
+      def read_column(condition = nil,&block)
         # <<< [2013/09/05 I.noda]
         #retq = query(@command_generator.get_command(
         #  @database, @table, {type: "rcolumn"}, condition))
         #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
-        query(@command_generator.get_command(@database, @table, 
-                                             {type: "rcolumn"}, condition)){
-          |retq|
-          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
-        }
+        if(block.nil?)
+          query(@command_generator.get_command(@database, @table, 
+                                               {type: "rcolumn"}, condition)){
+            |retq|
+            return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+          }
+        else
+          query(@command_generator.get_command(@database, @table, 
+                                               {type: "rcolumn"}, condition),
+                &block) ;
+        end
         # <<< [2013/09/05 I.noda]
       end
 
