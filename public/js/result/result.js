@@ -56,7 +56,8 @@ function hslcolor(h, s, l) {
 }
 
 function pcolormap(v) {
-  return hslcolor(v * 180.0 + 180.0, 0.7 * v, 0.5);
+  return hslcolor(v * 180.0 + 180.0, 0.7 * v, 0.9 - v * 0.4);
+//  return hslcolor(v * 180.0 + 180.0, 0.7 * v, 0.5);
 }
 
 var cmap = d3.select('#color-map').append("svg")
@@ -262,13 +263,24 @@ d3.json(url, function(error, json) {
         .style("text-anchor", "end")
         .text(function(d) { return d; });
 
-    function get_r(d) {
+    //<<<[2013/09/07 I.Noda] for better look
+    function get_r(d){
+	return get_r_constant(d) ;
+    }
+
+    function get_r_constant(d) {
+	return 5.0 ;
+    }
+
+    // obsolute
+    function get_r_by_result_data(d) {
       if (d < min_l || d > max_l) {
         console.log("invalid value");
         return 3.5;
       }
       return 1.0 + 19.0 * (d - min_l) / (max_l - min_l);
     }
+    //>>>[2013/09/07 I.Noda] 
 
     function get_color(d) {
       if (d < min_l || d > max_l) {
