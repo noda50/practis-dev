@@ -148,6 +148,9 @@ module Practis
       debug("loaded result fields: #{@result_fields}")
       @parameter_pool = []
 
+      # [2013/09/07 I.Noda] for exclusive parameter allocation
+      @mutexAllocateParameter = Mutex.new() ;
+
       # KeepAlive Handler
       error("fail to create KeepAliveHandler") if @message_handler
         .createHandler("KeepAliveHandler", get_srv_sock(KEEP_ALIVE_PORT)) < 0
@@ -251,43 +254,57 @@ module Practis
 
       # generate the parameters from the scheduler
       while request_number > 0
-        if (parameter = @variable_set.get_next).nil?
-          info("all parameter is already allocated!")
-          break
-        end
-        condition = parameter.parameter_set.map { |p|
-          "#{p.name} = '#{p.value}'" }.join(" and ")
-        debug(condition)
-        if (retval = @database_connector.read_column(
-            :parameter, condition)).length == 0
-          arg_hash = {parameter_id: parameter.uid,
-                      allocated_node_id: src_id,
-                      executing_node_id: src_id,
-                      allocation_start: iso_time_format(timeval),
-                      execution_start: nil,
-                      state: PARAMETER_STATE_ALLOCATING}
-          parameter.parameter_set.each { |p|
-            arg_hash[(p.name).to_sym] = p.value }
-          if @database_connector.insert_column(:parameter, arg_hash).length != 0
-            error("fail to insert a new parameter.")
+        @mutexAllocateParameter.synchronize{
+          newId = getNewParameterId() ;
+          if (parameter = @variable_set.get_next(newId)).nil?
+            info("all parameter is already allocated!")
+            break
+          end
+          condition = parameter.parameter_set.map { |p|
+            "#{p.name} = '#{p.value}'" }.join(" and ")
+          debug(condition)
+          if (retval = 
+              @database_connector.read_column(:parameter, 
+                                              condition)).length == 0
+            arg_hash = ({ parameter_id: parameter.uid,
+                          allocated_node_id: src_id,
+                          executing_node_id: src_id,
+                          allocation_start: iso_time_format(timeval),
+                          execution_start: nil,
+                          state: PARAMETER_STATE_ALLOCATING})
+            parameter.parameter_set.each { |p|
+              arg_hash[(p.name).to_sym] = p.value }
+            if @database_connector.insert_column(:parameter, arg_hash).length != 0
+              error("fail to insert a new parameter.")
+            else
+              parameter.state = PARAMETER_STATE_ALLOCATING
+              parameters.push(parameter)
+              @parameter_pool.push(parameter)
+              request_number -= 1
+            end
           else
-            parameter.state = PARAMETER_STATE_ALLOCATING
-            parameters.push(parameter)
-            @parameter_pool.push(parameter)
-            request_number -= 1
+            info("the parameter already executed on previous or by the others.")
+            info("condition: #{condition}")
+            retval.each do |r|
+              info(r)
+              parameter.state = r["state"]
+              @parameter_pool.push(parameter)
+            end
+            next
           end
-        else
-          info("the parameter already executed on previous or by the others.")
-          info("condition: #{condition}")
-          retval.each do |r|
-            info(r)
-            parameter.state = r["state"]
-            @parameter_pool.push(parameter)
-          end
-          next
-        end
+        } # @mutexAllocateParameterId.synchronize
       end
       return parameters
+    end
+
+    ##------------------------------------------------------------
+    #--- getNewParameterId
+    def getNewParameterId()
+      maxid = @database_connector.read_max(:parameter, 'parameter_id', 
+                                           :integer) ;
+      maxid ||= 0 ;
+      info("maxId: #{maxid}");
+      return maxid + 1 ;
     end
 
     ##------------------------------------------------------------

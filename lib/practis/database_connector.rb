@@ -199,6 +199,29 @@ module Practis
         return timeval
       end
 
+      ## [2013/09/07 I.Noda]
+      ##---read_max(type, column, valueType, condition)
+      ##   retrieve max value of ((|column|)) in database ((|type|))
+      ##   under ((|condition|)).
+      ##   valueType is :integer, :float, or nil.
+      def read_max(type, column, valueType, condition = nil)
+        connector = @connectors[type]
+        maxval = nil
+        unless (retval = connector.read({type: "rmax", column: column},
+                                        condition)).nil?
+          retval.each { |r| r.values.each { |v| 
+              maxval = (valueType == :integer ? v.to_i :
+                        valueType == :float ? v.to_f :
+                        v)
+            }}
+        end
+        if maxval.nil?
+          error("fail to get max value of #{column} from the #{type} database.")
+          return nil
+        end
+        return maxval
+      end
+
       def register_project(project_name)
         connector = @connectors[:project]
         id = rand(MAX_PROJECT)
@@ -642,9 +665,11 @@ module Practis
       end
 
       def read(arg_hash, condition = nil, &block)
-        query(@command_generator.get_command(@database, @table, 
-                                             arg_hash, condition),
-              &block)
+        com = @command_generator.get_command(@database, @table, 
+                                             arg_hash, condition)
+#        info(arg_hash.inspect) ;
+#        info(com) ;
+        query(com,  &block)
       end
 
       #=== Close the database connection.

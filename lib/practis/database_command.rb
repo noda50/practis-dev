@@ -19,6 +19,7 @@ module Practis
       DATABASE_COMMAND_TYPES = %w(cdatabase ctable cgrant cgrantl cinsert
                                   dcolumn ddatabase dtable
                                   rcolumn rcount rdatabase rinnerjoin rnow
+                                  rmax
                                   rtable runixtime ucolumn uglobal)
 
       def initialize(database_schema)
@@ -94,6 +95,13 @@ module Practis
         when "rcount"
           query << "SELECT #{arg_hash[:column]}, COUNT(*) FROM " +
               "#{database}.#{table} GROUP BY #{arg_hash[:column]};"
+        ## [2013/09/07 I.Noda] for unique parameter id
+        when "rmax"
+          query << "SELECT MAX(#{arg_hash[:column]}) FROM #{database}.#{table}"
+          query << (condition.nil? ? ";" :
+                    " #{condition_to_sql(database, table, condition)};")
+#          error("ahooooooooooooooooooooooooo #{query}") ;
+#          exit ;
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"
