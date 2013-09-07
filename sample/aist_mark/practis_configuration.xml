@@ -17,7 +17,7 @@
     <config name="debug_output" type="String">STDERR</config>
 
     <!-- Logger file output option -->
-    <config name="debug_logfile" type="String">log/aist_mark.%s.log</config>
+    <config name="debug_logfile" type="String">log/,aist_mark.%s.log</config>
 
     <!-- Web Interface -->
     <config name="progress_overview_maxstep" type="Integer">30</config>
@@ -26,8 +26,10 @@
     <!-- <config name="loop_sleep_duration" type="Integer">1</config> -->
     <config name="loop_sleep_duration" type="Integer">0</config>
     <config name="message_handler_duration" type="Integer">10</config>
-    <config name="keepalive_duration" type="Integer">90</config>
-    <config name="keepalive_expired_duration" type="Integer">270</config>
+    <!-- config name="keepalive_duration" type="Integer">90</config -->
+    <config name="keepalive_duration" type="Integer">3</config>
+    <!-- config name="keepalive_expired_duration" type="Integer">270</config -->
+    <config name="keepalive_expired_duration" type="Integer">9</config>
     <!-- After this timeout seconds, allocating or executing parameter is assumed as timeout.
     -->
     <config name="parameter_execution_expired_timeout" type="Integer">600</config>

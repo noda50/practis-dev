@@ -108,6 +108,7 @@ module Practis
         debug("start message handler #{@running}")
         sockets = []
         while true
+          Thread::pass ## [2013/09/07 I.Noda] 
           unless @running
             info("stop handler with running false")
             break
