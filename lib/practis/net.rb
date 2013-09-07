@@ -282,6 +282,7 @@ module Practis
         return retval.chop
       else
         error("received message is nil")
+        caller().each{|c| error("... called from:" + c.to_s)}
         return nil
       end
     end

@@ -15,7 +15,8 @@
     <config name="debug_output" type="String">STDERR</config>
 
     <!-- sleep time of Manager every loop -->
-    <config name="loop_sleep_duration" type="Integer">1</config>
+    <!-- config name="loop_sleep_duration" type="Integer">1</config -->
+    <config name="loop_sleep_duration" type="Integer">0</config>
     <config name="message_handler_duration" type="Integer">10</config>
     <config name="keepalive_duration" type="Integer">90</config>
     <config name="keepalive_expired_duration" type="Integer">270</config>
