@@ -45,7 +45,8 @@ module Practis
   DEFAULT_MESSAGE_HANDLER_DURATION = 1
 
   # Sleep time (seconds) of Daemon object in loop method
-  DEFAULT_LOOP_SLEEP_DURATION = 1
+  # DEFAULT_LOOP_SLEEP_DURATION = 1 
+  DEFAULT_LOOP_SLEEP_DURATION = 0 ### [2013/09/07 I.Noda] now, we need not this.
 
   # Duration (seconds) of keep alive
   DEFAULT_KEEPALIVE_DURATION = 3

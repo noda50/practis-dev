@@ -68,6 +68,7 @@ module Practis
             debug("#{self.class.name} try to recv")
             unless (data = precv(@sock)).kind_of?(Hash)
               error("fail to receive. errno:#{data}")
+              caller().each{|c| error("... called from:" + c.to_s)}
               finish
               return
             end

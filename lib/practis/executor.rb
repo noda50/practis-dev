@@ -177,14 +177,16 @@ module Practis
                                               @cluster_tree.parent[:id]))) < 0
         error("fail to send JoinPractis message. errno: #{retval}")
         close_sock(sock)
-        -1
+#        -1
+        return -1 #### [2013/09/07 I.Noda]
       end
       # Receive AckReqExecutable
       debug("receive AckReqExecutable")
       unless (data = precv(sock)).kind_of?(Hash)
         error("fail to receive AckReqExecutable. errno: #{data}.")
         close_sock(sock)
-        -2
+#        -2
+        return -2 #### [2013/09/07 I.Noda]
       end
       data[:executables].each do |executable|
         # write the file into executable path.
@@ -235,6 +237,7 @@ module Practis
       debug("receive parameter data: #{data}")
       unless data.kind_of?(Hash)
         error("Invalid AckSendParameters. errno: #{data}")
+        close_sock(sock) #### [2013/09/07 I.Noda]
         return -4
       end
       unless (parameters = data[:parameters]).nil?
@@ -249,6 +252,7 @@ module Practis
           rescue Exception => e
             error("fail to add new parameter. #{e.message}")
             error(e.backtrace)
+            close_sock(sock) #### [2013/09/07 I.Noda]
             return -2
           end
         else
@@ -259,7 +263,7 @@ module Practis
             cluster_tree.parent[:id].to_i, cluster_tree.mynode[:id].to_i,
             MSG_STATUS_OK))) < 0
           error("fail to send AckRequestParaemter with errno #{retval}.")
-          close_sock(sock)
+          close_sock(sock) #### [2013/09/07 I.Noda]
           return -3
         end
       else
@@ -268,11 +272,11 @@ module Practis
             cluster_tree.parent[:id].to_i, cluster_tree.mynode[:id].to_i,
             MSG_STATUS_FAILED))) < 0
           error("fail to send AckRequestParaemter with errno #{retval}.")
-          close_sock(sock)
+          close_sock(sock) #### [2013/09/07 I.Noda]
           return -4
         end
       end
-      close_sock(sock)
+      close_sock(sock) #### [2013/09/07 I.Noda]
       return 0
     end
 
@@ -317,6 +321,7 @@ module Practis
             close_sock(sock)
             return -1
           end
+          close_sock(sock) ; #### [2013/09/07 I.Noda]
         else              # Request new proc
           debug("exec: #{@executing}, queue: #{@queueing}, parallel: #{@parallel}")
           if (retval = request_parameter).nil?
