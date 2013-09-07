@@ -51,6 +51,8 @@ am = AistMark.new(Stat::Gaussian.new(0,0.2)) ;
 # configuration named "value".
 value = am.isInsideGraded?(x,y,20,true)
 
+p [:done, :aist_mark, x,y,value];
+
 # Template from here ###########################################################
 begin
   fields = {}
