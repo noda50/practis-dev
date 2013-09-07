@@ -86,7 +86,7 @@ module Practis
         break unless running
         mutex.synchronize { update }
         Thread::pass() ### [2013/09/07 I.Noda]
-        sleep(@loop_sleep_duration)
+#        sleep(@loop_sleep_duration)
       end
     end
 
