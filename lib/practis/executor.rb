@@ -363,7 +363,7 @@ module Practis
 
     #=== Request Parameter process
     def request_parameter
-      request_parameter_okd
+      request_parameter_itk
     end
 
     # Okada's original. This should be obsolute.
@@ -632,7 +632,7 @@ module Practis
           debug("exec: #{@executing}, queue: #{@queueing}, parallel: #{@parallel}")
           if (retval = request_parameter).nil?
             warn("request parameter failed.")
-          elsif retval < 0
+          elsif retval != true
             warn("request parameter failed with errno #{retval}")
           end
         end

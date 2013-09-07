@@ -49,7 +49,8 @@ module Practis
   DEFAULT_LOOP_SLEEP_DURATION = 0 ### [2013/09/07 I.Noda] now, we need not this.
 
   # Duration (seconds) of keep alive
-  DEFAULT_KEEPALIVE_DURATION = 3
+  # DEFAULT_KEEPALIVE_DURATION = 3
+  DEFAULT_KEEPALIVE_DURATION = 0.5 ### [2013/09/07 I.Noda] for more quick execution
   # Duration (seconds) to determine that a node is down
   DEFAULT_KEEPALIVE_EXPIRED_DURATION = DEFAULT_KEEPALIVE_DURATION * 3
   # Duration (seconds) of KeepAliveThread sends the message.

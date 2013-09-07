@@ -306,7 +306,7 @@ module Practis
       if retval.kind_of?(String)
         return retval.chop
       else
-        error("received message is nil")
+        error("received message is : #{retval.inspect}")
         caller().each{|c| error("... called from:" + c.to_s)}
         return nil
       end
