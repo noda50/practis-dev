@@ -48,7 +48,9 @@ module Practis
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),
-              {field: v.name, type: type_field, null: "NO"}
+              # [2013/09/08 I.Noda] for speed up in large-scale sim.
+              #{field: v.name, type: type_field, null: "NO"}
+              {field: v.name, type: type_field, null: "NO", key: "MUL"}
                                        ) < 0
             error("fail to add a filed. #{v.name}, #{type_field}")
           end
@@ -106,7 +108,7 @@ module Practis
           # create a database
           db_name = config.read("#{name}_database_name")
           if db.exist_database?(db_name)
-            debug("database: #{db_name} already exists.")
+            warn("database: #{db_name} already exists.")
           else
             if db.create_database(db_name) < 0
               error("fail to create database :#{db_name}")
@@ -120,7 +122,7 @@ module Practis
           # create a table
           tbl_name = config.read("#{name}_database_tablename")
           if db.exist_table?(db_name, tbl_name)
-            debug("table: #{tbl_name} aldready exist.")
+            warn("table: #{tbl_name} already exist.")
           else
             if db.create_table(db_name, tbl_name) < 0
               error("fail to create table: #{tbl_name}.")
@@ -176,7 +178,7 @@ module Practis
       end
 
       def inner_join_column(arg_hash)
-        debug(arg_hash)
+#        debug(arg_hash)
         bcon = @connectors[arg_hash[:base_type]]
         rcon = @connectors[arg_hash[:ref_type]]
         condition = "#{rcon.database}.#{rcon.table} ON #{bcon.database}." +
@@ -220,6 +222,23 @@ module Practis
           return nil
         end
         return maxval
+      end
+
+      ## [2013/09/08 I.Noda]
+      ##---read_count(type, condition)
+      ##   get count of data under ((|condition|)) in database ((|type|))
+      def read_count(type, condition = nil)
+        connector = @connectors[type]
+        count = nil
+        retval = connector.read({type: "rcount"},
+                                condition){|retval|
+          retval.each { |r| r.values.each { |v| count = v.to_i } }
+        }
+        if count.nil?
+          error("fail to get count from the #{type} database.")
+          return nil
+        end
+        return count
       end
 
       def register_project(project_name)
@@ -375,6 +394,9 @@ module Practis
         return 0
       end
 
+      # [2013/09/08 I.Noda] !!!! need to improve.
+      # most of operations in this methods should be done on DB,
+      # instead of on-memory.
       def update_parameter_state(expired_timeout)
         pconnector = @connectors[:parameter]
         rconnector = @connectors[:result]
@@ -576,8 +598,10 @@ module Practis
       end
 
       def create_table(database, table)
-        unless (retval = query(@command_generator.get_command(
-            database, table, {type: "ctable"}))).nil?
+        com = @command_generator.get_command(database, table, 
+                                             {type: "ctable"}) ;
+#        debug("create_table:com=#{com}") ;
+        unless (retval = query(com)).nil?
           warn("fail to create table: #{table}.")
           retval.each { |r| warn(r) }
           return -1
@@ -610,11 +634,13 @@ module Practis
         #retq = query(@command_generator.get_command(
         #  @database, @table, {type: "rcolumn"}, condition))
         #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # [2013/09/08 I.Noda] use Array.new instead of [] for safety.
         if(block.nil?)
           query(@command_generator.get_command(@database, @table, 
                                                {type: "rcolumn"}, condition)){
             |retq|
-            return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+            result = Array.new()
+            return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
           }
         else
           query(@command_generator.get_command(@database, @table, 

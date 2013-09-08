@@ -73,6 +73,7 @@ module Practis
               return
             end
             handle(@sock, data)
+            Thread::pass() ;
           end
         end
 

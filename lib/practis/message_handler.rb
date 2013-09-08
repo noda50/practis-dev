@@ -124,8 +124,9 @@ module Practis
           sockets.clear
           @handlers.each { |handler|
             handler[:socket].each { |s| sockets.push(s) } }
+          debug(" select connections...")
           fds, _, _ = IO::select(sockets, _, _, @select_duration)
-          debug(" waiting connection...")
+          debug(" done: select connections...")
           next if fds == nil
           #debug("select fds: #{fds}")
           fds.each do |socket|
@@ -139,8 +140,8 @@ module Practis
             (debug("null handler"); sock.close; next) if handler_name == nil
             debug("call handler " + handler_name)
             error("handler #{hander_name} cannot find in globals") \
-              if (cls = Practis::Net::Handler.const_get(handler_name)).nil?
-            th = cls.new(@parent, sock)
+              if (klass = Practis::Net::Handler.const_get(handler_name)).nil?
+            th = klass.new(@parent, sock)
             @handlers.each { |handler|
               (handler[:thread] = th; break) if handler[:name] == handler_name }
           end

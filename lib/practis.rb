@@ -105,7 +105,8 @@ module Practis
 
   #== Web Interfaces
   # parameter progress overview report max step
-  DEFAULT_PROGRESS_OVERVIEW_MAXSTEP = 10 ;
+  TAG_PROGRESS_OVERVIEW_MAXGRID = "progress_overview_maxgrid";
+  DEFAULT_PROGRESS_OVERVIEW_MAXGRID = 10 ;
 
 
   # Convert a binary to a string.
@@ -375,8 +376,8 @@ module Practis
     end
   end
 
-  def self.included(cls)
-    cls.extend ClassMethods
+  def self.included(klass)
+    klass.extend ClassMethods
   end
 
   module_function :fatal, :error, :info, :warn, :debug
