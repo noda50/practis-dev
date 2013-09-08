@@ -376,8 +376,8 @@ module Practis
     end
   end
 
-  def self.included(cls)
-    cls.extend ClassMethods
+  def self.included(klass)
+    klass.extend ClassMethods
   end
 
   module_function :fatal, :error, :info, :warn, :debug

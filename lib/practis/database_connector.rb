@@ -108,7 +108,7 @@ module Practis
           # create a database
           db_name = config.read("#{name}_database_name")
           if db.exist_database?(db_name)
-            debug("database: #{db_name} already exists.")
+            warn("database: #{db_name} already exists.")
           else
             if db.create_database(db_name) < 0
               error("fail to create database :#{db_name}")
@@ -122,7 +122,7 @@ module Practis
           # create a table
           tbl_name = config.read("#{name}_database_tablename")
           if db.exist_table?(db_name, tbl_name)
-            debug("table: #{tbl_name} aldready exist.")
+            warn("table: #{tbl_name} already exist.")
           else
             if db.create_table(db_name, tbl_name) < 0
               error("fail to create table: #{tbl_name}.")
@@ -178,7 +178,7 @@ module Practis
       end
 
       def inner_join_column(arg_hash)
-        debug(arg_hash)
+#        debug(arg_hash)
         bcon = @connectors[arg_hash[:base_type]]
         rcon = @connectors[arg_hash[:ref_type]]
         condition = "#{rcon.database}.#{rcon.table} ON #{bcon.database}." +
