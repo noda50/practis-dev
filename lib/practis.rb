@@ -105,7 +105,7 @@ module Practis
 
   #== Web Interfaces
   # parameter progress overview report max step
-  DEFAULT_PROGRESS_OVERVIEW_MAXSTEP = 10 ;
+  DEFAULT_PROGRESS_OVERVIEW_MAXGRID = 10 ;
 
 
   # Convert a binary to a string.

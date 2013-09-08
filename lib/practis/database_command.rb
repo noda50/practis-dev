@@ -92,16 +92,23 @@ module Practis
           query << "SELECT * FROM #{database}.#{table}"
           query << (condition.nil? ? ";" :
             " #{condition_to_sql(database, table, condition)};")
+        ## [2013/09/08 I.Noda] extend count command for general purpose.
         when "rcount"
-          query << "SELECT #{arg_hash[:column]}, COUNT(*) FROM " +
-              "#{database}.#{table} GROUP BY #{arg_hash[:column]};"
+          query << "SELECT"
+          query << " #{arg_hash[:column]}," if arg_hash[:column]
+          query << " COUNT(*) FROM #{database}.#{table}"
+          if(!condition.nil?)
+            query << " #{condition_to_sql(database, table, condition)}"
+          end
+          query << " GROUP BY #{arg_hash[:column]}" if arg_hash[:column]
+          query << " ;"
         ## [2013/09/07 I.Noda] for unique parameter id
         when "rmax"
           query << "SELECT MAX(#{arg_hash[:column]}) FROM #{database}.#{table}"
-          query << (condition.nil? ? ";" :
-                    " #{condition_to_sql(database, table, condition)};")
-#          error("ahooooooooooooooooooooooooo #{query}") ;
-#          exit ;
+          if(!condition.nil?)
+            query << " #{condition_to_sql(database, table, condition)}"
+          end
+          query << " ;"
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"

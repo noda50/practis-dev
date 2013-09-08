@@ -263,9 +263,13 @@ module Practis
           condition = parameter.parameter_set.map { |p|
             "#{p.name} = '#{p.value}'" }.join(" and ")
           debug(condition)
-          if (retval = 
-              @database_connector.read_column(:parameter, 
-                                              condition)).length == 0
+          ##[2013/09/08 I.Noda]
+          ## use read_count instead of read_column to check existense.
+#          if (retval = 
+#              @database_connector.read_column(:parameter, 
+#                                              condition)).length == 0
+          if(0 ==
+             (count = @database_connector.read_count(:parameter, condition)))
             arg_hash = ({ parameter_id: parameter.uid,
                           allocated_node_id: src_id,
                           executing_node_id: src_id,
@@ -283,14 +287,19 @@ module Practis
               request_number -= 1
             end
           else
-            info("the parameter already executed on previous or by the others.")
-            info("condition: #{condition}")
-            retval.each do |r|
-              info(r)
-              parameter.state = r["state"]
-              @parameter_pool.push(parameter)
-            end
-            next
+            warn("the parameter already executed on previous or by the others." +
+                 " count: #{count}" +
+                 " condition: (#{condition})")
+            @database_connector.read_column(:parameter, condition){
+              |retval|
+              retval.each do |r|
+                info(r)
+                parameter.state = r["state"]
+                @parameter_pool.push(parameter)
+              end
+            }
+            debug("parameter.state = #{parameter.state.inspect}");
+            next  ## [2013/09/08 I.Noda]  ??? should retry if state is not set?
           end
         } # @mutexAllocateParameterId.synchronize
       end
@@ -841,10 +850,10 @@ module Practis
           hash_progress[:total] = total / varA.parameters.length / \
               varB.parameters.length
           # initialize countTable
-          stepMaxConf = @config.read("progress_overview_maxstep") ;
+          stepMaxConf = @config.read(TAG_PROGRESS_OVERVIEW_MAXGRID) ;
           stepMax = (stepMaxConf ?
                      stepMaxConf.to_i :
-                     DEFAULT_PROGRESS_OVERVIEW_MAXSTEP) ;
+                     DEFAULT_PROGRESS_OVERVIEW_MAXGRID) ;
           countTable = ProgressCountTable.new(varA, varB, stepMax) ;
           # store value axis info
           valueAxis[varA.name] ||= countTable.valueAxisA() ;

@@ -222,6 +222,23 @@ module Practis
         return maxval
       end
 
+      ## [2013/09/08 I.Noda]
+      ##---read_count(type, condition)
+      ##   get count of data under ((|condition|)) in database ((|type|))
+      def read_count(type, condition = nil)
+        connector = @connectors[type]
+        count = nil
+        retval = connector.read({type: "rcount"},
+                                condition){|retval|
+          retval.each { |r| r.values.each { |v| count = v.to_i } }
+        }
+        if count.nil?
+          error("fail to get count from the #{type} database.")
+          return nil
+        end
+        return count
+      end
+
       def register_project(project_name)
         connector = @connectors[:project]
         id = rand(MAX_PROJECT)
@@ -610,11 +627,13 @@ module Practis
         #retq = query(@command_generator.get_command(
         #  @database, @table, {type: "rcolumn"}, condition))
         #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # [2013/09/08 I.Noda] use Array.new instead of [] for safety.
         if(block.nil?)
           query(@command_generator.get_command(@database, @table, 
                                                {type: "rcolumn"}, condition)){
             |retq|
-            return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+            result = Array.new()
+            return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
           }
         else
           query(@command_generator.get_command(@database, @table, 
