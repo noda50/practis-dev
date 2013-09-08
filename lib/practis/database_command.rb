@@ -69,12 +69,22 @@ module Practis
           query << "CREATE DATABASE #{database};"
         when "ctable"
           query << "CREATE TABLE #{database}.#{table} ("
-          query << tbl[:fields].map { |f| FIELD_ATTRS.map { |i|
+          indexedFields = [];
+          query << tbl[:fields].map { |f| 
+            FIELD_INDEXED.each{|key,value| 
+              indexedFields.push(f[:field]) if(f[key.to_sym] == value)
+            }
+            FIELD_ATTRS.map { |i|
             "#{field_to_sql(i, f[i.to_sym])}" }.join(" ") }.join(", ")
           tbl[:constraints].each { |f|
+            indexedFields.delete(f[:foreign_key]);
             query << ", FOREIGN KEY (#{f[:foreign_key]}) REFERENCES " +
             "#{f[:reference_table]}(#{f[:reference_field]}) ON DELETE CASCADE" +
             " ON UPDATE CASCADE" }
+          if(indexedFields.length > 0) then
+            query << ", "
+            query << indexedFields.map{|f| "INDEX(#{f})"}.join(",")
+          end
           query << ") ENGINE=#{tbl[:engine]} CHARACTER SET #{tbl[:charset]};"
         when "cgrant"
           query << "GRANT ALL ON #{database}.* TO '#{arg_hash[:username]}'@'%';"

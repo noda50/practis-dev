@@ -48,7 +48,9 @@ module Practis
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),
-              {field: v.name, type: type_field, null: "NO"}
+              # [2013/09/08 I.Noda] for speed up in large-scale sim.
+              #{field: v.name, type: type_field, null: "NO"}
+              {field: v.name, type: type_field, null: "NO", key: "MUL"}
                                        ) < 0
             error("fail to add a filed. #{v.name}, #{type_field}")
           end
@@ -593,8 +595,10 @@ module Practis
       end
 
       def create_table(database, table)
-        unless (retval = query(@command_generator.get_command(
-            database, table, {type: "ctable"}))).nil?
+        com = @command_generator.get_command(database, table, 
+                                             {type: "ctable"}) ;
+#        debug("create_table:com=#{com}") ;
+        unless (retval = query(com)).nil?
           warn("fail to create table: #{table}.")
           retval.each { |r| warn(r) }
           return -1

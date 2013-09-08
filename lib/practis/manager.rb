@@ -253,8 +253,8 @@ module Practis
       end
 
       # generate the parameters from the scheduler
-      while request_number > 0
-        @mutexAllocateParameter.synchronize{
+      @mutexAllocateParameter.synchronize{
+        while request_number > 0
           newId = getNewParameterId() ;
           if (parameter = @variable_set.get_next(newId)).nil?
             info("all parameter is already allocated!")
@@ -301,8 +301,8 @@ module Practis
             debug("parameter.state = #{parameter.state.inspect}");
             next  ## [2013/09/08 I.Noda]  ??? should retry if state is not set?
           end
-        } # @mutexAllocateParameterId.synchronize
-      end
+        end
+      } # @mutexAllocateParameter.synchronize
       return parameters
     end
 
