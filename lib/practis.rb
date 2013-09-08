@@ -105,6 +105,7 @@ module Practis
 
   #== Web Interfaces
   # parameter progress overview report max step
+  TAG_PROGRESS_OVERVIEW_MAXGRID = "progress_overview_maxgrid";
   DEFAULT_PROGRESS_OVERVIEW_MAXGRID = 10 ;
 
 
