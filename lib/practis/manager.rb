@@ -227,6 +227,8 @@ module Practis
         return nil
       end
       # get the parameter with 'ready' state.
+      # [2013/09/08 I.Noda] 
+      # I'm not sure the following algorithm can work.
       if (p_ready = @database_connector.read_column(
           :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
         p_ready.each do |p|
@@ -241,7 +243,7 @@ module Practis
                  execution_start: nil,
                  state: PARAMETER_STATE_ALLOCATING},
                 "parameter_id = #{p["parameter_id"].to_i}") < 0
-              error("failt to update the parameter with 'ready' state.")
+              error("fault to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
               parameters.push(matches[0])
@@ -293,7 +295,7 @@ module Practis
             @database_connector.read_column(:parameter, condition){
               |retval|
               retval.each do |r|
-                info(r)
+                warn("result of read_column under (#{condition}): #{r}")
                 parameter.state = r["state"]
                 @parameter_pool.push(parameter)
               end

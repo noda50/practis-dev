@@ -163,7 +163,7 @@ module Practis
         @available_numbers.delete(v)
         parameter_array = []
         indexes = value_to_indexes(v)
-        debug("indexes: #{indexes}")
+#        debug("indexes: #{indexes}")
 
         # allocate parameters
         variable_set.length.times do |i|
@@ -193,7 +193,7 @@ module Practis
           k -= l * divider
           indexes.push(l)
         end
-        debug("value_to_indexes: v=#{v}, indexes=#{indexes.inspect}");
+#        debug("value_to_indexes: v=#{v}, indexes=#{indexes.inspect}");
         return indexes
       end
     end

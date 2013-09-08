@@ -394,6 +394,9 @@ module Practis
         return 0
       end
 
+      # [2013/09/08 I.Noda] !!!! need to improve.
+      # most of operations in this methods should be done on DB,
+      # instead of on-memory.
       def update_parameter_state(expired_timeout)
         pconnector = @connectors[:parameter]
         rconnector = @connectors[:result]
