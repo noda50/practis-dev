@@ -108,18 +108,10 @@ class OrthogonalArray
   end
 
   # 
-  def generate_new_analysis_area(rows, add_point_case, exteded_column, parameters)
-    new_parameters = parameters[:variables].sort
-
-    # new_lower_value_bit = exteded_column.corresponds.key(new_parameters[0])
-    # new_upper_value_bit = exteded_column.corresponds.key(new_parameters[1])
-
-    new_lower_value_rows, new_upper_value_rows = []
-    new_lower_value, new_upper_value = nil
-
+  def generate_new_analysis_area(old_rows, new_rows, add_point_case, exteded_column)
     old_lower_value_rows, old_upper_value_rows = []
     old_lower_value, old_upper_value = nil
-    rows.each{|row|
+    old_rows.each{|row|
       # old lower parameter
       if old_lower_value.nil?
         old_lower_value_rows.push(row)
@@ -128,16 +120,6 @@ class OrthogonalArray
         if exteded_column[@table[exteded_column.id][row]] <= old_lower_value
           old_lower_value_rows.push(row)
           old_lower_value = exteded_column[@table[exteded_column.id][row]]
-        end
-      end
-      # new lower parameter
-      if new_lower_value.nil?
-        new_lower_value_rows.push(row)
-        new_lower_value = exteded_column[@table[exteded_column.id][row]]
-      else
-        if exteded_column[@table[exteded_column.id][row]] <= new_lower_value
-          new_lower_value_rows.push(row)
-          new_lower_value = exteded_column[@table[exteded_column.id][row]]
         end
       end
       # old upper parameter
@@ -150,9 +132,26 @@ class OrthogonalArray
           old_upper_value = exteded_column[@table[exteded_column.id][row]]
         end
       end
+    }
+
+    # =====================================
+    # TODO :modify
+    new_lower_value_rows, new_upper_value_rows = []
+    new_lower_value, new_upper_value = nil
+    new_rows.each{
       # new lower parameter
+      if new_lower_value.nil?
+        new_lower_value_rows.push(row) # TODO :modify
+        new_lower_value = exteded_column[@table[exteded_column.id][row]]
+      else
+        if exteded_column[@table[exteded_column.id][row]] <= new_lower_value
+          new_lower_value_rows.push(row)
+          new_lower_value = exteded_column[@table[exteded_column.id][row]]
+        end
+      end
+      # new upper parameter
       if new_upper_value.nil?
-        new_upper_value_rows.push(row)
+        new_upper_value_rows.push(row) 
         new_upper_value = exteded_column[@table[exteded_column.id][row]]
       else
         if new_upper_value <= exteded_column[@table[exteded_column.id][row]]
@@ -161,6 +160,7 @@ class OrthogonalArray
         end
       end
     }
+    # =====================================
 
     case add_point_case
     when "outside(+)"
