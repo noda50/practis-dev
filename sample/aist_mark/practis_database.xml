@@ -48,7 +48,7 @@
           <options engine="InnoDB" charset="utf8" />
         </table>
         <table name="parameter">
-          <field field="parameter_id" type="int(11)" null="NO" key="PRI" default="" extra="" comment="" />
+          <field field="parameter_id" type="bigint(11)" null="NO" key="PRI" default="" extra="" comment="" />
           <field field="allocated_node_id" type="int(11)" null="YES" key="MUL" default="-1" extra="" comment="" />
           <field field="executing_node_id" type="int(11)" null="YES" key="MUL" default="-1" extra="" comment="" />
           <field field="allocation_start" type="datetime" null="YES" key="" default="" extra="" comment="" />
@@ -59,7 +59,7 @@
           <options engine="InnoDB" charset="utf8" />
         </table>
         <table name="result">
-          <field field="result_id" type="int(11)" null="NO" key="PRI" default="0" extra="" comment="" />
+          <field field="result_id" type="bigint(11)" null="NO" key="PRI" default="0" extra="" comment="" />
           <field field="execution_time" type="float" null="NO" key="" default="" extra="" comment="" />
           <constraint foreign_key="result_id" references="parameter(parameter_id)" />
           <options engine="InnoDB" charset="utf8" />

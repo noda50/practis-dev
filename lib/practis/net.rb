@@ -77,8 +77,9 @@ module Practis
     #local_host :: bind a local host name.
     #local_port :: bind a local port number.
     #returned_value :: client socket
+    #&block :: if given, the block is called with a socket, and close. 
     def get_clnt_sock(hostname, port, send_timeout=nil, recv_timeout=nil,
-                     local_host=nil, local_port=nil)
+                     local_host=nil, local_port=nil,&block)
       sock = nil
       if local_host || local_port
         begin
@@ -109,7 +110,18 @@ module Practis
         sock = nil
         return nil
       end
-      return sock
+      ## If block is given, call it.  Otherwise, return socket.
+      if(block)
+        # if block is given, call it and close the socket.
+        begin
+          return block.call(sock) ;
+        ensure
+          close_sock(sock) ;
+        end
+      else
+        # otherwise, it return the socket. (original version)
+        return sock
+      end
     end
 
     #=== Get a TCP server socket.
@@ -118,7 +130,9 @@ module Practis
     #recv_timeout :: recv timeout
     #local_host :: local host name
     #returned_value :: an array of server sockets IPv4 and IPv6
-    def get_srv_sock(port, send_timeout=nil, recv_timeout=nil, local_host=nil)
+    #&block :: if given, the block is called with a socket, and close. 
+    def get_srv_sock(port, send_timeout=nil, recv_timeout=nil, local_host=nil,
+                     &block)
       sock = nil
       if local_host
         begin
@@ -156,7 +170,18 @@ module Practis
         error("could not create server socket")
         return nil
       end
-      return sock
+      ## If block is given, call it.  Otherwise, return socket.
+      if(block)
+        # if block is given, call it and close the socket.
+        begin
+          return block.call(sock) ;
+        ensure
+          close_sock(sock) ;
+        end
+      else
+        # otherwise, it return the socket. (original version)
+        return sock
+      end
     end
 
     #=== Set socket options.
@@ -281,7 +306,8 @@ module Practis
       if retval.kind_of?(String)
         return retval.chop
       else
-        error("received message is nil")
+        error("received message is : #{retval.inspect}")
+        caller().each{|c| error("... called from:" + c.to_s)}
         return nil
       end
     end

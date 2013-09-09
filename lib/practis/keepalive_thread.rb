@@ -81,6 +81,7 @@ module Practis
             end
             close_sock(@socket)
           end
+          Thread::pass() ;
           sleep @timeout
         end
       end

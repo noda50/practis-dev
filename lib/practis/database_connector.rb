@@ -48,7 +48,9 @@ module Practis
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),
-              {field: v.name, type: type_field, null: "NO"}
+              # [2013/09/08 I.Noda] for speed up in large-scale sim.
+              #{field: v.name, type: type_field, null: "NO"}
+              {field: v.name, type: type_field, null: "NO", key: "MUL"}
                                        ) < 0
             error("fail to add a filed. #{v.name}, #{type_field}")
           end
@@ -72,7 +74,7 @@ module Practis
 
       def create_node(arg_hash)
         connector = @connectors[:node]
-        if (retval = connector.insert_column(arg_hash)).length != 0
+        if (retval = connector.insert_record(arg_hash)).length != 0
           error("fail to add node. errno: #{retval}")
           return -1
         end
@@ -106,7 +108,7 @@ module Practis
           # create a database
           db_name = config.read("#{name}_database_name")
           if db.exist_database?(db_name)
-            debug("database: #{db_name} already exists.")
+            warn("database: #{db_name} already exists.")
           else
             if db.create_database(db_name) < 0
               error("fail to create database :#{db_name}")
@@ -120,7 +122,7 @@ module Practis
           # create a table
           tbl_name = config.read("#{name}_database_tablename")
           if db.exist_table?(db_name, tbl_name)
-            debug("table: #{tbl_name} aldready exist.")
+            warn("table: #{tbl_name} already exist.")
           else
             if db.create_table(db_name, tbl_name) < 0
               error("fail to create table: #{tbl_name}.")
@@ -152,30 +154,37 @@ module Practis
         end
       end
 
-      def insert_column(type, arg_hash)
+      def insert_record(type, arg_hash)
         if (connector = get_connector(type)).nil?
           error("invalid type: #{type}")
           return [nil]
         end
-        connector.insert_column(arg_hash)
+        connector.insert_record(arg_hash)
       end
 
-      def read_column(type, condition = nil)
+      ##--------------------------------------------------
+      ##--- read_record(type, [condition]) {|result| ...}
+      ##    Send query to get data wrt condition.
+      ##    If ((|&block|)) is given,  the block is called with 
+      ##    ((|result|)) data of the query.
+      ##    If ((|&block|)) is not given, it return an Array of the
+      ##    result.
+      def read_record(type, condition = nil, &block)
         if (connector = get_connector(type)).nil?
           error("invalid type: #{type}")
           return []
         end
-        connector.read_column(condition)
+        connector.read_record(condition,&block)
       end
 
-      def inner_join_column(arg_hash)
-        debug(arg_hash)
+      def inner_join_record(arg_hash)
+#        debug(arg_hash)
         bcon = @connectors[arg_hash[:base_type]]
         rcon = @connectors[arg_hash[:ref_type]]
         condition = "#{rcon.database}.#{rcon.table} ON #{bcon.database}." +
               "#{bcon.table}.#{arg_hash[:base_field]} = #{rcon.database}." +
               "#{rcon.table}.#{arg_hash[:ref_field]}"
-        bcon.inner_join_column(condition)
+        bcon.inner_join_record(condition)
       end
 
       def read_time(type = nil)
@@ -192,18 +201,58 @@ module Practis
         return timeval
       end
 
+      ## [2013/09/07 I.Noda]
+      ##---read_max(type, record, valueType, condition)
+      ##   retrieve max value of ((|record|)) in database ((|type|))
+      ##   under ((|condition|)).
+      ##   valueType is :integer, :float, or nil.
+      def read_max(type, record, valueType, condition = nil)
+        connector = @connectors[type]
+        maxval = nil
+        unless (retval = connector.read({type: "rmax", record: record},
+                                        condition)).nil?
+          retval.each { |r| r.values.each { |v| 
+              maxval = (valueType == :integer ? v.to_i :
+                        valueType == :float ? v.to_f :
+                        v)
+            }}
+        end
+        if maxval.nil?
+          error("fail to get max value of #{record} from the #{type} database.")
+          return nil
+        end
+        return maxval
+      end
+
+      ## [2013/09/08 I.Noda]
+      ##---read_count(type, condition)
+      ##   get count of data under ((|condition|)) in database ((|type|))
+      def read_count(type, condition = nil)
+        connector = @connectors[type]
+        count = nil
+        retval = connector.read({type: "rcount"},
+                                condition){|retval|
+          retval.each { |r| r.values.each { |v| count = v.to_i } }
+        }
+        if count.nil?
+          error("fail to get count from the #{type} database.")
+          return nil
+        end
+        return count
+      end
+
       def register_project(project_name)
         connector = @connectors[:project]
         id = rand(MAX_PROJECT)
-        if (retval = connector.read_column).length == 0
-          while connector.insert_column(
+        if (retval = connector.read_record).length == 0
+          while connector.insert_record(
               {project_id: id, project_name: project_name}).length != 0
             id = rand(MAX_PROJECT)
           end
         else
           ids = retval.select { |r| r["project_name"] == project_name }
           if ids.length != 1
-            error("invalid project columns")
+            error("invalid project records")
             ids.each { |i| error(i) }
             return -1
           end
@@ -216,9 +265,9 @@ module Practis
       def register_execution(execution_name, project_id, executable_command)
         connector = @connectors[:execution]
         id = rand(MAX_EXECUTION)
-        if (retval = connector.read_column(
+        if (retval = connector.read_record(
             "project_id = #{project_id}")).length == 0
-          while connector.insert_column(
+          while connector.insert_record(
               {execution_id: id,
                execution_name: execution_name,
                project_id: project_id,
@@ -235,7 +284,7 @@ module Practis
           #retval.each { |r| debug(r) }
           ids = retval.select { |r| r["execution_name"] == execution_name }
           if ids.length != 1
-            error("invalid execution columns")
+            error("invalid execution records")
             return -1
           end
           id = ids[0]["execution_id"]
@@ -249,17 +298,17 @@ module Practis
         prev_nodes = []
 
         # check nodes of previous execution
-        unless (retval = connector.read_column).length == 0
+        unless (retval = connector.read_record).length == 0
           retval.each do |r|
             node_id = r["node_id"]
             # If same id node exists, delete it.
             if my_node_id == node_id
-              unless (dretval = connector.delete_column(
+              unless (dretval = connector.delete_record(
                   "node_id = #{my_node_id}")).nil?
                 dretval.each { |dr| warn(dr) }
               end
             else
-              unless (uretval = connector.update_column(
+              unless (uretval = connector.update_record(
                   {queueing: 0,
                    executing: 0,
                    state: NODE_STATE_FINISH},
@@ -274,7 +323,7 @@ module Practis
         end
 
         # register manager node
-        if (ret = connector.insert_column(
+        if (ret = connector.insert_record(
             {node_id: my_node_id,
              node_type: NODE_TYPE_MANAGER,
              execution_id: execution_id,
@@ -294,8 +343,8 @@ module Practis
       def check_previous_result_database
         rconnector = @connectors[:result]
         pconnector = @connectors[:parameter]
-        results = rconnector.read_column
-        parameters = pconnector.read_column
+        results = rconnector.read_record
+        parameters = pconnector.read_record
         finished_parameters = []
         finished_parameter_ids = []
 
@@ -304,7 +353,7 @@ module Practis
             p["parameter_id"].to_i == r["result_id"].to_i }
           ps.each do |p|
             if p["state"] != PARAMETER_STATE_FINISH
-              unless (retval = pconnector.update_column(
+              unless (retval = pconnector.update_record(
                   #{:state => PARAMETER_STATE_READY},
                   {state: PARAMETER_STATE_FINISH},
                   "parameter_id = #{r["result_id"].to_i}")).nil?
@@ -318,7 +367,7 @@ module Practis
         parameters.each do |p|
           if p["state"] != PARAMETER_STATE_FINISH &&
               !finished_parameter_ids.include?(p["parameter_id"].to_i)
-            unless (retval = pconnector.delete_column(
+            unless (retval = pconnector.delete_record(
                 "parameter_id = #{p["parameter_id"].to_i}")).nil?
               retval.each { |ret| warn(ret) }
             end
@@ -327,24 +376,27 @@ module Practis
         return finished_parameters
       end
 
-      def update_column(type, arg_hash, condition)
+      def update_record(type, arg_hash, condition)
         if (connector = get_connector(type)).nil?
           error("invalid type: #{type}")
           return []
         end
-        connector.update_column(arg_hash, condition)
+        connector.update_record(arg_hash, condition)
       end
 
       def update_parameter(arg_hash, condition)
         connector = @connectors[:parameter]
-        unless (retval = connector.update_column(arg_hash, condition)).nil?
-          error("fail to update the parameter column.")
+        unless (retval = connector.update_record(arg_hash, condition)).nil?
+          error("fail to update the parameter record.")
           retval.each { |r| error(r) }
           return -1
         end
         return 0
       end
 
+      # [2013/09/08 I.Noda] !!!! need to improve.
+      # most of operations in this methods should be done on DB,
+      # instead of on-memory.
       def update_parameter_state(expired_timeout)
         pconnector = @connectors[:parameter]
         rconnector = @connectors[:result]
@@ -353,8 +405,8 @@ module Practis
           error("fail to get current time from the parameter database.")
           return nil, nil, nil, nil, nil
         end
-        parameters = pconnector.read_column   # current executing parameters
-        results = rconnector.read_column      # current stored results
+        parameters = pconnector.read_record   # current executing parameters
+        results = rconnector.read_record      # current stored results
 
         # count the number of the parameter each state.
         p_ready = parameters.select { |p|
@@ -369,7 +421,7 @@ module Practis
             .each do |p|
           if (results.select { |r| p["parameter_id"] == r["result_id"] })
               .length > 0
-            if (retval = pconnector.update_column(
+            if (retval = pconnector.update_record(
                 {state: PARAMETER_STATE_FINISH},
                 "parameter_id = #{p["parameter_id"]}")).length != 0
               error("fail to update the parameter state")
@@ -381,7 +433,7 @@ module Practis
             finished_parameters << p["parameter_id"].to_i
           else  # check the executing parameter is expired?
             if timeval - p["execution_start"].to_i > expired_timeout
-              if (retval = pconnector.update_column(
+              if (retval = pconnector.update_record(
                   {allocation_start: nil,
                    execution_start: nil,
                    state: PARAMETER_STATE_READY},
@@ -496,10 +548,10 @@ module Practis
         return false
       end
 
-      def exist_column?(key, value)
+      def exist_record?(key, value)
         if (retval = query(@command_generator.get_command(
-            @database, @table, {type: "rcolumn"}))).nil?
-          debug("specified table has no column.")
+            @database, @table, {type: "rrecord"}))).nil?
+          debug("specified table has no record.")
         else
           retval.each do |r|
             if r[key] == value
@@ -546,8 +598,10 @@ module Practis
       end
 
       def create_table(database, table)
-        unless (retval = query(@command_generator.get_command(
-            database, table, {type: "ctable"}))).nil?
+        com = @command_generator.get_command(database, table, 
+                                             {type: "ctable"}) ;
+#        debug("create_table:com=#{com}") ;
+        unless (retval = query(com)).nil?
           warn("fail to create table: #{table}.")
           retval.each { |r| warn(r) }
           return -1
@@ -555,7 +609,7 @@ module Practis
         return 0
       end
 
-      def insert_column(arg_hash)
+      def insert_record(arg_hash)
         arg_hash[:type] = "cinsert"
         # <<< [2013/09/05 I.noda]
         #retq = query(@command_generator.get_command(
@@ -568,34 +622,49 @@ module Practis
         # >>> [2013/09/05 I.noda]
       end
 
-      def read_column(condition = nil)
+      ##--------------------------------------------------
+      ##--- read_record([condition]) {|result| ...}
+      ##    send query to get data wrt condition.
+      ##    If ((|&block|)) is given,  the block is called with 
+      ##    ((|result|)) data of the query.
+      ##    If ((|&block|)) is not given, it return an Array of the
+      ##    result.
+      def read_record(condition = nil,&block)
         # <<< [2013/09/05 I.noda]
         #retq = query(@command_generator.get_command(
-        #  @database, @table, {type: "rcolumn"}, condition))
+        #  @database, @table, {type: "rrecord"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # [2013/09/08 I.Noda] use Array.new instead of [] for safety.
+        if(block.nil?)
+          query(@command_generator.get_command(@database, @table, 
+                                               {type: "rrecord"}, condition)){
+            |retq|
+            result = Array.new()
+            return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
+          }
+        else
+          query(@command_generator.get_command(@database, @table, 
+                                               {type: "rrecord"}, condition),
+                &block) ;
+        end
+        # <<< [2013/09/05 I.noda]
+      end
+
+      def delete_record(condition = nil)
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "drecord"}, condition))
         #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
         query(@command_generator.get_command(@database, @table, 
-                                             {type: "rcolumn"}, condition)){
+                                             {type: "drecord"}, condition)){
           |retq|
           return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
         }
         # <<< [2013/09/05 I.noda]
       end
 
-      def delete_column(condition = nil)
-        # <<< [2013/09/05 I.noda]
-        #retq = query(@command_generator.get_command(
-        #  @database, @table, {type: "dcolumn"}, condition))
-        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
-        query(@command_generator.get_command(@database, @table, 
-                                             {type: "dcolumn"}, condition)){
-          |retq|
-          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
-        }
-        # <<< [2013/09/05 I.noda]
-      end
-
-      def update_column(arg_hash, condition = nil)
-        arg_hash[:type] = "ucolumn"
+      def update_record(arg_hash, condition = nil)
+        arg_hash[:type] = "urecord"
         # <<< [2013/09/05 I.noda]
         #retq = query(@command_generator.get_command(
         #  @database, @table, arg_hash, condition))
@@ -608,7 +677,7 @@ module Practis
         # <<< [2013/09/05 I.noda]
       end
 
-      def inner_join_column(condition = nil)
+      def inner_join_record(condition = nil)
         # <<< [2013/09/05 I.noda]
         #retq = query(@command_generator.get_command(
         #  @database, @table, {type: "rinnerjoin"}, condition))
@@ -622,9 +691,11 @@ module Practis
       end
 
       def read(arg_hash, condition = nil, &block)
-        query(@command_generator.get_command(@database, @table, 
-                                             arg_hash, condition),
-              &block)
+        com = @command_generator.get_command(@database, @table, 
+                                             arg_hash, condition)
+#        info(arg_hash.inspect) ;
+#        info(com) ;
+        query(com,  &block)
       end
 
       #=== Close the database connection.

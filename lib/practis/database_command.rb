@@ -17,9 +17,10 @@ module Practis
       include Practis
 
       DATABASE_COMMAND_TYPES = %w(cdatabase ctable cgrant cgrantl cinsert
-                                  dcolumn ddatabase dtable
-                                  rcolumn rcount rdatabase rinnerjoin rnow
-                                  rtable runixtime ucolumn uglobal)
+                                  drecord ddatabase dtable
+                                  rrecord rcount rdatabase rinnerjoin rnow
+                                  rmax
+                                  rtable runixtime urecord uglobal)
 
       def initialize(database_schema)
         @database_schema = JSON.parse(database_schema, :symbolize_names => true)
@@ -68,12 +69,22 @@ module Practis
           query << "CREATE DATABASE #{database};"
         when "ctable"
           query << "CREATE TABLE #{database}.#{table} ("
-          query << tbl[:fields].map { |f| FIELD_ATTRS.map { |i|
+          indexedFields = [];
+          query << tbl[:fields].map { |f| 
+            FIELD_INDEXED.each{|key,value| 
+              indexedFields.push(f[:field]) if(f[key.to_sym] == value)
+            }
+            FIELD_ATTRS.map { |i|
             "#{field_to_sql(i, f[i.to_sym])}" }.join(" ") }.join(", ")
           tbl[:constraints].each { |f|
+            indexedFields.delete(f[:foreign_key]);
             query << ", FOREIGN KEY (#{f[:foreign_key]}) REFERENCES " +
             "#{f[:reference_table]}(#{f[:reference_field]}) ON DELETE CASCADE" +
             " ON UPDATE CASCADE" }
+          if(indexedFields.length > 0) then
+            query << ", "
+            query << indexedFields.map{|f| "INDEX(#{f})"}.join(",")
+          end
           query << ") ENGINE=#{tbl[:engine]} CHARACTER SET #{tbl[:charset]};"
         when "cgrant"
           query << "GRANT ALL ON #{database}.* TO '#{arg_hash[:username]}'@'%';"
@@ -87,13 +98,27 @@ module Practis
           query << tbl[:fields].map { |f| arg_hash[f[:field].to_sym].nil? ?
             "NULL" : "'#{arg_hash[f[:field].to_sym]}'" }.join(", ")
           query << ");"
-        when "rcolumn"
+        when "rrecord"
           query << "SELECT * FROM #{database}.#{table}"
           query << (condition.nil? ? ";" :
             " #{condition_to_sql(database, table, condition)};")
+        ## [2013/09/08 I.Noda] extend count command for general purpose.
         when "rcount"
-          query << "SELECT #{arg_hash[:column]}, COUNT(*) FROM " +
-              "#{database}.#{table} GROUP BY #{arg_hash[:column]};"
+          query << "SELECT"
+          query << " #{arg_hash[:record]}," if arg_hash[:record]
+          query << " COUNT(*) FROM #{database}.#{table}"
+          if(!condition.nil?)
+            query << " #{condition_to_sql(database, table, condition)}"
+          end
+          query << " GROUP BY #{arg_hash[:record]}" if arg_hash[:record]
+          query << " ;"
+        ## [2013/09/07 I.Noda] for unique parameter id
+        when "rmax"
+          query << "SELECT MAX(#{arg_hash[:record]}) FROM #{database}.#{table}"
+          if(!condition.nil?)
+            query << " #{condition_to_sql(database, table, condition)}"
+          end
+          query << " ;"
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"
@@ -106,7 +131,7 @@ module Practis
           query << "SELECT DATE_FORMAT(NOW(), GET_FORMAT(DATETIME, 'ISO'));"
         when "runixtime"
           query << "SELECT UNIX_TIMESTAMP();"
-        when "ucolumn"
+        when "urecord"
           query << "UPDATE #{database}.#{table} SET "
           query << tbl[:fields].inject([]) { |s, f|
             if arg_hash.has_key?(f[:field].to_sym)
@@ -122,7 +147,7 @@ module Practis
           query << ";"
         when "uglobal"
           query << "SET GLOBAL max_allowed_packet=16*1024*1024;"
-        when "dcolumn"
+        when "drecord"
           query << "DELETE FROM #{database}.#{table} " +
             "#{condition_to_sql(database, table, condition)};"
         when "ddatabase"
