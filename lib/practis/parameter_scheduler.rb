@@ -16,14 +16,17 @@ module Practis
     def initialize(variable_set, scheduler_name="RoundrobinScheduler")
       @scheduler = Practis::Scheduler.const_get(scheduler_name)
         .new(variable_set)
+      @mutex = Mutex.new() ;
     end
 
     def get_parameter_set
-      if (parameter_array = @scheduler.get_parameter_set).nil? ||
-          parameter_array.include?(nil)
-        return nil
-      end
-      return parameter_array
+      @mutex.synchronize{
+        if (parameter_array = @scheduler.get_parameter_set).nil? ||
+            parameter_array.include?(nil)
+          return nil
+        end
+        return parameter_array
+      }
       # parameter_array = @scheduler.get_parameter_set
       # if parameter_array.nil? then return nil
       # elsif parameter_array.include?(nil) then return nil
@@ -160,7 +163,7 @@ module Practis
         @available_numbers.delete(v)
         parameter_array = []
         indexes = value_to_indexes(v)
-        debug("indexes: #{indexes}")
+#        debug("indexes: #{indexes}")
 
         # allocate parameters
         variable_set.length.times do |i|
@@ -190,6 +193,7 @@ module Practis
           k -= l * divider
           indexes.push(l)
         end
+#        debug("value_to_indexes: v=#{v}, indexes=#{indexes.inspect}");
         return indexes
       end
     end
