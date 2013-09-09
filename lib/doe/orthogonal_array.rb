@@ -8,12 +8,14 @@ class OrthogonalArray
   attr_reader :num_of_factor
   attr_reader :l_size #experiment size
   attr_reader :colums
+  attr_reader :analysis_area
 
   # 
   def initialize(parameters)
     level = 2
     @table =[]
     @colums = []
+    @analysis_area = []
     @num_of_factor = parameters.size
 
     l = 0
@@ -59,10 +61,16 @@ class OrthogonalArray
       @colums.push(oc)
       id += 1
     }
+
+    area = []
+    for i in 0...@table[0].size
+      area.push(i)
+    end
+    @analysis_area.push(area)
   end
 
   # 
-  def extend_table(add_point_case, parameters)
+  def extend_table(id_set, add_point_case, parameters)
     old_level = 0
     old_digit_num = 0
     twice = false
@@ -82,8 +90,7 @@ class OrthogonalArray
           @table[oc.id] += copy
           @l_size *= 2
         end
-        oc.check_alignment(add_point_case, parameters[:variables])
-        oc.assign_parameter(old_level, oc.parameters)
+        oc.assign_parameter(old_level, add_point_case, parameters[:variables])
         break
       end
     }
@@ -95,6 +102,100 @@ class OrthogonalArray
           @table[oc.id] += copy
         end
       }
+    end
+    # generate new analysis area
+
+  end
+
+  # 
+  def generate_new_analysis_area(rows, add_point_case, exteded_column, parameters)
+    new_parameters = parameters[:variables].sort
+
+    # new_lower_value_bit = exteded_column.corresponds.key(new_parameters[0])
+    # new_upper_value_bit = exteded_column.corresponds.key(new_parameters[1])
+
+    new_lower_value_rows, new_upper_value_rows = []
+    new_lower_value, new_upper_value = nil
+
+    old_lower_value_rows, old_upper_value_rows = []
+    old_lower_value, old_upper_value = nil
+    rows.each{|row|
+      # old lower parameter
+      if old_lower_value.nil?
+        old_lower_value_rows.push(row)
+        old_lower_value = exteded_column[@table[exteded_column.id][row]]
+      else
+        if exteded_column[@table[exteded_column.id][row]] <= old_lower_value
+          old_lower_value_rows.push(row)
+          old_lower_value = exteded_column[@table[exteded_column.id][row]]
+        end
+      end
+      # new lower parameter
+      if new_lower_value.nil?
+        new_lower_value_rows.push(row)
+        new_lower_value = exteded_column[@table[exteded_column.id][row]]
+      else
+        if exteded_column[@table[exteded_column.id][row]] <= new_lower_value
+          new_lower_value_rows.push(row)
+          new_lower_value = exteded_column[@table[exteded_column.id][row]]
+        end
+      end
+      # old upper parameter
+      if old_upper_value.nil?
+        old_upper_value_rows.push(row)
+        old_upper_value = exteded_column[@table[exteded_column.id][row]]
+      else
+        if old_upper_value <= exteded_column[@table[exteded_column.id][row]]
+          old_upper_value_rows.push(row)
+          old_upper_value = exteded_column[@table[exteded_column.id][row]]
+        end
+      end
+      # new lower parameter
+      if new_upper_value.nil?
+        new_upper_value_rows.push(row)
+        new_upper_value = exteded_column[@table[exteded_column.id][row]]
+      else
+        if new_upper_value <= exteded_column[@table[exteded_column.id][row]]
+          new_upper_value_rows.push(row)
+          new_upper_value = exteded_column[@table[exteded_column.id][row]]
+        end
+      end
+    }
+
+    case add_point_case
+    when "outside(+)"
+      # (new_lower, new_upper)
+      new_area = []
+      area.each { |e| new_area.push(@table.size + e) }
+      @analysis_area.push(new_area)
+      # new area between (old_upper, new_lower)
+      @analysis_area.push(old_upper_value_rows + new_lower_value_rows)
+    when "outside(-)"
+      # (new_lower, new_upper)
+      new_area = []
+      area.each { |e| new_area.push(@table.size + e) }
+      @analysis_area.push(new_area)
+      # new area between (new_upper, old_lower)
+      @analysis_area.push(new_upper_value_rows + old_lower_value_rows)
+    when "inside"
+      # (new_lower, new_upper)
+      new_area = []
+      area.each { |e| new_area.push(@table.size + e) }
+      @analysis_area.push(new_area)
+      # between (old_lower, new_lower) in area
+      @analysis_area.push(old_lower_value_rows + new_lower_value_rows)
+      # between (old_upper, new_upper) in area
+      @analysis_area.push(old_upper_value_rows + new_upper_value_rows)
+    when "both side" # TODO
+      new_area = []
+      # get max, min of parameter
+      # (new_lower, old_lower(min)
+      new_area = []
+      @analysis_area.push(new_area)
+      # (old_upper(max), new_upper)
+      @analysis_area.push(new_area)
+    else
+      p "create NO area for analysis"
     end
   end
 
@@ -122,7 +223,7 @@ class OrthogonalArray
     end
     return show
   end
-  # 直交表全体の確認 :TODO modify
+  # 直交表全体の確認
   def get_table
     table_info = []
     @table[0].size.times{ table_info.push([]) }
@@ -137,7 +238,7 @@ class OrthogonalArray
   def get_vector(col)
     return @table[col]
   end
-  # 
+  # return array of bit strings
   def get_row(row)
     bits = []
     @table.each{|col|
