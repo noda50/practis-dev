@@ -67,11 +67,13 @@ module Practis
             end
             debug("#{self.class.name} try to recv")
             unless (data = precv(@sock)).kind_of?(Hash)
-              error("fail to receive. errno:#{data}")
+              error("fail to receive. errno:#{data}. Handler class: #{self.class.to_s}")
+              caller().each{|c| error("... called from:" + c.to_s)}
               finish
               return
             end
             handle(@sock, data)
+            Thread::pass() ;
           end
         end
 
@@ -316,6 +318,7 @@ module Practis
               parameter_id, executor_id) < 0
             error("fail to update started parameter.")
           end
+          finish ## [2013/09/07 I.Noda]  I think we need this.
         end
       end
 

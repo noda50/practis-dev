@@ -148,6 +148,9 @@ module Practis
       debug("loaded result fields: #{@result_fields}")
       @parameter_pool = []
 
+      # [2013/09/07 I.Noda] for exclusive parameter allocation
+      @mutexAllocateParameter = Mutex.new() ;
+
       # KeepAlive Handler
       error("fail to create KeepAliveHandler") if @message_handler
         .createHandler("KeepAliveHandler", get_srv_sock(KEEP_ALIVE_PORT)) < 0
@@ -224,6 +227,8 @@ module Practis
         return nil
       end
       # get the parameter with 'ready' state.
+      # [2013/09/08 I.Noda] 
+      # I'm not sure the following algorithm can work.
       if (p_ready = @database_connector.read_column(
           :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
         p_ready.each do |p|
@@ -238,7 +243,7 @@ module Practis
                  execution_start: nil,
                  state: PARAMETER_STATE_ALLOCATING},
                 "parameter_id = #{p["parameter_id"].to_i}") < 0
-              error("failt to update the parameter with 'ready' state.")
+              error("fault to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
               parameters.push(matches[0])
@@ -250,44 +255,67 @@ module Practis
       end
 
       # generate the parameters from the scheduler
-      while request_number > 0
-        if (parameter = @variable_set.get_next).nil?
-          info("all parameter is already allocated!")
-          break
-        end
-        condition = parameter.parameter_set.map { |p|
-          "#{p.name} = '#{p.value}'" }.join(" and ")
-        debug(condition)
-        if (retval = @database_connector.read_column(
-            :parameter, condition)).length == 0
-          arg_hash = {parameter_id: parameter.uid,
-                      allocated_node_id: src_id,
-                      executing_node_id: src_id,
-                      allocation_start: iso_time_format(timeval),
-                      execution_start: nil,
-                      state: PARAMETER_STATE_ALLOCATING}
-          parameter.parameter_set.each { |p|
-            arg_hash[(p.name).to_sym] = p.value }
-          if @database_connector.insert_column(:parameter, arg_hash).length != 0
-            error("fail to insert a new parameter.")
+      @mutexAllocateParameter.synchronize{
+        while request_number > 0
+          newId = getNewParameterId() ;
+          if (parameter = @variable_set.get_next(newId)).nil?
+            info("all parameter is already allocated!")
+            break
+          end
+          condition = parameter.parameter_set.map { |p|
+            "#{p.name} = '#{p.value}'" }.join(" and ")
+          debug(condition)
+          ##[2013/09/08 I.Noda]
+          ## use read_count instead of read_column to check existense.
+#          if (retval = 
+#              @database_connector.read_column(:parameter, 
+#                                              condition)).length == 0
+          if(0 ==
+             (count = @database_connector.read_count(:parameter, condition)))
+            arg_hash = ({ parameter_id: parameter.uid,
+                          allocated_node_id: src_id,
+                          executing_node_id: src_id,
+                          allocation_start: iso_time_format(timeval),
+                          execution_start: nil,
+                          state: PARAMETER_STATE_ALLOCATING})
+            parameter.parameter_set.each { |p|
+              arg_hash[(p.name).to_sym] = p.value }
+            if @database_connector.insert_column(:parameter, arg_hash).length != 0
+              error("fail to insert a new parameter.")
+            else
+              parameter.state = PARAMETER_STATE_ALLOCATING
+              parameters.push(parameter)
+              @parameter_pool.push(parameter)
+              request_number -= 1
+            end
           else
-            parameter.state = PARAMETER_STATE_ALLOCATING
-            parameters.push(parameter)
-            @parameter_pool.push(parameter)
-            request_number -= 1
+            warn("the parameter already executed on previous or by the others." +
+                 " count: #{count}" +
+                 " condition: (#{condition})")
+            @database_connector.read_column(:parameter, condition){
+              |retval|
+              retval.each do |r|
+                warn("result of read_column under (#{condition}): #{r}")
+                parameter.state = r["state"]
+                @parameter_pool.push(parameter)
+              end
+            }
+            debug("parameter.state = #{parameter.state.inspect}");
+            next  ## [2013/09/08 I.Noda]  ??? should retry if state is not set?
           end
-        else
-          info("the parameter already executed on previous or by the others.")
-          info("condition: #{condition}")
-          retval.each do |r|
-            info(r)
-            parameter.state = r["state"]
-            @parameter_pool.push(parameter)
-          end
-          next
         end
-      end
+      } # @mutexAllocateParameter.synchronize
       return parameters
+    end
+
+    ##------------------------------------------------------------
+    #--- getNewParameterId
+    def getNewParameterId()
+      maxid = @database_connector.read_max(:parameter, 'parameter_id', 
+                                           :integer) ;
+      maxid ||= 0 ;
+      info("maxId: #{maxid}");
+      return maxid + 1 ;
     end
 
     ##------------------------------------------------------------
@@ -748,8 +776,14 @@ module Practis
 
       ##----------------------------------------
       # get value by index
-      def getRatioByIndex(idxA, idxB)
-        @table[idxA][idxB].to_f / @maxTable[idxA][idxB].to_f;
+      def getRatioByIndex(idxA, idxB, scale = :linear)
+        v = @table[idxA][idxB].to_f / @maxTable[idxA][idxB].to_f;
+        case(scale)
+        when :linear then return v ;
+        when :sqrt then return Math::sqrt(v) ;
+        else
+          raise "unknown scale type: #{scale.to_s}" ;
+        end
       end
 
       ##----------------------------------------
@@ -818,10 +852,10 @@ module Practis
           hash_progress[:total] = total / varA.parameters.length / \
               varB.parameters.length
           # initialize countTable
-          stepMaxConf = @config.read("progress_overview_maxstep") ;
+          stepMaxConf = @config.read(TAG_PROGRESS_OVERVIEW_MAXGRID) ;
           stepMax = (stepMaxConf ?
                      stepMaxConf.to_i :
-                     DEFAULT_PROGRESS_OVERVIEW_MAXSTEP) ;
+                     DEFAULT_PROGRESS_OVERVIEW_MAXGRID) ;
           countTable = ProgressCountTable.new(varA, varB, stepMax) ;
           # store value axis info
           valueAxis[varA.name] ||= countTable.valueAxisA() ;
@@ -838,7 +872,7 @@ module Practis
             pA = countTable.axisValueA(idxA) ;
             countTable.axisB.each do |idxB|
               pB = countTable.axisValueB(idxB);
-              count = countTable.getRatioByIndex(idxA,idxB) ;
+              count = countTable.getRatioByIndex(idxA,idxB, :sqrt) ;
               efa.push({:value => [pA, pB], :finish => count})
             end
           end

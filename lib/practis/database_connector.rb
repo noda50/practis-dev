@@ -5,6 +5,10 @@ require 'rubygems'
 require 'json'
 require 'mysql2'
 require 'timeout'
+##<<<[2013/09/04 I.Noda]
+## for exclusive connection use
+require 'thread'
+##>>>[2013/09/04 I.Noda]
 
 require 'practis'
 require 'practis/database'
@@ -44,7 +48,9 @@ module Practis
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),
-              {field: v.name, type: type_field, null: "NO"}
+              # [2013/09/08 I.Noda] for speed up in large-scale sim.
+              #{field: v.name, type: type_field, null: "NO"}
+              {field: v.name, type: type_field, null: "NO", key: "MUL"}
                                        ) < 0
             error("fail to add a filed. #{v.name}, #{type_field}")
           end
@@ -102,7 +108,7 @@ module Practis
           # create a database
           db_name = config.read("#{name}_database_name")
           if db.exist_database?(db_name)
-            debug("database: #{db_name} already exists.")
+            warn("database: #{db_name} already exists.")
           else
             if db.create_database(db_name) < 0
               error("fail to create database :#{db_name}")
@@ -116,7 +122,7 @@ module Practis
           # create a table
           tbl_name = config.read("#{name}_database_tablename")
           if db.exist_table?(db_name, tbl_name)
-            debug("table: #{tbl_name} aldready exist.")
+            warn("table: #{tbl_name} already exist.")
           else
             if db.create_table(db_name, tbl_name) < 0
               error("fail to create table: #{tbl_name}.")
@@ -156,16 +162,23 @@ module Practis
         connector.insert_column(arg_hash)
       end
 
-      def read_column(type, condition = nil)
+      ##--------------------------------------------------
+      ##--- read_column(type, [condition]) {|result| ...}
+      ##    Send query to get data wrt condition.
+      ##    If ((|&block|)) is given,  the block is called with 
+      ##    ((|result|)) data of the query.
+      ##    If ((|&block|)) is not given, it return an Array of the
+      ##    result.
+      def read_column(type, condition = nil, &block)
         if (connector = get_connector(type)).nil?
           error("invalid type: #{type}")
           return []
         end
-        connector.read_column(condition)
+        connector.read_column(condition,&block)
       end
 
       def inner_join_column(arg_hash)
-        debug(arg_hash)
+#        debug(arg_hash)
         bcon = @connectors[arg_hash[:base_type]]
         rcon = @connectors[arg_hash[:ref_type]]
         condition = "#{rcon.database}.#{rcon.table} ON #{bcon.database}." +
@@ -186,6 +199,46 @@ module Practis
           return nil
         end
         return timeval
+      end
+
+      ## [2013/09/07 I.Noda]
+      ##---read_max(type, column, valueType, condition)
+      ##   retrieve max value of ((|column|)) in database ((|type|))
+      ##   under ((|condition|)).
+      ##   valueType is :integer, :float, or nil.
+      def read_max(type, column, valueType, condition = nil)
+        connector = @connectors[type]
+        maxval = nil
+        unless (retval = connector.read({type: "rmax", column: column},
+                                        condition)).nil?
+          retval.each { |r| r.values.each { |v| 
+              maxval = (valueType == :integer ? v.to_i :
+                        valueType == :float ? v.to_f :
+                        v)
+            }}
+        end
+        if maxval.nil?
+          error("fail to get max value of #{column} from the #{type} database.")
+          return nil
+        end
+        return maxval
+      end
+
+      ## [2013/09/08 I.Noda]
+      ##---read_count(type, condition)
+      ##   get count of data under ((|condition|)) in database ((|type|))
+      def read_count(type, condition = nil)
+        connector = @connectors[type]
+        count = nil
+        retval = connector.read({type: "rcount"},
+                                condition){|retval|
+          retval.each { |r| r.values.each { |v| count = v.to_i } }
+        }
+        if count.nil?
+          error("fail to get count from the #{type} database.")
+          return nil
+        end
+        return count
       end
 
       def register_project(project_name)
@@ -341,6 +394,9 @@ module Practis
         return 0
       end
 
+      # [2013/09/08 I.Noda] !!!! need to improve.
+      # most of operations in this methods should be done on DB,
+      # instead of on-memory.
       def update_parameter_state(expired_timeout)
         pconnector = @connectors[:parameter]
         rconnector = @connectors[:result]
@@ -465,6 +521,10 @@ module Practis
         @database = database
         @table = table
         @query_retry = query_retry
+        ##<<<[2013/09/04 I.Noda]
+        ## for exclusive connection use
+        @mutex = Mutex.new() ;
+        ##>>>[2013/09/04 I.Noda]
         connect
       end
 
@@ -538,8 +598,10 @@ module Practis
       end
 
       def create_table(database, table)
-        unless (retval = query(@command_generator.get_command(
-            database, table, {type: "ctable"}))).nil?
+        com = @command_generator.get_command(database, table, 
+                                             {type: "ctable"}) ;
+#        debug("create_table:com=#{com}") ;
+        unless (retval = query(com)).nil?
           warn("fail to create table: #{table}.")
           retval.each { |r| warn(r) }
           return -1
@@ -549,39 +611,91 @@ module Practis
 
       def insert_column(arg_hash)
         arg_hash[:type] = "cinsert"
-        retq = query(@command_generator.get_command(
-          @database, @table, arg_hash))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, arg_hash))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, arg_hash)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # >>> [2013/09/05 I.noda]
       end
 
-      def read_column(condition = nil)
-        retq = query(@command_generator.get_command(
-          @database, @table, {type: "rcolumn"}, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+      ##--------------------------------------------------
+      ##--- read_column([condition]) {|result| ...}
+      ##    send query to get data wrt condition.
+      ##    If ((|&block|)) is given,  the block is called with 
+      ##    ((|result|)) data of the query.
+      ##    If ((|&block|)) is not given, it return an Array of the
+      ##    result.
+      def read_column(condition = nil,&block)
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "rcolumn"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # [2013/09/08 I.Noda] use Array.new instead of [] for safety.
+        if(block.nil?)
+          query(@command_generator.get_command(@database, @table, 
+                                               {type: "rcolumn"}, condition)){
+            |retq|
+            result = Array.new()
+            return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
+          }
+        else
+          query(@command_generator.get_command(@database, @table, 
+                                               {type: "rcolumn"}, condition),
+                &block) ;
+        end
+        # <<< [2013/09/05 I.noda]
       end
 
       def delete_column(condition = nil)
-        retq = query(@command_generator.get_command(
-          @database, @table, {type: "dcolumn"}, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "dcolumn"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             {type: "dcolumn"}, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
       def update_column(arg_hash, condition = nil)
         arg_hash[:type] = "ucolumn"
-        retq = query(@command_generator.get_command(
-          @database, @table, arg_hash, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, arg_hash, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             arg_hash, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
       def inner_join_column(condition = nil)
-        retq = query(@command_generator.get_command(
-          @database, @table, {type: "rinnerjoin"}, condition))
-        retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        # <<< [2013/09/05 I.noda]
+        #retq = query(@command_generator.get_command(
+        #  @database, @table, {type: "rinnerjoin"}, condition))
+        #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        query(@command_generator.get_command(@database, @table, 
+                                             {type: "rinnerjoin"}, condition)){
+          |retq|
+          return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        }
+        # <<< [2013/09/05 I.noda]
       end
 
-      def read(arg_hash, condition = nil)
-        query(@command_generator.get_command(
-          @database, @table, arg_hash, condition))
+      def read(arg_hash, condition = nil, &block)
+        com = @command_generator.get_command(@database, @table, 
+                                             arg_hash, condition)
+#        info(arg_hash.inspect) ;
+#        info(com) ;
+        query(com,  &block)
       end
 
       #=== Close the database connection.
@@ -623,24 +737,35 @@ module Practis
       #=== Execute a query.
       #query_string :: mysql query.
       #returned value :: Mysql2 Result objects.
-      def query(query_string, option = nil)
+      def query(query_string, option = nil, &block)
         c = @query_retry
         while true
-          begin
-            if option.nil?
-              return @connector.query(query_string)
-            else
-              return @connector.query(query_string, option)
+          @mutex.synchronize(){  ###<<<[2013/09/04 I.Noda] for exclusive call>>>
+            begin
+              ## <<< [2013/09/05 I.Noda]
+              ## to introduce block call
+              res = nil ;
+              if option.nil?
+                res = @connector.query(query_string)
+              else
+                res = @connector.query(query_string, option)
+              end
+              if(block) then
+                return block.call(res) ;
+              else
+                return res ;
+              end
+              ## >>> [2013/09/05 I.Noda]
+            rescue Mysql2::Error => e
+              error("failed to run query. #{e.message}")
+              error("failed query: #{query_string}")
+              error(e.backtrace)
+              sleep(QUERY_RETRY_DURATION)
+              raise e if c == 0
             end
-          rescue Mysql2::Error => e
-            error("failed to run query. #{e.message}")
-            error("failed query: #{query_string}")
-            error(e.backtrace)
-            sleep(QUERY_RETRY_DURATION)
-            raise e if c == 0
-          end
+          } ###<<<[2013/09/04 I.Noda]>>>
           c -= 1
-        end
+          end
       end
 
       def create(type, arg_hash, condition)

@@ -45,10 +45,12 @@ module Practis
   DEFAULT_MESSAGE_HANDLER_DURATION = 1
 
   # Sleep time (seconds) of Daemon object in loop method
-  DEFAULT_LOOP_SLEEP_DURATION = 1
+  # DEFAULT_LOOP_SLEEP_DURATION = 1 
+  DEFAULT_LOOP_SLEEP_DURATION = 0 ### [2013/09/07 I.Noda] now, we need not this.
 
   # Duration (seconds) of keep alive
-  DEFAULT_KEEPALIVE_DURATION = 3
+  # DEFAULT_KEEPALIVE_DURATION = 3
+  DEFAULT_KEEPALIVE_DURATION = 0.5 ### [2013/09/07 I.Noda] for more quick execution
   # Duration (seconds) to determine that a node is down
   DEFAULT_KEEPALIVE_EXPIRED_DURATION = DEFAULT_KEEPALIVE_DURATION * 3
   # Duration (seconds) of KeepAliveThread sends the message.
@@ -103,7 +105,8 @@ module Practis
 
   #== Web Interfaces
   # parameter progress overview report max step
-  DEFAULT_PROGRESS_OVERVIEW_MAXSTEP = 10 ;
+  TAG_PROGRESS_OVERVIEW_MAXGRID = "progress_overview_maxgrid";
+  DEFAULT_PROGRESS_OVERVIEW_MAXGRID = 10 ;
 
 
   # Convert a binary to a string.
@@ -373,8 +376,8 @@ module Practis
     end
   end
 
-  def self.included(cls)
-    cls.extend ClassMethods
+  def self.included(klass)
+    klass.extend ClassMethods
   end
 
   module_function :fatal, :error, :info, :warn, :debug

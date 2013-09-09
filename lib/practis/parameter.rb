@@ -152,7 +152,7 @@ module Practis
     include Practis
 
     # Unique IDs pool
-    @@id_pool = []
+    @@id_pool = []  ## [2013/09/07 I.Noda] not used
 
     # An array of Variable.
     attr_reader :variable_set
@@ -170,7 +170,7 @@ module Practis
     end
 
     #=== get a next available parameter set.
-    def get_next
+    def get_next(newId)
       return nil if (parameter_array =
                      chk_arg(Array, @scheduler.get_parameter_set, true)).nil?
       parameter_set = []
@@ -178,8 +178,9 @@ module Practis
         .push(Parameter.new(@variable_set[i].name,
                             type_to_string(@variable_set[i].type),
                             parameter_array[i])) }
-      return ParameterSet.new(Practis::VariableSet.allocate_new_id,
-                              parameter_set)
+      ##[2013/09/07 I.Noda] now, id is given. (taken from database by caller)
+      #newId = Practis::VariableSet.allocate_new_id ;
+      return ParameterSet.new(newId, parameter_set)
     end
 
     #=== get a number of available variable set.
@@ -192,6 +193,7 @@ module Practis
       return @scheduler.get_total
     end
 
+    ## [2013/09/07 I.Noda] not used anymore
     #=== Allocate a new id for a parameter set.
     #ID must be unique, this method allocate a new ID for a parameter set.
     #id :: if you want to specify a static id, use this arg.

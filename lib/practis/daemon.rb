@@ -44,8 +44,9 @@ module Practis
       if config_file.nil?
         @config = nil
         @loop_sleep_duration = DEFAULT_LOOP_SLEEP_DURATION
-        debug ? $logger = Practis::PractisLogger.new(Logger::DEBUG, STDERR) :
-          $logger = Practis::PractisLogger.new
+        $logger = (debug ?
+                   Practis::PractisLogger.new(Logger::DEBUG, STDERR) :
+                   Practis::PractisLogger.new) ;
       else
         case File.extname(config_file)
         when ".xml"
@@ -84,6 +85,7 @@ module Practis
       while true
         break unless running
         mutex.synchronize { update }
+        Thread::pass() ### [2013/09/07 I.Noda]
         sleep(@loop_sleep_duration)
       end
     end
