@@ -174,7 +174,7 @@ module Practis
                 next
               end
               executable_name = File::basename(executable)
-              # check existing columns
+              # check existing records
               obj = (f = File.open(executable, "rb")).read
               f.close
               str = str[0] \
@@ -205,7 +205,7 @@ module Practis
                   next
                 end
               end
-              # check existing columns
+              # check existing records
               obj = (f = File.open(File.join(executable_path, executable_name), "rb")).read
               f.close
               str = str[0] \

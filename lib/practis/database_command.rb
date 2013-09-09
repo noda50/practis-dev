@@ -17,10 +17,10 @@ module Practis
       include Practis
 
       DATABASE_COMMAND_TYPES = %w(cdatabase ctable cgrant cgrantl cinsert
-                                  dcolumn ddatabase dtable
-                                  rcolumn rcount rdatabase rinnerjoin rnow
+                                  drecord ddatabase dtable
+                                  rrecord rcount rdatabase rinnerjoin rnow
                                   rmax
-                                  rtable runixtime ucolumn uglobal)
+                                  rtable runixtime urecord uglobal)
 
       def initialize(database_schema)
         @database_schema = JSON.parse(database_schema, :symbolize_names => true)
@@ -98,23 +98,23 @@ module Practis
           query << tbl[:fields].map { |f| arg_hash[f[:field].to_sym].nil? ?
             "NULL" : "'#{arg_hash[f[:field].to_sym]}'" }.join(", ")
           query << ");"
-        when "rcolumn"
+        when "rrecord"
           query << "SELECT * FROM #{database}.#{table}"
           query << (condition.nil? ? ";" :
             " #{condition_to_sql(database, table, condition)};")
         ## [2013/09/08 I.Noda] extend count command for general purpose.
         when "rcount"
           query << "SELECT"
-          query << " #{arg_hash[:column]}," if arg_hash[:column]
+          query << " #{arg_hash[:record]}," if arg_hash[:record]
           query << " COUNT(*) FROM #{database}.#{table}"
           if(!condition.nil?)
             query << " #{condition_to_sql(database, table, condition)}"
           end
-          query << " GROUP BY #{arg_hash[:column]}" if arg_hash[:column]
+          query << " GROUP BY #{arg_hash[:record]}" if arg_hash[:record]
           query << " ;"
         ## [2013/09/07 I.Noda] for unique parameter id
         when "rmax"
-          query << "SELECT MAX(#{arg_hash[:column]}) FROM #{database}.#{table}"
+          query << "SELECT MAX(#{arg_hash[:record]}) FROM #{database}.#{table}"
           if(!condition.nil?)
             query << " #{condition_to_sql(database, table, condition)}"
           end
@@ -131,7 +131,7 @@ module Practis
           query << "SELECT DATE_FORMAT(NOW(), GET_FORMAT(DATETIME, 'ISO'));"
         when "runixtime"
           query << "SELECT UNIX_TIMESTAMP();"
-        when "ucolumn"
+        when "urecord"
           query << "UPDATE #{database}.#{table} SET "
           query << tbl[:fields].inject([]) { |s, f|
             if arg_hash.has_key?(f[:field].to_sym)
@@ -147,7 +147,7 @@ module Practis
           query << ";"
         when "uglobal"
           query << "SET GLOBAL max_allowed_packet=16*1024*1024;"
-        when "dcolumn"
+        when "drecord"
           query << "DELETE FROM #{database}.#{table} " +
             "#{condition_to_sql(database, table, condition)};"
         when "ddatabase"

@@ -325,7 +325,7 @@ module Practis
     hash[:uid] = json[:uid]
     hash[:parameter_set] = json[:parameter_set]
     hash[:addr] = args[1]
-    debug(args[2])
+    # debug(args[2])
     hash[:result_fields] = JSON.parse(args[2], :symbolize_names => true)
     hash[:executor_id] = args[3].to_i
     hash[:parent_id] = args[4].to_i
