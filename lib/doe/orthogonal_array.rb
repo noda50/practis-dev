@@ -70,14 +70,15 @@ class OrthogonalArray
   end
 
   # 
-  def extend_table(id_set, add_point_case, parameters)
+  def extend_table(id_set, add_point_case, parameter)
     old_level = 0
     old_digit_num = 0
     twice = false
+    new_rows = []
     @colums.each{ |oc|
-      if oc.parameter_name == parameters[:name]
+      if oc.parameter_name == parameter[:name]
         old_level = oc.level        
-        oc.update_level(parameters[:variables].size)
+        oc.update_level(parameter[:variables].size)
         old_digit_num = oc.digit_num
         if oc.equal_digit_num(old_digit_num)
           oc.padding(old_digit_num, old_level)
@@ -90,110 +91,133 @@ class OrthogonalArray
           @table[oc.id] += copy
           @l_size *= 2
         end
-        oc.assign_parameter(old_level, add_point_case, parameters[:variables])
+        oc.assign_parameter(old_level, add_point_case, parameter[:variables])
+        new_bit =  oc.get_bit_string(parameter)
+        for i in 0...@table[oc.id].size
+          for j in 0...new_bit.size
+            if @table[oc.id][i] == new_bit[j]
+              new_rows.push(i)
+            end
+          end
+        end
+        # generate new analysis area
+        generate_new_analysis_area(id_set, new_rows, add_point_case, oc)
         break
       end
     }
     if twice 
       @colums.each{|oc|
-        if oc.parameter_name != parameters[:name]
+        if oc.parameter_name != parameter[:name]
           copy = []
           @table[oc.id].each{ |b| copy.push(b) }
           @table[oc.id] += copy
         end
       }
     end
-    # generate new analysis area
-
   end
 
   # 
   def generate_new_analysis_area(old_rows, new_rows, add_point_case, exteded_column)
-    old_lower_value_rows, old_upper_value_rows = []
-    old_lower_value, old_upper_value = nil
-    old_rows.each{|row|
-      # old lower parameter
-      if old_lower_value.nil?
+    old_lower_value_rows = []
+    old_upper_value_rows = []
+    old_lower_value = nil
+    old_upper_value = nil
+    old_rows.each{ |row|
+      if old_lower_value.nil? # old lower parameter
         old_lower_value_rows.push(row)
-        old_lower_value = exteded_column[@table[exteded_column.id][row]]
+        old_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
       else
-        if exteded_column[@table[exteded_column.id][row]] <= old_lower_value
+        if exteded_column.corresponds[@table[exteded_column.id][row]] < old_lower_value
+          old_lower_value_rows.clear
           old_lower_value_rows.push(row)
-          old_lower_value = exteded_column[@table[exteded_column.id][row]]
+          old_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        elsif exteded_column.corresponds[@table[exteded_column.id][row]] == old_lower_value
+          old_lower_value_rows.push(row)
         end
       end
-      # old upper parameter
-      if old_upper_value.nil?
+      
+      if old_upper_value.nil? # old upper parameter
         old_upper_value_rows.push(row)
-        old_upper_value = exteded_column[@table[exteded_column.id][row]]
+        old_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
       else
-        if old_upper_value <= exteded_column[@table[exteded_column.id][row]]
+        if old_upper_value < exteded_column.corresponds[@table[exteded_column.id][row]]
+          old_upper_value_rows.clear 
           old_upper_value_rows.push(row)
-          old_upper_value = exteded_column[@table[exteded_column.id][row]]
+          old_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        elsif old_upper_value == exteded_column.corresponds[@table[exteded_column.id][row]]
+          old_upper_value_rows.push(row)
         end
       end
     }
 
-    # =====================================
-    # TODO :modify
-    new_lower_value_rows, new_upper_value_rows = []
-    new_lower_value, new_upper_value = nil
-    new_rows.each{
-      # new lower parameter
-      if new_lower_value.nil?
-        new_lower_value_rows.push(row) # TODO :modify
-        new_lower_value = exteded_column[@table[exteded_column.id][row]]
+    new_lower_value_rows = []
+    new_upper_value_rows = []
+    new_lower_value = nil
+    new_upper_value = nil
+    new_rows.each{ |row|
+      if new_lower_value.nil? # new lower parameter
+        new_lower_value_rows.push(row)
+        new_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
       else
-        if exteded_column[@table[exteded_column.id][row]] <= new_lower_value
+        if exteded_column.corresponds[@table[exteded_column.id][row]] < new_lower_value
+          new_lower_value_rows.clear
           new_lower_value_rows.push(row)
-          new_lower_value = exteded_column[@table[exteded_column.id][row]]
+          new_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        elsif exteded_column.corresponds[@table[exteded_column.id][row]] == new_lower_value
+          new_lower_value_rows.push(row)
         end
       end
-      # new upper parameter
-      if new_upper_value.nil?
-        new_upper_value_rows.push(row) 
-        new_upper_value = exteded_column[@table[exteded_column.id][row]]
+      
+      if new_upper_value.nil? # new upper parameter
+        new_upper_value_rows.push(row)
+        new_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
       else
-        if new_upper_value <= exteded_column[@table[exteded_column.id][row]]
+        if new_upper_value < exteded_column.corresponds[@table[exteded_column.id][row]]
+          new_upper_value_rows.clear
           new_upper_value_rows.push(row)
-          new_upper_value = exteded_column[@table[exteded_column.id][row]]
+          new_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        elsif new_upper_value == exteded_column.corresponds[@table[exteded_column.id][row]]
+          new_upper_value_rows.push(row)
         end
       end
     }
-    # =====================================
 
     case add_point_case
     when "outside(+)"
       # (new_lower, new_upper)
-      new_area = []
-      area.each { |e| new_area.push(@table.size + e) }
-      @analysis_area.push(new_area)
+      @analysis_area.push(new_rows)
       # new area between (old_upper, new_lower)
       @analysis_area.push(old_upper_value_rows + new_lower_value_rows)
+      pp @analysis_area
     when "outside(-)"
       # (new_lower, new_upper)
-      new_area = []
-      area.each { |e| new_area.push(@table.size + e) }
-      @analysis_area.push(new_area)
+      @analysis_area.push(new_rows)
       # new area between (new_upper, old_lower)
       @analysis_area.push(new_upper_value_rows + old_lower_value_rows)
     when "inside"
       # (new_lower, new_upper)
-      new_area = []
-      area.each { |e| new_area.push(@table.size + e) }
-      @analysis_area.push(new_area)
+      @analysis_area.push(new_rows)
       # between (old_lower, new_lower) in area
       @analysis_area.push(old_lower_value_rows + new_lower_value_rows)
       # between (old_upper, new_upper) in area
       @analysis_area.push(old_upper_value_rows + new_upper_value_rows)
     when "both side" # TODO
-      new_area = []
       # get max, min of parameter
+      max_tmp = exteded_column.parameters.max
+      min_tmp = exteded_column.parameters.min
+      max_value_rows = []
+      min_value_rows = []
+      for i in 0...@table[exteded_column.id].size
+        if @table[exteded_column.id][i] == exteded_column.corresponds.key(max_tmp)
+          max_value_rows.push(i)
+        elsif @table[exteded_column.id][i] == exteded_column.corresponds.key(min_tmp)
+          min_value_rows.push(i)
+        end
+      end
       # (new_lower, old_lower(min)
-      new_area = []
-      @analysis_area.push(new_area)
+      @analysis_area.push(new_lower_value_rows + min_value_rows)
       # (old_upper(max), new_upper)
-      @analysis_area.push(new_area)
+      @analysis_area.push(max_value_rows + new_upper_value_rows)
     else
       p "create NO area for analysis"
     end

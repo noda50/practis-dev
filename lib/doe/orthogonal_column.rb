@@ -55,7 +55,8 @@ class OrthogonalColumn
 	end
 
 	# in case of new parameter points, check & alignment parameter in order
-	def check_alignment(add_point_case, add_parameters)
+	def assign_parameter(old_level, add_point_case, add_parameters)
+
 	  case add_point_case
 	  when OUTSIDE_PLUSE
 	    right_digit_of_max = @corresponds.max_by(&:last)[0]
@@ -81,7 +82,7 @@ class OrthogonalColumn
 	  when BOTH_SIDE
 	    right_digit_of_max = @corresponds.max_by(&:last)[0]
 	    if right_digit_of_max[right_digit_of_max.size - 1] == "1"
-	      add_parameters.sort.reverse!
+	      add_parameters.reverse!
 	    else
 	      add_parameters.sort!
 	    end
@@ -89,14 +90,15 @@ class OrthogonalColumn
 	    p "error"
 	  end
 	  @parameters += add_parameters
+	  link_parameter(old_level)
 	end
 
-	# 
-	def assign_parameter(old_level, parameters)
+	# bit string link to parameters
+	def link_parameter(old_level)
 	  for i in old_level...@level do
 	    bit = ("%0" + @digit_num.to_s + "b") % i
 	    if !@corresponds.key?(bit)
-	      @corresponds[bit] = parameters[i]
+	      @corresponds[bit] = @parameters[i]
 	    end
 	  end
 	end
@@ -104,5 +106,14 @@ class OrthogonalColumn
 	# 
 	def get_parameter(bit_string)
 		return @corresponds[bit_string]
+	end
+	# 
+	def get_bit_string(parameter)
+		if parameter[:name] != @parameter_name
+			return nil
+		end
+		bit_string = []
+		parameter[:variables].each{ |v| bit_string.push(@corresponds.key(v)) }
+		return bit_string
 	end
 end
