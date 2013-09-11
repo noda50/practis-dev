@@ -63,9 +63,7 @@ class OrthogonalArray
     }
 
     area = []
-    for i in 0...@table[0].size
-      area.push(i)
-    end
+    @table[0].size.times{|i| area.push(i)}
     @analysis_area.push(area)
   end
 
@@ -74,9 +72,10 @@ class OrthogonalArray
     old_level = 0
     old_digit_num = 0
     twice = false
-    new_rows = []
+    ext_column = nil
     @colums.each{ |oc|
       if oc.parameter_name == parameter[:name]
+        ext_column = oc
         old_level = oc.level        
         oc.update_level(parameter[:variables].size)
         old_digit_num = oc.digit_num
@@ -92,10 +91,6 @@ class OrthogonalArray
           @l_size *= 2
         end
         oc.assign_parameter(old_level, add_point_case, parameter[:variables])
-        new_bit =  oc.get_bit_string(parameter)
-        id_set.each{|row| new_rows.push(row + (@table[oc.id].size / 2))}
-        # generate new analysis area
-        generate_new_analysis_area(id_set, new_rows, add_point_case, oc)
         break
       end
     }
@@ -108,10 +103,13 @@ class OrthogonalArray
         end
       }
     end
+    return ext_column
   end
 
-  # 
-  def generate_new_analysis_area(old_rows, new_rows, add_point_case, exteded_column)
+  # for a kind of parameter
+  def generate_new_analysis_area(old_rows, add_point_case, exteded_column)
+    new_rows = []
+    old_rows.each{|row| new_rows.push(row + (@table[exteded_column.id].size / 2))}
     old_lower_value_rows = []
     old_upper_value_rows = []
     old_lower_value = nil
@@ -176,25 +174,25 @@ class OrthogonalArray
       end
     }
 
+    generated_area = []
     case add_point_case
     when "outside(+)"
       # (new_lower, new_upper)
-      @analysis_area.push(new_rows)
+      generated_area.push(new_rows)
       # new area between (old_upper, new_lower)
-      @analysis_area.push(old_upper_value_rows + new_lower_value_rows)
-      pp @analysis_area
+      generated_area.push(old_upper_value_rows + new_lower_value_rows)
     when "outside(-)"
       # (new_lower, new_upper)
-      @analysis_area.push(new_rows)
+      generated_area.push(new_rows)
       # new area between (new_upper, old_lower)
-      @analysis_area.push(new_upper_value_rows + old_lower_value_rows)
+      generated_area.push(new_upper_value_rows + old_lower_value_rows)
     when "inside"
       # (new_lower, new_upper)
-      @analysis_area.push(new_rows)
+      generated_area.push(new_rows)
       # between (old_lower, new_lower) in area
-      @analysis_area.push(old_lower_value_rows + new_lower_value_rows)
+      generated_area.push(old_lower_value_rows + new_lower_value_rows)
       # between (old_upper, new_upper) in area
-      @analysis_area.push(old_upper_value_rows + new_upper_value_rows)
+      generated_area.push(old_upper_value_rows + new_upper_value_rows)
     when "both side" # TODO
       # get max, min of parameter
       max_tmp = exteded_column.parameters.max
@@ -209,12 +207,14 @@ class OrthogonalArray
         end
       end
       # (new_lower, old_lower(min)
-      @analysis_area.push(new_lower_value_rows + min_value_rows)
+      generated_area.push(new_lower_value_rows + min_value_rows)
       # (old_upper(max), new_upper)
-      @analysis_area.push(max_value_rows + new_upper_value_rows)
+      generated_area.push(max_value_rows + new_upper_value_rows)
     else
       p "create NO area for analysis"
     end
+    @analysis_area += generated_area
+    return generated_area
   end
 
   # col番目のベクトルのrow番目に記述されたn水準のうちの1つを示す値を返す
