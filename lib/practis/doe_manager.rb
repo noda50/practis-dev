@@ -74,7 +74,8 @@ module Practis
       end
 
       # get the parameter with 'ready' state.
-      if (p_ready = @database_connector.read_column(:parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
+      if (p_ready = @database_connector.read_column(
+          :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
         p_ready.each do |p|
           break if request_number <= 0
           if (matches = @parameter_pool.select { |pp|
@@ -99,101 +100,103 @@ module Practis
       end
 
       # generate the parameters from the scheduler
-      while request_number > 0
-        if (parameter = @current_var_set.get_next).nil?
-          if @va_queue.length <= 0 
-            if !@to_be_varriance_analysis
-              info("all parameter is already allocated!")
-              break
+      @mutexAllocateParameter.synchronize{
+        while request_number > 0
+          if (parameter = @current_var_set.get_next).nil?
+            if @va_queue.length <= 0 
+              if !@to_be_varriance_analysis
+                info("all parameter is already allocated!")
+                break
+              else
+                info("wait to finish analyzing result !")
+                debug("exe queue size: #{@va_queue.length}")
+                debug("id quequ: #{@id_list_queue}")
+                debug("va counter: #{@va_counter}")
+                debug("id_queue flag: #{@to_be_varriance_analysis}")
+                break
+              end
             else
-              info("wait to finish analyzing result !")
-              debug("exe queue size: #{@va_queue.length}")
-              debug("id quequ: #{@id_list_queue}")
-              debug("va counter: #{@va_counter}")
-              debug("id_queue flag: #{@to_be_varriance_analysis}")
-              break
+              debug("queue length: #{@va_queue.length}")
+              @current_var_set = @va_queue.shift
+              @va_counter += 1
+              @to_be_varriance_analysis = true
+
+              if @current_var_set.nil?
+                debug("no more parameter set !!")
+                break# finalize
+              end
+
+              @total_parameters += @current_var_set.get_total
+
+              info( "#{@current_var_set} \n" +
+              "not allocated parameters: #{@current_var_set.get_available}, " +
+              "finish: #{@finished_parameters}, " +
+              "total: #{@total_parameters}")
+
+              parameter = @current_var_set.get_next
             end
-          else
-            debug("queue length: #{@va_queue.length}")
-            @current_var_set = @va_queue.shift
-            @va_counter += 1
-            @to_be_varriance_analysis = true
-
-            if @current_var_set.nil?
-              debug("no more parameter set !!")
-              break# finalize
-            end
-
-            @total_parameters += @current_var_set.get_total
-
-            info( "#{@current_var_set} \n" +
-            "not allocated parameters: #{@current_var_set.get_available}, " +
-            "finish: #{@finished_parameters}, " +
-            "total: #{@total_parameters}")
-
-            parameter = @current_var_set.get_next
           end
-        end
 
-        condition = parameter.parameter_set.map { |p|
-          "#{p.name} = '#{p.value}'" }.join(" and ")
-        debug("#{condition}, id: #{parameter.uid}")
+          condition = parameter.parameter_set.map { |p|
+            "#{p.name} = '#{p.value}'" }.join(" and ")
+          debug("#{condition}, id: #{parameter.uid}")
 
-        res_key = []
-        debug("parameter set: #{parameter.parameter_set}")
-        parameter.parameter_set.each { |p|
-          if @name_list.include?(p.name)
-            res_key.push("#{p.name} = '#{p.value}'")
-          end
-        }
-
-        debug("\n res_key: #{res_key} \n")
-        tmp_res_key = res_key.map { |p| "#{p}"}.join(" and ")
-
-        if !@id_list_queue[@va_counter][:list].include?(tmp_res_key)
-          @id_list_queue[@va_counter][:list][tmp_res_key] = []
-        end
-
-
-        if (retval = @database_connector.read_column(:parameter, condition)).length == 0 #
-          arg_hash = {parameter_id: parameter.uid,
-                      allocated_node_id: src_id,
-                      executing_node_id: src_id,
-                      allocation_start: iso_time_format(timeval),
-                      execution_start: nil,
-                      state: PARAMETER_STATE_ALLOCATING}
+          res_key = []
+          debug("parameter set: #{parameter.parameter_set}")
           parameter.parameter_set.each { |p|
-            arg_hash[(p.name).to_sym] = p.value }
-          # @id_list[tmp_res_key].push(parameter.uid)
-          @id_list_queue[@va_counter][:list][tmp_res_key].push(parameter.uid)
-          if @database_connector.insert_column(:parameter, arg_hash).length != 0
-            error("fail to insert a new parameter.")
-          else
-            parameter.state = PARAMETER_STATE_ALLOCATING
-            parameters.push(parameter)
-            @parameter_pool.push(parameter)
-            request_number -= 1 
-          end
-        else
-          @total_parameters -= 1
-                    
-          info("the parameter already executed on previous or by the others.")
-          info("condition: #{condition}")
-          retval.each do |r|
-            info(r)
-
-            # store result id
-            # @id_list[tmp_res_key].push(r["parameter_id"])
-            @id_list_queue[@va_counter][:list][tmp_res_key].push(r["parameter_id"])
-
-            if(parameter.uid != r["parameter_id"])
-              parameter.state = r["state"]
-              @parameter_pool.push(parameter)
+            if @name_list.include?(p.name)
+              res_key.push("#{p.name} = '#{p.value}'")
             end
+          }
+
+          debug("\n res_key: #{res_key} \n")
+          tmp_res_key = res_key.map { |p| "#{p}"}.join(" and ")
+
+          if !@id_list_queue[@va_counter][:list].include?(tmp_res_key)
+            @id_list_queue[@va_counter][:list][tmp_res_key] = []
           end
-          next
+
+
+          if(0 ==
+             (count = @database_connector.read_count(:parameter, condition)))
+            arg_hash = {parameter_id: parameter.uid,
+                        allocated_node_id: src_id,
+                        executing_node_id: src_id,
+                        allocation_start: iso_time_format(timeval),
+                        execution_start: nil,
+                        state: PARAMETER_STATE_ALLOCATING}
+            parameter.parameter_set.each { |p|
+              arg_hash[(p.name).to_sym] = p.value }
+            # @id_list[tmp_res_key].push(parameter.uid)
+            @id_list_queue[@va_counter][:list][tmp_res_key].push(parameter.uid)
+            if @database_connector.insert_column(:parameter, arg_hash).length != 0
+              error("fail to insert a new parameter.")
+            else
+              parameter.state = PARAMETER_STATE_ALLOCATING
+              parameters.push(parameter)
+              @parameter_pool.push(parameter)
+              request_number -= 1 
+            end
+          else
+            warn("the parameter already executed on previous or by the others." +
+                 " count: #{count}" +
+                 " condition: (#{condition})")
+            @total_parameters -= 1
+            @database_connector.read_record(:parameter, condition){|retval|
+              retval.each{ |r|
+                info(r)
+                @id_list_queue[@va_counter][:list][tmp_res_key].push(r["parameter_id"])
+                if(parameter.uid != r["parameter_id"])
+                  parameter.state = r["state"]
+                  @parameter_pool.push(parameter)
+                end
+              }
+            }
+            debug("parameter.state = #{parameter.state.inspect}");
+            next
+          end
         end
-      end
+      }
       return parameters
     end
 
@@ -560,12 +563,6 @@ module Practis
       end
     end
 
-    private
-    def method_name
-      
-    end
-
-
     def show_param_combination
       for j in 0...@paramCombinationArray[0].size
         for i in 0...@paramCombinationArray.size
@@ -632,6 +629,5 @@ module Practis
       end
     end
 =end
-
   end
 end
