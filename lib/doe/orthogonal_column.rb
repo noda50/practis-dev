@@ -63,19 +63,19 @@ class OrthogonalColumn
 	    if right_digit_of_max[right_digit_of_max.size - 1] == "1"
 	      add_parameters.sort!
 	    else
-	      add_parameters.sort.reverse!
+	      add_parameters.reverse!
 	    end
 	  when OUTSIDE_MINUS
 	    right_digit_of_min = @corresponds.min_by(&:last)[0]
 	    if right_digit_of_min[right_digit_of_max.size - 1] == "0"
 	      add_parameters.sort!
 	    else
-	      add_parameters.sort.reverse!
+	      add_parameters.reverse!
 	    end
 	  when INSIDE
 	    digit_num_of_left_point = @corresponds.max_by { |item| (item[1] < add_parameters[0]) ? item[1] : -1}[0]
 	    if digit_num_of_left_point[digit_num_of_left_point.size - 1] == "0"
-	      add_parameters.sort.reverse!
+	      add_parameters.reverse!
 	    else
 	      add_parameters.sort!
 	    end
