@@ -93,13 +93,7 @@ class OrthogonalArray
         end
         oc.assign_parameter(old_level, add_point_case, parameter[:variables])
         new_bit =  oc.get_bit_string(parameter)
-        for i in 0...@table[oc.id].size
-          for j in 0...new_bit.size
-            if @table[oc.id][i] == new_bit[j]
-              new_rows.push(i)
-            end
-          end
-        end
+        id_set.each{|row| new_rows.push(row + (@table[oc.id].size / 2))}
         # generate new analysis area
         generate_new_analysis_area(id_set, new_rows, add_point_case, oc)
         break
