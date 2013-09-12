@@ -1,4 +1,4 @@
-require './orthogonal_column'
+require 'doe/orthogonal_column'
 require 'pp'
 
 # extend 2 levels orthogonal array
@@ -23,7 +23,6 @@ class OrthogonalArray
 
     @l_size = level**l
     @max_assign_factor = level**l - 1
-    
     vector = []
     (@l_size.to_s(2).size - 1).times{ vector.push([]) }
 

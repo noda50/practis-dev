@@ -13,7 +13,7 @@ require 'practis/database_connector'
 require 'practis/message_handler'
 require 'practis/net'
 require 'practis/parameter_parser'
-require 'practis/result_paraser'
+require 'practis/result_parser'
 
 
 require 'doe/orthogonal_array'
@@ -29,12 +29,14 @@ module Practis
 
     def initialize(config_file, parameter_file, database_file, result_file, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
-      # @va_queue_mutex = Mutex.new
       @va_queue = []
       @current_var_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
-      @name_list = ["Noise","NumOfGameIteration"]
+      debug("/-/-/-/-/-/-/-/-/-/-/-/-/")
+      pp @current_var_set.variable_set
+      exit(0)
+
+      # @name_list = ["Noise","NumOfGameIteration"]
       @current_var_set.scheduler.prepareDoE(@name_list)
-      # @id_list = {}
       @total_parameters = @current_var_set.get_total
       
       hash ={:list => id_list = {}, :size => @current_var_set.get_total}
@@ -43,10 +45,10 @@ module Practis
       @va_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
-      @doe_file = open("doe.log", "w")
+      # @doe_file = open("doe.log", "w")
     end
 
-=begin === methods of manager.rb ===
+    # === methods of manager.rb ===
     # create_executable_command
     # allocate_node(node_type, address, id=nil, parallel=nil)
     # allocate_parameters(request_number, src_id) # <- override
@@ -63,8 +65,8 @@ module Practis
     # get_parameter_progress
     # get_results
     # ===========================
-=end
-    
+
+    ##------------------------------------------------------------
     # override method
     #=== Allocate requested number of parameters.
     def allocate_parameters(request_number, src_id)
@@ -74,7 +76,7 @@ module Practis
       end
 
       # get the parameter with 'ready' state.
-      if (p_ready = @database_connector.read_column(
+      if (p_ready = @database_connector.read_record(
           :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
         p_ready.each do |p|
           break if request_number <= 0
@@ -102,7 +104,8 @@ module Practis
       # generate the parameters from the scheduler
       @mutexAllocateParameter.synchronize{
         while request_number > 0
-          if (parameter = @current_var_set.get_next).nil?
+          newId = getNewParameterId
+          if (parameter = @current_var_set.get_next(newId)).nil?
             if @va_queue.length <= 0 
               if !@to_be_varriance_analysis
                 info("all parameter is already allocated!")
@@ -133,7 +136,7 @@ module Practis
               "finish: #{@finished_parameters}, " +
               "total: #{@total_parameters}")
 
-              parameter = @current_var_set.get_next
+              parameter = @current_var_set.get_next(newId)
             end
           end
 
@@ -166,8 +169,8 @@ module Practis
                         execution_start: nil,
                         state: PARAMETER_STATE_ALLOCATING}
             parameter.parameter_set.each { |p|
-              arg_hash[(p.name).to_sym] = p.value }
-            # @id_list[tmp_res_key].push(parameter.uid)
+              arg_hash[(p.name).to_sym] = p.value
+            }
             @id_list_queue[@va_counter][:list][tmp_res_key].push(parameter.uid)
             if @database_connector.insert_column(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
@@ -200,6 +203,7 @@ module Practis
       return parameters
     end
 
+    ##------------------------------------------------------------
     # override method
     # update is called in main loop
     def update
@@ -247,43 +251,25 @@ module Practis
               debug("\n\n check allocate parameter !! \n")
               retval.each {|r| debug("#{r}")}
               finalize
-              @doe_file.close
+              # @doe_file.close
             else
               error("all parameter is finished? Huh???")
             end
           end
         end
       end
-
-      @doe_file.flush
-      
-      # if 500 <= @finished_parameters
-      #   debug("finished parameters : #{@finished_parameters} ")
-      #   finalize
-      # end
+      # @doe_file.flush
     end
 
-
+    ##------------------------------------------------------------
     # test variance analysis
     def variance_analysis
       uploaded_result_count = 0
       result_list = []
-      # @id_list.each{|lk, lv|
-      #   tmp = []
-      #   lv.each{ |v|
-      #     if (retval = @database_connector.read_column(:result, "result_id = '#{v}'")).length > 0
-      #       uploaded_result_count += 1
-      #       retval.each{ |r| tmp.push(r["value"]) }
-      #     else
-      #       debug("retval: #{retval}")
-      #     end
-      #   }
-      #   result_list.push(tmp)
-      # }
       @id_list_queue[0][:list].each{|lk, lv|
         tmp = []
         lv.each{ |v|
-          if (retval = @database_connector.read_column(:result, "result_id = '#{v}'")).length > 0
+          if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
             uploaded_result_count += 1
             retval.each{ |r| tmp.push(r["value"]) }
           else
@@ -294,20 +280,21 @@ module Practis
       }
 
       
-      if uploaded_result_count >= @id_list_queue[0][:size]#@current_var_set.get_total
-        if uploaded_result_count > 20
-          @doe_file.write("Num. of uploaded results #{uploaded_result_count}\n")
-        end
-        debug("id list: #{@id_list_queue[0][:list]}")# debug("id list: #{@id_list}")
+      if uploaded_result_count >= @id_list_queue[0][:size]
+        # if uploaded_result_count > 20
+          # @doe_file.write("Num. of uploaded results #{uploaded_result_count}\n")
+        # end
+        debug("id list: #{@id_list_queue[0][:list]}")
         debug("result length: #{result_list.size}")
         debug("result: #{result_list}")
-        # debug("assigned: #{current_var_set.scheduler.scheduler.get_factor_indexes}")
         factor_names = []
         @current_var_set.scheduler.scheduler.get_factor_indexes.each_key{|k| factor_names.push(k)}
         va = VarianceAnalysis.new(@current_var_set.scheduler.scheduler.get_factor_indexes, result_list, factor_names, 2)
+        #
+        # va = VarianceAnalysis.new()
         # significant parameter is divide !!
 
-        if va.f_e >= 1
+        if va.e_f >= 1
           next_parameter_set_seed = Hash.new
           num_significance = 0
           # debug("name list: #{@name_list}")
@@ -315,8 +302,8 @@ module Practis
           @current_var_set.variable_set.each { |v|
             # debug("variable set: #{v}")
             if @name_list.include?(v.name)
-              # debug("F value: #{va.f[v.name]}, F error: #{va.f_e}")
-              if @f_disttable.get_Fvalue(1, va.f_e, va.f[v.name])
+              # debug("F value: #{va.f[v.name]}, F error: #{va.e_f}")
+              if @f_disttable.get_Fvalue(1, va.e_f, va.f[v.name])
                 if !(div_param = divide_parameter_range(v, 2)).nil?
                   next_parameter_set_seed[v.name] = div_param
                   # debug("hash: #{next_parameter_set_seed[v.name]}")
@@ -362,9 +349,12 @@ module Practis
               }
               next_parameter = Practis::VariableSet.new(variables_array, "DesginOfExperimentScheduler")
               debug("next parameter set: #{next_parameter}")
-              @doe_file.write("#{next_parameter}\n")
+              # @doe_file.write("#{next_parameter}\n")
               @va_queue.push(next_parameter)
-              next_parameter.scheduler.prepareDoE(@name_list)
+
+              # TODO: modify
+              # next_parameter.scheduler.prepareDoE(@name_list)
+
               hash ={:list => id_list = {}, :size => next_parameter.get_total}
               @id_list_queue.push(hash)
             }
@@ -382,6 +372,7 @@ module Practis
       # debug("queue of DoE parameter set: #{@va_queue}")
     end
 
+    ##------------------------------------------------------------
     # var: parameter (Practis::Variable)
     # divide_size: 
     # return array of variable_array
@@ -437,6 +428,7 @@ module Practis
       end
     end
 
+    ##------------------------------------------------------------
     def cast_decimal(var)
       if !var.kind_of?(Float)
         return var
@@ -445,11 +437,12 @@ module Practis
       end
     end
 
+    ##------------------------------------------------------------
     # override method
     #
     def get_parameter_progress
       finished = nil
-      if (retval = @database_connector.read_column(
+      if (retval = @database_connector.read_record(
           :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
         finished = retval
       end
@@ -542,7 +535,7 @@ module Practis
       @id_list_queue[0][:list].each{|lk, lv|
         tmp = []
         lv.each{ |v|
-          if (retval = @database_connector.read_column(:result, "result_id = '#{v}'")).length > 0
+          if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
             uploaded_result_count += 1
             retval.each{ |r| tmp.push(r["value"]) }
           else
@@ -571,63 +564,5 @@ module Practis
         puts
       end
     end
-
-    # 指定した直交表n行目のパラメータ組み合わせを配列で返す
-    def get_parameterSet(n = 0)
-      arr = Array.new
-      for i in 0...@paramCombinationArray.size
-        arr.push(@paramCombinationArray[i][n])
-      end
-      return arr
-    end
-
-    # 指定した直交表n行目のパラメータ組み合わせをstringを返す
-    def get_parameterSetString(n = 0, spliter = " ")
-      s = ""
-      for i in 0...@paramCombinationArray.size
-        s += spliter + @paramCombinationArray[i][n].to_s
-      end
-      return s
-    end
-
-    def get_assignedSet(n = 0)
-      arr = Array.new
-      for i in 0...@assignedOA.size
-        arr.push(@assignedOA[i][n])
-      end
-      return arr
-    end
-
-=begin
-    # 再帰的に組み合わせを生成
-    # aは1次元配列, bは2次元配列のパラメータセット
-    def crossCombi(a, b)
-      p "a: " + a.to_s #
-      p "b: " + b.to_s #
-
-      tmp = b.shift()
-      p "tmp: " + tmp.to_s #
-
-      if b.empty? then
-        combi = a.product(tmp).to_a
-        p combi #
-
-        combi.each{|arr|
-          arr.flatten!
-        }
-
-        p "fla_combi: " + combi.to_s
-
-        return combi
-      else
-        combi = a.product(tmp).to_a
-        combi.each{|arr|
-          arr.flatten!
-        }
-        p "fla_combi: " + combi.to_s
-        return crossCombi(combi, b).to_a
-      end
-    end
-=end
   end
 end

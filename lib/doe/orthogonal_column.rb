@@ -30,8 +30,7 @@ class OrthogonalColumn
 	end
 
 	# check digit number 
-	def equal_digit_num(old_digit_num) 
-	  # old_digit_num = @digit_num
+	def equal_digit_num(old_digit_num)
 	  @digit_num = sqrt(@level).ceil
 	  if old_digit_num < @digit_num
 	    return true
