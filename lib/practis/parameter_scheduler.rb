@@ -22,9 +22,9 @@ module Practis
       @mutex = Mutex.new() ;
     end
 
-    def get_parameter_set
+    def get_parameter_set(id=nil)
       @mutex.synchronize{
-        if (parameter_array = @scheduler.get_parameter_set).nil? ||
+        if (parameter_array = @scheduler.get_parameter_set(id)).nil? ||
             parameter_array.include?(nil)
           return nil
         end
@@ -69,7 +69,7 @@ module Practis
         end
       end
 
-      def get_parameter_set
+      def get_parameter_set(id=nil)
         parameter_array = []
         # check whether all of the parameters are allocated?
         if current_indexes[current_indexes.length - 1] >=
@@ -151,7 +151,7 @@ module Practis
         debug("random scheduler initiated, #{@total_number}")
       end
 
-      def get_parameter_set
+      def get_parameter_set(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, total: #{@total_indexes.length}, " +
@@ -209,8 +209,8 @@ module Practis
       attr_reader :current_indexes
       attr_reader :total_indexes
       attr_reader :variable_set
-      attr_reader :orthogonal_table
-      attr_reader :current_area
+      attr_reader :oa
+      attr_reader :analysis
 
       def initialize(variable_set)
         @variable_set = chk_arg(Array, variable_set)
@@ -224,7 +224,6 @@ module Practis
           end
         end
 
-        # ====== TODO: modify parameters array to variable instance
         parameters = []
         @unassigned = []
         @total_indexes = []
@@ -239,7 +238,6 @@ module Practis
             @unassigned_total.push(v.length)
           end
         }
-        # ====== TODO end
         
         @total_number = 1
         @total_indexes.collect {|t| @total_number *= t}
@@ -247,7 +245,10 @@ module Practis
         @available_numbers = @total_number.times.map { |i| i }
 
         @oa = OrthogonalArray.new(parameters)
-        @current_area = @oa.analysis_area[0]
+        @analysis = {:area => @oa.analysis_area[0],
+                    :result_id => {},
+                    :size => @oa.table[0].size*@unassigned_total_size}
+        # @analysis[:area] = @oa.analysis_area[0]
         @experimentSize = @oa.table[0].size
 
         @unassigned_total_size = 1
@@ -260,7 +261,7 @@ module Practis
       
 
       # get parameter set from variable_set
-      def get_parameter_set
+      def get_parameter_set(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, \n" +
@@ -277,7 +278,6 @@ module Practis
         v_index = v / @unassigned_total_size
         @allocated_numbers.push(v)
 
-        # corr_bit_str = @oa.(area[v_index])
         not_allocate_indexes = value_to_indexes(v % @unassigned_total_size)
         # debug("check indexes: #{indexes}")
 
@@ -287,7 +287,7 @@ module Practis
           unassign_flag = true
           @oa.colums.each{|col|
             if @variable_set[i].name == col.parameter_name
-              parameter_array.push(@oa.get_parameter(@current_area[v_index], col.id))
+              parameter_array.push(@oa.get_parameter(@analysis[:area][v_index], col.id))
               unassign_flag = false
               break
             end
@@ -297,21 +297,11 @@ module Practis
           end 
         }
 
-        # @variable_set.length.times{ |i|
-        #   if @not_allocate_parameter.include?(@variable_set[i].name)
-        #     debug("name: #{@variable_set[i].name}, index: #{not_allocate_indexes[i]}")
-        #     parameter_array.push(@variable_set[i].get_n(not_allocate_indexes[i]))
-        #   else
-        #     debug("name: #{@variable_set[i].name}, index: #{indexes[i]}")
-        #     parameter_array.push(@variable_set[i].get_n(corr_bit_str[i]))
-        #   end
-        # }
-        # debug("check paramerer array = #{parameter_array}")
+        if (@analysis[:result_id].key?(@analysis[:area][v_index]))
+          @analysis[:result_id][@analysis[:area][v_index]] = []
+        end  
+        @analysis[:result_id][@analysis[:area][v_index]].push(id)
 
-        # pp parameter_array
-        # if v_index == 3
-        #   exit(0)
-        # end
         return parameter_array
       end
 
@@ -326,16 +316,12 @@ module Practis
         return @oa.table[0].size*@unassigned_total_size
       end
 
-
-      def update_area(next_area)
-
-        @current_area = area
+      # 
+      def update_analysis(next_area)
+        @analysis[:area] = next_area
+        @analysis[:result_id] = {}
+        @analysis[:size] = next_area.size*@unassigned_total_size
       end
-
-      # private
-      # def get_factor_indexes
-      #   return @assigned
-      # end
 
       # return parameter combination indexes
       private
