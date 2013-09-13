@@ -219,7 +219,8 @@ module Practis
             next
           end
           field[0][:type] == "float" || field[0][:type] == "double" ?
-            "#{cond[:key]} = CAST('#{cond[:value]}' AS DECIMAL)" :
+#            "#{cond[:key]} = CAST('#{cond[:value]}' AS DECIMAL)" :
+            "#{cond[:key]} = (#{cond[:value]} * 1.0)" :
             "#{cond[:key]} = '#{cond[:value]}'"
         }.join(" AND ")
         return retval
