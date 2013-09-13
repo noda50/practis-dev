@@ -49,6 +49,10 @@ module Practis
 
     class MysqlCommandGenerator < DatabaseCommandGenerator
 
+      ##::::::::::::::::::::::::::::::::::::::::::::::::::
+      EpsForRealComp = 1.0e-6 ;
+
+      ##--------------------------------------------------
       def generate(database, table, arg_hash, condition)
         tbl = nil
         if !database.nil? && !table.nil?
@@ -218,10 +222,28 @@ module Practis
             error("condition #{cond[:key]} does not exist!")
             next
           end
-          field[0][:type] == "float" || field[0][:type] == "double" ?
+          #<<<<<[2013/09/13 I.Noda]
+          # for precise comparison of double value
+#          field[0][:type] == "float" || field[0][:type] == "double" ?
 #            "#{cond[:key]} = CAST('#{cond[:value]}' AS DECIMAL)" :
-            "#{cond[:key]} = (#{cond[:value]} * 1.0)" :
-            "#{cond[:key]} = '#{cond[:value]}'"
+#            "#{cond[:key]} = (#{cond[:value]} * 1.0)" :
+#            "#{cond[:key]} = '#{cond[:value]}'"
+          condstr = nil ;
+          col = cond[:key] ;
+          val = cond[:value] ;
+          if(field[0][:type] == "float" || field[0][:type] == "double") then
+            valA = val.to_f * (1.0 + EpsForRealComp) ;
+            valB = val.to_f * (1.0 - EpsForRealComp) ;
+            if(val.to_f > 0.0) then
+              condstr = "`#{col}` BETWEEN #{valB} AND #{valA}" ;
+            else
+              condstr = "`#{col}` BETWEEN #{valA} AND #{valB}" ;
+            end
+          else
+            condstr = "`#{col}` = '#{val}'" ;
+          end
+          condstr ;
+          #>>>>>[2013/09/13 I.Noda]
         }.join(" AND ")
         return retval
       end
