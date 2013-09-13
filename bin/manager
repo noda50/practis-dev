@@ -7,7 +7,7 @@ require 'optparse'
 
 require 'practis'
 require 'practis/manager'
-
+require 'practis/doe_manager'
 
 # Parse command line options.
 options = {}
@@ -72,6 +72,8 @@ if result_file.nil?
 end
 
 # Run PRACTIS using configurations.
-manager = Practis::Manager.new(config_file, parameter_file, database_file,
+# manager = Practis::Manager.new(config_file, parameter_file, database_file,
+#                                result_file, addr)
+manager = Practis::DoeManager.new(config_file, parameter_file, database_file,
                                result_file, addr)
 manager.loop

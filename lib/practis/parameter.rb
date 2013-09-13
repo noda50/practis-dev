@@ -144,6 +144,12 @@ module Practis
     def length
       return @parameters.length
     end
+
+    ## [2013/09/12 H.Matsushima] for design of experiment
+    # === 
+    def add_parameter(parameter)
+      @parameters += parameter
+    end
   end
 
   #=== Variable set.
@@ -163,7 +169,7 @@ module Practis
 
     #=== initialize method.
     #variable_set :: an array of Variable objects.
-    #scheduler :: a class name of the scheculer.
+    #scheduler :: a class name of the scheduler.
     def initialize(variable_set, scheduler = "RoundrobinScheduler")
       @variable_set = chk_arg(Array, variable_set)
       @scheduler = Practis::ParameterScheduler.new(@variable_set, scheduler)
@@ -191,6 +197,15 @@ module Practis
     #=== get a total number of variable set.
     def get_total
       return @scheduler.get_total
+    end
+
+    ## [2013/09/12 H.Matsushima] add for design of experiment
+    #=== use by design of experiment
+    def add_variables(name, var_array, old_area, extend_poit)
+      @variable_set += chk_arg(Array, var_array)
+      new_params = []
+      new_params.push({:name => name, :variables => var_array})
+      @scheduler.orthogonal_table.extend_table(old_area, extend_poit, new_params)
     end
 
     ## [2013/09/07 I.Noda] not used anymore

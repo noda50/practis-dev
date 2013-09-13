@@ -31,12 +31,6 @@ module Practis
       super(config_file, parameter_file, database_file, result_file, myaddr)
       @va_queue = []
       @current_var_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
-      debug("/-/-/-/-/-/-/-/-/-/-/-/-/")
-      pp @current_var_set.variable_set
-      exit(0)
-
-      # @name_list = ["Noise","NumOfGameIteration"]
-      @current_var_set.scheduler.prepareDoE(@name_list)
       @total_parameters = @current_var_set.get_total
       
       hash ={:list => id_list = {}, :size => @current_var_set.get_total}
@@ -106,38 +100,38 @@ module Practis
         while request_number > 0
           newId = getNewParameterId
           if (parameter = @current_var_set.get_next(newId)).nil?
-            if @va_queue.length <= 0 
+            # if @va_queue.length <= 0 
               if !@to_be_varriance_analysis
                 info("all parameter is already allocated!")
                 break
               else
                 info("wait to finish analyzing result !")
-                debug("exe queue size: #{@va_queue.length}")
-                debug("id quequ: #{@id_list_queue}")
+                # debug("exe queue size: #{@va_queue.length}")
+                # debug("id quequ: #{@id_list_queue}")
                 debug("va counter: #{@va_counter}")
                 debug("id_queue flag: #{@to_be_varriance_analysis}")
                 break
               end
-            else
-              debug("queue length: #{@va_queue.length}")
-              @current_var_set = @va_queue.shift
-              @va_counter += 1
-              @to_be_varriance_analysis = true
+            # else
+              # debug("queue length: #{@va_queue.length}")
+              # @current_var_set = @va_queue.shift
+              # @va_counter += 1
+              # @to_be_varriance_analysis = true
 
-              if @current_var_set.nil?
-                debug("no more parameter set !!")
-                break# finalize
-              end
+              # if @current_var_set.nil?
+              #   debug("no more parameter set !!")
+              #   break# finalize
+              # end
 
-              @total_parameters += @current_var_set.get_total
+              # @total_parameters += @current_var_set.get_total
 
-              info( "#{@current_var_set} \n" +
-              "not allocated parameters: #{@current_var_set.get_available}, " +
-              "finish: #{@finished_parameters}, " +
-              "total: #{@total_parameters}")
+              # info( "#{@current_var_set} \n" +
+              # "not allocated parameters: #{@current_var_set.get_available}, " +
+              # "finish: #{@finished_parameters}, " +
+              # "total: #{@total_parameters}")
 
-              parameter = @current_var_set.get_next(newId)
-            end
+              # parameter = @current_var_set.get_next(newId)
+            # end
           end
 
           condition = parameter.parameter_set.map { |p|
@@ -151,14 +145,12 @@ module Practis
               res_key.push("#{p.name} = '#{p.value}'")
             end
           }
-
           debug("\n res_key: #{res_key} \n")
           tmp_res_key = res_key.map { |p| "#{p}"}.join(" and ")
 
           if !@id_list_queue[@va_counter][:list].include?(tmp_res_key)
             @id_list_queue[@va_counter][:list][tmp_res_key] = []
           end
-
 
           if(0 ==
              (count = @database_connector.read_count(:parameter, condition)))
@@ -172,7 +164,7 @@ module Practis
               arg_hash[(p.name).to_sym] = p.value
             }
             @id_list_queue[@va_counter][:list][tmp_res_key].push(parameter.uid)
-            if @database_connector.insert_column(:parameter, arg_hash).length != 0
+            if @database_connector.insert_record(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
             else
               parameter.state = PARAMETER_STATE_ALLOCATING
@@ -188,7 +180,7 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 info(r)
-                @id_list_queue[@va_counter][:list][tmp_res_key].push(r["parameter_id"])
+                # @id_list_queue[@va_counter][:list][tmp_res_key].push(r["parameter_id"])
                 if(parameter.uid != r["parameter_id"])
                   parameter.state = r["state"]
                   @parameter_pool.push(parameter)
@@ -224,9 +216,10 @@ module Practis
       debug("id quequ: #{@id_list_queue}")
       debug("va counter: #{@va_counter}")
 
-      if check_uploaded_result_count
-        variance_analysis
-      end
+      # :TODO 
+      # if check_uploaded_result_count
+      #   variance_analysis
+      # end
 
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@current_var_set.get_available}, " +
@@ -240,9 +233,9 @@ module Practis
         @message_handler.join
       end
 
-      debug("\n\n check the requirement for finish !! \n")
+      # debug("\n\n check the requirement for finish !! \n")
 
-      if va_queue.length <= 0 
+      # if va_queue.length <= 0 
         if @current_var_set.get_available <= 0 and @parameter_pool.length <= 0
           debug("\n\n check available: #{@current_var_set.get_available} \n pool: #{@parameter_pool}")
           if !@to_be_varriance_analysis # 2013/08/01
@@ -257,7 +250,7 @@ module Practis
             end
           end
         end
-      end
+      # end
       # @doe_file.flush
     end
 
@@ -426,6 +419,27 @@ module Practis
       else
         return nil
       end
+    end
+
+    # return array of new searching parameters (area) 
+    def generate_next_search_area(area, oa, new_param_list)
+      new_area = []
+
+      extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
+      new_area += oa.generate_new_analysis_area(area, new_param_list[0][:case], extclm)
+      
+      if 2 <= new_param_list.size
+        for i in 1...new_param_list.size
+          tmp_area = []
+          new_area.each { |na| 
+            extclm = oa.extend_table(area, new_param_list[i][:case], new_param_list[i][:param])
+            tmp_area.push(oa.generate_new_analysis_area(na, new_param_list[i][:case], extclm))
+          }
+          new_area = tmp_area
+        end
+      end
+
+      return new_area
     end
 
     ##------------------------------------------------------------
