@@ -50,7 +50,9 @@ module Practis
     class MysqlCommandGenerator < DatabaseCommandGenerator
 
       ##::::::::::::::::::::::::::::::::::::::::::::::::::
-      EpsForRealComp = 1.0e-6 ;
+      Eps_RealComp = 1.0e-6;
+      InnerRatio_RealComp = (1.0 - Eps_RealComp)
+      OuterRatio_RealComp = (1.0 + Eps_RealComp)
 
       ##--------------------------------------------------
       def generate(database, table, arg_hash, condition)
@@ -238,8 +240,8 @@ module Practis
           col = cond[:key] ;
           val = cond[:value] ;
           if(field[0][:type] == "float" || field[0][:type] == "double") then
-            valA = val.to_f * (1.0 + EpsForRealComp) ;
-            valB = val.to_f * (1.0 - EpsForRealComp) ;
+            valA = val.to_f * OuterRatio_RealComp ;
+            valB = val.to_f * InnerRatio_RealComp ;
             if(val.to_f > 0.0) then
               condstr = "`#{col}` BETWEEN #{valB} AND #{valA}" ;
             else
@@ -253,6 +255,301 @@ module Practis
         }.join(" AND ")
         return retval
       end
+
+      ##------------------------------------------------------------
+      ##[2013/09/14 I.Noda]
+      ## (not used yet)
+      ## S-exp like format for condition
+      ## <Condition> ::= <Expr>
+      ## <Expr> ::= <Literal> | <Atom> | <Form>
+      ## <Literal> ::= <<Ruby String>> || <<Ruby Numeral>>
+      ## <Atom> ::= :true | :false | :null
+      ## <Form> ::= <CompForm> | <LogicForm> | <ValueForm> | <DirectForm>
+      ## <CompForm> ::= [<BinaryOp>, <Expr>, <Expr>]
+      ##              | [<TriaryOp>, <Expr>, <Expr>, <Expr>]
+      ## <BinaryOp> ::= :eq | :gt | :ge | :lt | :le
+      ## <TriaryOp> ::= :between
+      SqlCond_CompOp = ({ :eq => ({ :arity => 2, :form => '%s = %s', 
+                                    :float => :relax }),
+                          :ne => ({ :arity => 2, :form => '%s <> %s',
+                                    :float => :relax }),
+                          :gt => ({ :arity => 2, :form => '%s > %s' }),
+                          :ge => ({ :arity => 2, :form => '%s >= %s' }),
+                          :lt => ({ :arity => 2, :form => '%s < %s' }),
+                          :le => ({ :arity => 2, :form => '%s <= %s' }),
+                          :between => ({ :arity => 3, 
+                                         :form => '%s BETWEEN %s AND %s' }),
+                          }) ;
+      ## <LogicForm> ::= [:and, <Expr>, ...]
+      ##               | [:or, <Expr>, ...]
+      ##               | [:not, <Expr>]
+      SqlCond_LogicalOp = ({ :and => ({ :arity => :any, 
+                                        :form => '%s AND %s',
+                                        :null => 'TRUE'}),
+                             :or =>  ({ :arity => :any,
+                                        :form => '%s OR %s',
+                                        :null => 'FALSE'}),
+                             :not => ({ :arity => 1, :form => 'NOT %s'}),
+                           });
+      ## <ValueForm> ::= <MathOpForm> | <FunctionForm> | <FieldForm>
+      ## <MathOpForm> ::= [<MathOp>, <Expr>, <Expr>]
+      ## <MathOp> ::= :add | :sub | :mul | :div
+      ## <FunctionForm> ::= [:function, <FuncName>, <Expr>,...]
+      ## <FieldForm> ::= [:field, <FieldName> [<TableName>]]
+      ## <FuncName> ::= <<Ruby String>>
+      ## <FieldName> ::= <<Ruby String>>
+      ## <DirectForm> ::= [:direct, <<SQL form in Ruby String>>]
+      SqlCond_MathOp = ({ :add => ({ :arity => 2,
+                                     :form => '%s + %s'}),
+                          :sub => ({ :arity => 2,
+                                     :form => '%s - %s'}),
+                          :mul => ({ :arity => 2,
+                                     :form => '%s * %s'}),
+                          :div => ({ :arity => 2,
+                                     :form => '%s / %s'}),
+                        }) ;
+
+      def condition_to_sql_byArray(database, table, condition)
+        statement = " WHERE %s" ;
+        expr = conditionToSql_Expr(database, table, condition) ;
+        return statement % expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_Expr(database, table, condition)
+        case(condition)
+        when String, Numeric, Time then
+          return conditionToSql_Literal(database, table, condition) ;
+        when Symbol then
+          return conditionToSql_Atom(database, table, condition);
+        when Array then
+          return conditionToSql_Form(database, table, condition) ;
+        else
+          error("unknown condition for SQL: #{condition}") ;
+          raise("unknown condition for SQL: #{condition}") ;
+        end
+      end
+
+      ##------------------------------
+      def conditionToSql_Literal(database, table, condition)
+        expr = nil ;
+        case(condition)
+        when String then
+          expr = "'#{condition}'";
+          expr.instance_eval{@type=String} ;
+        when Time then
+          expr = "'#{condition.strftime("%Y-%m-%d %H:%M:%S")}'";
+          expr.instance_eval{@type=Time}
+        when Numeric then ## only Numeric value is delay-evaluated
+          expr = condition ;
+        else
+          error("unknown literal for SQL form : #{condition}");
+          raise("unknown literal for SQL form : #{condition}");
+        end
+        return expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_Atom(database, table, condition)
+        expr = nil ;
+        case(condition)
+        when :true then expr ='TRUE' ; expr.instance_eval{@type=:boolean} ;
+        when :false then expr = 'FALSE' ; expr.instance_eval{@type=:boolean} ;
+        when :null then expr = 'NULL' ; expr.instance_eval{@type=NilClass} ;
+        else
+          error("unknown atom value for SQL: #{condition}");
+          raise("unknown atom value for SQL: #{condition}") ;
+        end
+        return expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_Form(database, table, condition)
+        op = condition[0] ;
+        if(SqlCond_CompOp[op]) then
+          return conditionToSql_CompForm(database, table, condition)
+        elsif(SqlCond_LogicalOp[op]) then
+          return conditionToSql_LogicalForm(database, table, condition)
+        elsif(SqlCond_MathOp[op])
+          return conditionToSql_MathForm(database, table, condition)
+        elsif(op == :field)
+          return conditionToSql_Field(database, table, condition)
+        elsif(op == :function)
+          return conditionToSql_Function(database, table, condition)
+        elsif(op == :direct)
+          return conditionToSql_Direct(database, table, condition)
+        else
+          error("unknown SQL Form : #{condition}") ;
+          raise("unknown SQL Form : #{condition}") ;
+        end
+      end
+
+      ##------------------------------
+      def conditionToSql_CompForm(database, table, condition)
+        opInfo = SqlCond_CompOp[condition[0]] ;
+        return conditionToSql_OpForm(database, table, condition, opInfo);
+      end
+
+      ##------------------------------
+      def conditionToSql_LogicalForm(database, table, condition)
+        opInfo = SqlCond_LogicalOp[condition[0]] ;
+        return conditionToSql_OpForm(database, table, condition, opInfo);
+      end
+
+      ##------------------------------
+      def conditionToSql_OpForm(database, table, condition, opInfo)
+        if(opInfo[:arity] == :any) then
+          return conditionToSql_OpFormNAry(database, table, condition, opInfo);
+        else ## opInfo[:arity] should be an integer
+          return conditionToSql_OpFormFixedAry(database, table, condition, opInfo);
+        end
+      end
+
+      ##------------------------------
+      def conditionToSql_OpFormNAry(database, table, condition, opInfo)
+        expr = nil
+        if(condition.length < 2) then
+          expr = opInfo[:null] ;
+        else
+          form = conditionToSql_Expr(database, table, condition[1]) ;
+          (2...condition.length).each{|i|
+            arg = conditionToSql_Expr(database, table, condition[i]) ;
+            form = opInfo[:form] % [form.to_s, arg.to_s] ;
+          }
+          expr = "(#{form})" ;
+        end
+        expr.instance_eval{@type=:boolean};
+        return expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_OpFormFixedAry(database, table, condition, opInfo)
+        expr = nil ;
+        if(condition.length != opInfo[:arity]+1) then
+          error("wrong arity for the SQL operator: #{condition}, #{opInfo}");
+          raise("wrong arity for the SQL operator: #{condition}, #{opInfo}");
+        else
+          # collect converted args.
+          isFloat = false ;
+          fieldArgs = [] ;
+          args = (1..opInfo[:arity]).map{|i|
+            arg = conditionToSql_Expr(database, table, condition[i]) ;
+            isFloat = true if(arg.is_a?(Float) ||
+                              arg.instance_eval{@type} == Float) ;
+            fieldArgs.push(i-1) if(arg.instance_eval{@isField}) ;
+            arg;
+          }
+          # check needs to relax comparison for float
+          if(isFloat && opInfo[:float] == :relax)
+            ## for :eq and :ne comparison of float values
+            expr = conditionToSql_OpFormRelaxedComp(database, table, condition,
+                                                    opInfo, args, fieldArgs) ;
+          else
+            #normal form
+            expr = opInfo[:form] % args ;
+            expr = "(#{expr})";
+          end
+        end
+        expr.instance_eval{@type=:boolean}
+        return expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_OpFormRelaxedComp(database, table, condition,
+                                           opInfo, args, fieldArgs)
+        newCond = nil ;
+        (pivot,rest) = args ;
+        if(fieldArgs.length > 0 && fieldArgs[0] > 0) then
+          (rest, pivot) = args ;
+        end
+        if(rest.is_a?(Numeric))
+          valA = rest * InnerRatio_RealComp ;
+          valB = rest * OuterRatio_RealComp ;
+          newCond = (rest >= 0 ?
+                     [:between, [:direct, pivot], 
+                      [:direct, valA], [:direct, valB]] :
+                     [:between, [:direct, pivot], 
+                      [:direct, valB], [:direct, valA]]) ;
+        else
+          newCond = [:or, 
+                     [:between, [:direct, pivot],
+                      [:mul, [:direct, rest], InnerRatio_RealComp],
+                      [:mul, [:direct, rest], OuterRatio_RealComp]],
+                     [:between, [:direct, pivot],
+                      [:mul, [:direct, rest], OuterRatio_RealComp],
+                      [:mul, [:direct, rest], InnerRatio_RealComp]]] ;
+        end
+        if(condition[0] == :ne)
+          newCond = [:not, newCond] ;
+        end
+        return conditionToSql_Expr(database, table, newCond) ;
+      end
+
+      ##------------------------------
+      def conditionToSql_Field(database, table, condition)
+        fieldName = condition[1] ;
+        expr = "`#{fieldName}`" ;
+        typeName = getFieldType(database, table, fieldName) ;
+        case(typeName)
+        when "float", "double" then type = Float ;
+        when "int" then type = Integer ;
+        when "time", "datetime", "date" then type = Time ;
+        when "boolean" then type = :boolean ;
+        else type = String ;
+        end
+        expr.instance_eval{@type = type; @isField = true};
+        return expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_MathForm(database, table, condition)
+        opInfo = SqlCond_MathOp[condition[0]] ;
+        if((condition.length() - 1) != opInfo[:arity]) then
+          error("arity does not match: #{condition}, #{opInfo}") ;
+          raise("arity does not match: #{condition}, #{opInfo}") ;
+        else
+          isFloat = false ;
+          lastType = nil ;
+          args = (1...condition.length).map{|i|
+            arg = conditionToSql_Expr(database, table, condition[i])
+            lastType = arg.instance_eval{@type} ;
+            isFloat = true if lastType == Float ;
+            arg ;
+          }
+          expr = "(" + (opInfo[:form] % args) + ")" ;
+          expr.instance_eval{@type=(isFloat ? Float : lastType)};
+          return expr ;
+        end
+      end
+
+      ##------------------------------
+      def conditionToSql_Function(database, table, condition)
+        funcName = condition[1] ;
+        args = (2...condition.length).map{|i|
+          arg = conditionToSql_Expr(database, table, condition[i]) ;
+          arg
+        }
+        expr = "#{funcName}(#{args.join(",")})" ;
+        return expr ;
+      end
+
+      ##------------------------------
+      def conditionToSql_Direct(database, table, condition)
+        return condition[1];
+      end
+
+      ##------------------------------
+      ## temporal
+      def getFieldType(database, table, fieldName)
+        case(fieldName)
+          when /^i/ then return "int" ;
+          when /^f/ then return "float" ;
+          when /^t/ then return "time" ;
+          when /^b/ then return "boolean" ;
+          else "string" ;
+        end
+      end
+
     end
 
     class MongoCommandGenerator < DatabaseCommandGenerator
