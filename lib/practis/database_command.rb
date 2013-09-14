@@ -550,6 +550,20 @@ module Practis
         end
       end
 
+      ##------------------------------
+      ## sample of structured cond
+      #[:eq, 1, 2],
+      #[:gt, [:field, "sFoo"],'bar baz'],
+      #[:ge, [:field, "iBaz"], 345],
+      #[:lt, 3, [:field, "fBar"]],
+      #[:le, [:field, "tTime"], Time.now],
+      #[:ne, [:field, "fFoo"], 3.14],
+      #[:eq, -2.718, [:field, "fBaz"]],
+      #[:eq, [:add, 2.718, 4], [:field, "fBaz"]],
+      #[:between, [:field, "iFoo"], 5, 8],
+      #[:and, [:or, [:eq, 1, 2], [:gt, [:field, 'foo'], 4]], :false]
+
+
     end
 
     class MongoCommandGenerator < DatabaseCommandGenerator
