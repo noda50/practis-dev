@@ -265,8 +265,10 @@ module Practis
       def register_execution(execution_name, project_id, executable_command)
         connector = @connectors[:execution]
         id = rand(MAX_EXECUTION)
-        if (retval = connector.read_record(
-            "project_id = #{project_id}")).length == 0
+#        if (retval = connector.read_record(
+#            "project_id = #{project_id}")).length == 0
+        if (retval = connector.read_record([:eq, [:field, "project_id"],
+                                            project_id])).length == 0
           while connector.insert_record(
               {execution_id: id,
                execution_name: execution_name,
@@ -303,16 +305,25 @@ module Practis
             node_id = r["node_id"]
             # If same id node exists, delete it.
             if my_node_id == node_id
-              unless (dretval = connector.delete_record(
-                  "node_id = #{my_node_id}")).nil?
+#              unless (dretval = connector.delete_record(
+#                  "node_id = #{my_node_id}")).nil?
+              unless (dretval = 
+                      connector.delete_record([:eq, [:field, "node_id"],
+                                               my_node_id])).nil?
                 dretval.each { |dr| warn(dr) }
               end
             else
-              unless (uretval = connector.update_record(
-                  {queueing: 0,
-                   executing: 0,
-                   state: NODE_STATE_FINISH},
-                  "node_id = #{node_id}")).nil?
+#              unless (uretval = connector.update_record(
+#                  {queueing: 0,
+#                   executing: 0,
+#                   state: NODE_STATE_FINISH},
+#                  "node_id = #{node_id}")).nil?
+              unless (uretval =
+                      connector.update_record({ queueing: 0,
+                                                executing: 0,
+                                                state: NODE_STATE_FINISH},
+                                              [:eq, [:field, "node_id"],
+                                               node_id])).nil?
                 uretval.each { |ur| warn(ur) }
               end
               prev_nodes << {parent: r["parent"], state: NODE_STATE_FINISH,
@@ -353,10 +364,14 @@ module Practis
             p["parameter_id"].to_i == r["result_id"].to_i }
           ps.each do |p|
             if p["state"] != PARAMETER_STATE_FINISH
-              unless (retval = pconnector.update_record(
-                  #{:state => PARAMETER_STATE_READY},
-                  {state: PARAMETER_STATE_FINISH},
-                  "parameter_id = #{r["result_id"].to_i}")).nil?
+#              unless (retval = pconnector.update_record(
+#                  #{:state => PARAMETER_STATE_READY},
+#                  {state: PARAMETER_STATE_FINISH},
+#                  "parameter_id = #{r["result_id"].to_i}")).nil?
+              unless (retval = 
+                      pconnector.update_record({state: PARAMETER_STATE_FINISH},
+                                               [:eq, [:field, "parameter_id"],
+                                                r["result_id"].to_i])).nil?
                 retval.each { |ret| warn(ret) }
               end
             end
@@ -367,8 +382,11 @@ module Practis
         parameters.each do |p|
           if p["state"] != PARAMETER_STATE_FINISH &&
               !finished_parameter_ids.include?(p["parameter_id"].to_i)
-            unless (retval = pconnector.delete_record(
-                "parameter_id = #{p["parameter_id"].to_i}")).nil?
+#            unless (retval = pconnector.delete_record(
+#                "parameter_id = #{p["parameter_id"].to_i}")).nil?
+            unless (retval = 
+                    pconnector.delete_record([:eq, [:field, "parameter_id"],
+                                              p["parameter_id"].to_i])).nil?
               retval.each { |ret| warn(ret) }
             end
           end
@@ -421,9 +439,13 @@ module Practis
             .each do |p|
           if (results.select { |r| p["parameter_id"] == r["result_id"] })
               .length > 0
-            if (retval = pconnector.update_record(
-                {state: PARAMETER_STATE_FINISH},
-                "parameter_id = #{p["parameter_id"]}")).length != 0
+#            if (retval = pconnector.update_record(
+#                {state: PARAMETER_STATE_FINISH},
+#                "parameter_id = #{p["parameter_id"]}")).length != 0
+            if (retval = 
+                pconnector.update_record({state: PARAMETER_STATE_FINISH},
+                                         [:eq, [:field, "parameter_id"],
+                                          p["parameter_id"]])).length != 0
               error("fail to update the parameter state")
               retval.each { |r| error(r) }
               next
@@ -433,11 +455,17 @@ module Practis
             finished_parameters << p["parameter_id"].to_i
           else  # check the executing parameter is expired?
             if timeval - p["execution_start"].to_i > expired_timeout
-              if (retval = pconnector.update_record(
-                  {allocation_start: nil,
-                   execution_start: nil,
-                   state: PARAMETER_STATE_READY},
-                  "parameter_id = #{p["parameter_id"]}")).length != 0
+#              if (retval = pconnector.update_record(
+#                  {allocation_start: nil,
+#                   execution_start: nil,
+#                   state: PARAMETER_STATE_READY},
+#                  "parameter_id = #{p["parameter_id"]}")).length != 0
+              if (retval = 
+                  pconnector.update_record({ allocation_start: nil,
+                                             execution_start: nil,
+                                             state: PARAMETER_STATE_READY},
+                                           [:eq, [:field, "parameter_id"],
+                                            p["parameter_id"]])).length != 0
                 error("fail to update the expired parameter.")
                 retval.each { |r| error(r) }
               end

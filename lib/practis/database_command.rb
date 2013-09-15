@@ -291,6 +291,20 @@ module Practis
 
       ##------------------------------------------------------------
       def condition_to_sql(database, table, condition)
+        if(condition.is_a?(String))
+          # [Okada's original]
+          condition_to_sql_byString(database, table, condition) ;
+        else
+          # [Noda's structured one]
+          condition_to_sql_byArray(database, table, condition) ;
+        end
+      end
+
+      ##------------------------------------------------------------
+      def condition_to_sql_byString(database, table, condition)
+        warn("!!!condition_to_sql_byString() is obsolute!!!") ;
+        caller().each{|stack| warn("...called from: #{stack}")} ;
+
         conds = []
         condition.split(/\s*(\ and\ |\ or\ )\s*/).each do |s|
           if s != "and" && s != "or"
@@ -353,7 +367,7 @@ module Practis
       ##[2013/09/14 I.Noda]
       ## (not used yet)
       ## S-exp like format for condition
-      ## <Condition> ::= <Expr>
+      ## <Condition> ::= <Expr> | nil
       ## <Expr> ::= <Literal> | <Atom> | <Form>
       ## <Literal> ::= <<Ruby String>> || <<Ruby Numeral>>
       ## <Atom> ::= :true | :false | :null
@@ -402,10 +416,17 @@ module Practis
                                      :form => '%s / %s'}),
                         }) ;
 
+      ##------------------------------
       def condition_to_sql_byArray(database, table, condition)
-        statement = " WHERE %s" ;
-        expr = conditionToSql_Expr(database, table, condition) ;
-        return statement % expr ;
+        if(condition.nil?)
+          return "" ;
+        else
+          statement = " WHERE %s" ;
+          expr = conditionToSql_Expr(database, table, condition) ;
+          r = statement % expr ;
+          debug("convert: #{condition} -> #{r}") ;
+          return r ;
+        end
       end
 
       ##------------------------------
