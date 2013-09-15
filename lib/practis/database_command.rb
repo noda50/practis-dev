@@ -49,6 +49,10 @@ module Practis
 
     class MysqlCommandGenerator < DatabaseCommandGenerator
 
+      ##::::::::::::::::::::::::::::::::::::::::::::::::::
+      EpsForRealComp = 1.0e-6 ;
+
+      ##--------------------------------------------------
       def generate(database, table, arg_hash, condition)
         tbl = nil
         if !database.nil? && !table.nil?
@@ -142,8 +146,9 @@ module Practis
               s
             end
           }.join(", ")
-          query << condition_to_sql(database, table, condition) \
-            unless condition.nil?
+          unless condition.nil?
+            query << condition_to_sql(database, table, condition)
+          end
           query << ";"
         when "uglobal"
           query << "SET GLOBAL max_allowed_packet=16*1024*1024;"
@@ -158,12 +163,14 @@ module Practis
         query = query.sub("  ", " ") while query.include?("  ")
         return query
       end
-
+      
       private
       #=== Convert a field attribute to SQL field attribute name.
       def field_to_sql(field_attribute_type, field_attribute_value)
-        (error("invalid field attribute. #{field_attribute_type}"); nil) \
-          unless FIELD_ATTRS.include?(field_attribute_type)
+        unless FIELD_ATTRS.include?(field_attribute_type) then
+          (error("invalid field attribute. #{field_attribute_type}"); nil) 
+        end
+
         case field_attribute_type
         when "field" then return field_attribute_value
         when "type" then return field_attribute_value
@@ -178,9 +185,11 @@ module Practis
           else return ""
           end
         when "default"
-          return "DEFAULT #{field_attribute_value}" \
-            if field_attribute_value.length > 0
-          return ""
+          if field_attribute_value.length > 0 then
+            return "DEFAULT #{field_attribute_value}" 
+          else
+            return ""
+          end
         when "extra" then return "#{field_attribute_value}"
         when "comment" then return "#{field_attribute_value}"
         end
@@ -189,6 +198,7 @@ module Practis
         return nil
       end
 
+      ##------------------------------------------------------------
       def condition_to_sql(database, table, condition)
         conds = []
         condition.split(/\s*(\ and\ |\ or\ )\s*/).each do |s|
@@ -218,9 +228,28 @@ module Practis
             error("condition #{cond[:key]} does not exist!")
             next
           end
-          field[0][:type] == "float" || field[0][:type] == "double" ?
-            "#{cond[:key]} = CAST('#{cond[:value]}' AS DECIMAL)" :
-            "#{cond[:key]} = '#{cond[:value]}'"
+          #<<<<<[2013/09/13 I.Noda]
+          # for precise comparison of double value
+#          field[0][:type] == "float" || field[0][:type] == "double" ?
+#            "#{cond[:key]} = CAST('#{cond[:value]}' AS DECIMAL)" :
+#            "#{cond[:key]} = (#{cond[:value]} * 1.0)" :
+#            "#{cond[:key]} = '#{cond[:value]}'"
+          condstr = nil ;
+          col = cond[:key] ;
+          val = cond[:value] ;
+          if(field[0][:type] == "float" || field[0][:type] == "double") then
+            valA = val.to_f * (1.0 + EpsForRealComp) ;
+            valB = val.to_f * (1.0 - EpsForRealComp) ;
+            if(val.to_f > 0.0) then
+              condstr = "`#{col}` BETWEEN #{valB} AND #{valA}" ;
+            else
+              condstr = "`#{col}` BETWEEN #{valA} AND #{valB}" ;
+            end
+          else
+            condstr = "`#{col}` = '#{val}'" ;
+          end
+          condstr ;
+          #>>>>>[2013/09/13 I.Noda]
         }.join(" AND ")
         return retval
       end
