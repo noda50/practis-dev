@@ -35,8 +35,8 @@ module Practis
       
       hash = {:size => @current_var_set.get_total, :list => {}}
       # :list[] = {:are => , :result => []} 
-      @id_list_queue = []
-      @id_list_queue.push(hash)
+      # @id_list_queue = []
+      # @id_list_queue.push(hash)
       
       # [2013/09/13 H-Matsushima]
       @area_list = []
@@ -113,8 +113,8 @@ module Practis
               else
                 info("wait to finish analyzing result !")
                 # debug("exe queue size: #{@va_queue.length}")
-                debug("id quequ: #{@id_list_queue}")
-                debug("va counter: #{@va_counter}")
+                # debug("id quequ: #{@id_list_queue}")
+                # debug("va counter: #{@va_counter}")
                 debug("id_queue flag: #{@to_be_varriance_analysis}")
                 break
               end
@@ -144,20 +144,20 @@ module Practis
             "#{p.name} = '#{p.value}'" }.join(" and ")
           debug("#{condition}, id: #{parameter.uid}")
 
-          res_key = []
+          # res_key = []
           # debug("parameter set: #{parameter.parameter_set}")
-          parameter.parameter_set.each { |p|
-            if @name_list.include?(p.name)
-              res_key.push("#{p.name} = '#{p.value}'")
-            end
-          }
-          debug("\n res_key: #{res_key} \n")
-          tmp_res_key = res_key.map { |p| "#{p}"}.join(" and ")
+          # parameter.parameter_set.each { |p|
+          #   if @name_list.include?(p.name)
+          #     res_key.push("#{p.name} = '#{p.value}'")
+          #   end
+          # }
+          # debug("\n res_key: #{res_key} \n")
+          # tmp_res_key = res_key.map { |p| "#{p}"}.join(" and ")
 
-          if !@id_list_queue[@va_counter][:list].include?(tmp_res_key)
-            @id_list_queue[@va_counter][:list][tmp_res_key] = []
+          # if !@id_list_queue[@va_counter][:list].include?(tmp_res_key)
+            # @id_list_queue[@va_counter][:list][tmp_res_key] = []
             # @id_list_queue[@va_counter][:list][tmp_res_key] = {:area => , :result => []}
-          end
+          # end
 
           if(0 ==
              (count = @database_connector.read_count(:parameter, condition)))
@@ -170,7 +170,7 @@ module Practis
             parameter.parameter_set.each { |p|
               arg_hash[(p.name).to_sym] = p.value
             }
-            @id_list_queue[@va_counter][:list][tmp_res_key].push(parameter.uid)
+            # @id_list_queue[@va_counter][:list][tmp_res_key].push(parameter.uid)
             if @database_connector.insert_record(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
             else
@@ -187,7 +187,7 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 info(r)
-                @id_list_queue[@va_counter][:list][tmp_res_key].push(r["parameter_id"])
+                # @id_list_queue[@va_counter][:list][tmp_res_key].push(r["parameter_id"])
                 if(parameter.uid != r["parameter_id"])
                   parameter.state = r["state"]
                   @parameter_pool.push(parameter)
@@ -220,10 +220,13 @@ module Practis
       end
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
-      debug("id quequ: #{@id_list_queue}")
-      debug("va counter: #{@va_counter}")
+      # debug("id quequ: #{@id_list_queue}")
+      # debug("va counter: #{@va_counter}")
 
-      # :TODO 
+      # :TODO
+      if @current_var_set.get_available <= 0
+        variance_analysis
+      end
       # if check_uploaded_result_count
       #   variance_analysis
       # end
@@ -242,22 +245,20 @@ module Practis
 
       # debug("\n\n check the requirement for finish !! \n")
 
-      # if va_queue.length <= 0 
-        if @current_var_set.get_available <= 0 and @parameter_pool.length <= 0
-          debug("\n\n check available: #{@current_var_set.get_available} \n pool: #{@parameter_pool}")
-          if !@to_be_varriance_analysis # 2013/08/01
-            debug("\n\n check flag: #{@to_be_varriance_analysis} !! \n")
-            if (retval = allocate_parameters(1, 1)).length == 0
-              debug("\n\n check allocate parameter !! \n")
-              retval.each {|r| debug("#{r}")}
-              finalize
-              # @doe_file.close
-            else
-              error("all parameter is finished? Huh???")
-            end
+      if @current_var_set.get_available <= 0 and @parameter_pool.length <= 0
+        # debug("\n\n check available: #{@current_var_set.get_available} \n pool: #{@parameter_pool}")
+        if !@to_be_varriance_analysis # 2013/08/01
+          # debug("\n\n check flag: #{@to_be_varriance_analysis} !! \n")
+          if (retval = allocate_parameters(1, 1)).length == 0
+            # debug("\n\n check allocate parameter !! \n")
+            retval.each {|r| debug("#{r}")}
+            finalize
+            # @doe_file.close
+          else
+            error("all parameter is finished? Huh???")
           end
         end
-      # end
+      end
       # @doe_file.flush
     end
 
@@ -265,74 +266,52 @@ module Practis
     # variance analysis
     def variance_analysis
       uploaded_result_count = 0
-      # TODO: modify 
-      #
-      #result_list ={}
-      #area = @current_var_set.scheduler.scheduler.analysis
-      #
-      result_list ={}
+      result_list = { :area => @current_var_set.scheduler.scheduler.analysis[:area],
+                      :results => {} }
       @current_var_set.scheduler.scheduler.analysis[:result_id].each{|area, ids|
-        if !result_list.key?(area)
-          result_list[area] = []
+        if !result_list[:results].key?(area)
+          result_list[:results][area] = []
         end
         ids.each{|v|
           if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
             uploaded_result_count += 1
-            retval.each{ |r| result_list[area].push(r["value"]) }
+            retval.each{ |r| result_list[:results][area].push(r["value"]) }
           else
             debug("retval: #{retval}")
           end
         }
-        
       }
 
-      # result_list = []
-      # @id_list_queue[0][:list].each{|lk, lv|
-      #   tmp = []
-      #   lv.each{ |v|
-      #     if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
-      #       uploaded_result_count += 1
-      #       retval.each{ |r| tmp.push(r["value"]) }
-      #     else
-      #       debug("retval: #{retval}")
-      #     end
-      #   }
-      #   result_list.push(tmp)
-      # }
-
-      if uploaded_result_count >= @area_list[0][:size]
-      # if uploaded_result_count >= @id_list_queue[0][:size]
-        # if uploaded_result_count > 20
-          # @doe_file.write("Num. of uploaded results #{uploaded_result_count}\n")
-        # end
-        # debug("id list: #{@id_list_queue[0][:list]}")
+      if uploaded_result_count >= @area_list[0].size
         debug("result length: #{result_list.size}")
         debug("result: #{result_list}")
-        # factor_names = []
-        # @current_var_set.scheduler.scheduler.get_factor_indexes.each_key{|k| factor_names.push(k)}
-        # va = VarianceAnalysis.new(@current_var_set.scheduler.scheduler.get_factor_indexes, result_list, factor_names, 2)
-        #
+        debug("#{pp @current_var_set.scheduler.scheduler.oa.colums}")
         va = VarianceAnalysis.new(result_list,
                                   @current_var_set.scheduler.scheduler.oa.table,
                                   @current_var_set.scheduler.scheduler.oa.colums)
         if va.e_f >= 1
           num_significance = []
+          new_param_list = []
           va.effect_Factor.each{|ef|
-            pp ef
             # significant parameter is decided
-            
+            if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
+              num_significance.push(ef[:name])
+            end            
           }
-          if 0 < num_significance
-            # [2013/09/13 H-Matsushima]
-
+          if 0 < num_significance.size
+            @current_var_set.variable_set.each { |v|
+              if num_significance.include?(v.name)
+                new_param_list.push(generate_new_parameter(v))
+              end
+            }
             # generate new_param_list & extend orthogonal array
-            # next_area_list = generate_next_search_area(@current_var_set.scheduler.scheduler.analysis_area[:area],
-                                                          # @current_var_set.scheduler.scheduler.oa,
-                                                          # new_param_list)
-            # 
-            # @area_list += next_area_list
+            next_area_list = generate_next_search_area(@current_var_set.scheduler.scheduler.analysis[:area],
+                                                          @current_var_set.scheduler.scheduler.oa,
+                                                          new_param_list)
+            debug("next area list: ")
+            pp next_area_list
+            @area_list += next_area_list
           end
-
         end
 =begin
         if va.e_f >= 1
@@ -391,21 +370,16 @@ module Practis
           end
         end
 =end
-        # @id_list = {}
-        # @id_list_queue.shift
+
         @area_list.shift
-        @va_counter -= 1
 
         if @area_list.size <= 0 
           @to_be_varriance_analysis = false
         end
-        # if @id_list_queue.size <= 0
-        #   @to_be_varriance_analysis = false
-        # end
         
-        # debug("\n \t !! Results of allocated parameter are stored in DB !! \n")
+        debug("#{pp @area_list}")
+        exit(0)
       end
-      # debug("queue of DoE parameter set: #{@va_queue}")
     end
 
     ##------------------------------------------------------------
@@ -466,12 +440,15 @@ module Practis
 
     # search only "inside" significant parameter
     def generate_new_parameter(var)
-      min = var.min
-      max = var.max
+      min = var.parameters.min
+      max = var.parameters.max
       var_diff = cast_decimal((max - min).abs / 3.0)
-      
-      # divide
-      new_array = [min+var_diff, max-var_diff]
+
+      if min.class == Fixnum
+        new_array = [min+var_diff.to_i, max-var_diff.to_i]
+      elsif min.class == Float
+        new_array = [(min+var_diff).round(5), (max-var_diff).round(5)]
+      end
 
       # var.name
       new_var ={:case => "inside", 
@@ -483,20 +460,25 @@ module Practis
     def generate_next_search_area(area, oa, new_param_list)
       new_area = []
 
+      debug("new param list: #{new_param_list}")
+      debug("area: #{area}")
+      pp new_param_list
+
       extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
       new_area += oa.generate_new_analysis_area(area, new_param_list[0][:case], extclm)
+      debug("#{new_area}")
       
       if 2 <= new_param_list.size
         for i in 1...new_param_list.size
           tmp_area = []
           new_area.each { |na| 
             extclm = oa.extend_table(area, new_param_list[i][:case], new_param_list[i][:param])
-            tmp_area.push(oa.generate_new_analysis_area(na, new_param_list[i][:case], extclm))
+            tmp_area += oa.generate_new_analysis_area(na, new_param_list[i][:case], extclm)
           }
           new_area = tmp_area
         end
       end
-
+      debug("#{new_area}")
       return new_area
     end
 
@@ -597,35 +579,42 @@ module Practis
 
     private
     def check_uploaded_result_count
-      if @id_list_queue.length <= 0
-        @to_be_varriance_analysis = false;
+      if @area_list.size <= 0 
+        @to_be_varriance_analysis = false
         return false
       end
-      
-      uploaded_result_count = 0
-      result_list = []
-      @id_list_queue[0][:list].each{|lk, lv|
-        tmp = []
-        lv.each{ |v|
-          if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
-            uploaded_result_count += 1
-            retval.each{ |r| tmp.push(r["value"]) }
-          else
-            debug("retval: #{retval}")
-          end
-        }
-        result_list.push(tmp)
-      }
-      debug("list queue size: #{@id_list_queue.length}")
-      debug("id list: #{@id_list_queue[0][:list]}")# debug("id list: #{@id_list}")
-      debug("result length: #{result_list.size}")
-      debug("result: #{result_list}")
 
-      if uploaded_result_count >= @id_list_queue[0][:size]
-        return true
-      else
-        return false
-      end
+
+
+      # if @id_list_queue.length <= 0
+      #   @to_be_varriance_analysis = false;
+      #   return false
+      # end
+      
+      # uploaded_result_count = 0
+      # result_list = []
+      # @id_list_queue[0][:list].each{|lk, lv|
+      #   tmp = []
+      #   lv.each{ |v|
+      #     if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
+      #       uploaded_result_count += 1
+      #       retval.each{ |r| tmp.push(r["value"]) }
+      #     else
+      #       debug("retval: #{retval}")
+      #     end
+      #   }
+      #   result_list.push(tmp)
+      # }
+      # debug("list queue size: #{@id_list_queue.length}")
+      # debug("id list: #{@id_list_queue[0][:list]}")# debug("id list: #{@id_list}")
+      # debug("result length: #{result_list.size}")
+      # debug("result: #{result_list}")
+
+      # if uploaded_result_count >= @id_list_queue[0][:size]
+      #   return true
+      # else
+      #   return false
+      # end
     end
 
     def show_param_combination

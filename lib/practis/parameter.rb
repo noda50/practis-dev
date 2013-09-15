@@ -178,7 +178,7 @@ module Practis
     #=== get a next available parameter set.
     def get_next(newId)
       return nil if (parameter_array =
-                     chk_arg(Array, @scheduler.get_parameter_set, true)).nil?
+                     chk_arg(Array, @scheduler.get_parameter_set(newId), true)).nil?
       parameter_set = []
       @variable_set.length.times { |i| parameter_set
         .push(Parameter.new(@variable_set[i].name,

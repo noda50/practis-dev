@@ -243,6 +243,8 @@ module Practis
         @total_indexes.collect {|t| @total_number *= t}
         @allocated_numbers = []
         @available_numbers = @total_number.times.map { |i| i }
+        @unassigned_total_size = 1
+        @unassigned_total.collect{|t| @unassigned_total_size *= t}
 
         @oa = OrthogonalArray.new(parameters)
         @analysis = {:area => @oa.analysis_area[0],
@@ -251,8 +253,7 @@ module Practis
         # @analysis[:area] = @oa.analysis_area[0]
         @experimentSize = @oa.table[0].size
 
-        @unassigned_total_size = 1
-        @.collect{|t| @unassigned_total_size *= t}
+        
         @total_experiment = get_total
         @allocated_numbers = []        
         @available_numbers = @total_experiment.times.map { |i| i }
@@ -297,9 +298,9 @@ module Practis
           end 
         }
 
-        if (@analysis[:result_id].key?(@analysis[:area][v_index]))
+        if !@analysis[:result_id].key?(@analysis[:area][v_index])
           @analysis[:result_id][@analysis[:area][v_index]] = []
-        end  
+        end
         @analysis[:result_id][@analysis[:area][v_index]].push(id)
 
         return parameter_array
