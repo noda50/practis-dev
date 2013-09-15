@@ -91,9 +91,9 @@
     <config name="project_database_type" type="String">mysql</config>
     <config name="project_database_hostname" type="String">127.0.0.1</config>
     <config name="project_database_management_username" type="String">practis_manager</config>
-    <config name="project_database_management_password" type="String">practis</config>
-    <config name="project_database_username" type="String">practis_user</config>
-    <config name="project_database_password" type="String">practis</config>
+    <config name="project_database_management_password" type="String">sitcarp</config>
+    <config name="project_database_username" type="String">practis</config>
+    <config name="project_database_password" type="String">sitcarp</config>
     <config name="project_database_name" type="String">dilemma_game</config>
     <config name="project_database_tablename" type="String">project</config>
 
@@ -101,9 +101,9 @@
     <config name="execution_database_type" type="String">mysql</config>
     <config name="execution_database_hostname" type="String">127.0.0.1</config>
     <config name="execution_database_management_username" type="String">practis_manager</config>
-    <config name="execution_database_management_password" type="String">practis</config>
-    <config name="execution_database_username" type="String">practis_user</config>
-    <config name="execution_database_password" type="String">practis</config>
+    <config name="execution_database_management_password" type="String">sitcarp</config>
+    <config name="execution_database_username" type="String">practis</config>
+    <config name="execution_database_password" type="String">sitcarp</config>
     <config name="execution_database_name" type="String">dilemma_game</config>
     <config name="execution_database_tablename" type="String">execution</config>
 
@@ -111,9 +111,9 @@
     <config name="executable_database_type" type="String">mysql</config>
     <config name="executable_database_hostname" type="String">127.0.0.1</config>
     <config name="executable_database_management_username" type="String">practis_manager</config>
-    <config name="executable_database_management_password" type="String">practis</config>
-    <config name="executable_database_username" type="String">practis_user</config>
-    <config name="executable_database_password" type="String">practis</config>
+    <config name="executable_database_management_password" type="String">sitcarp</config>
+    <config name="executable_database_username" type="String">practis</config>
+    <config name="executable_database_password" type="String">sitcarp</config>
     <config name="executable_database_name" type="String">dilemma_game</config>
     <config name="executable_database_tablename" type="String">executable</config>
 
@@ -121,9 +121,9 @@
     <config name="node_database_type" type="String">mysql</config>
     <config name="node_database_hostname" type="String">127.0.0.1</config>
     <config name="node_database_management_username" type="String">practis_manager</config>
-    <config name="node_database_management_password" type="String">practis</config>
-    <config name="node_database_username" type="String">practis_user</config>
-    <config name="node_database_password" type="String">practis</config>
+    <config name="node_database_management_password" type="String">sitcarp</config>
+    <config name="node_database_username" type="String">practis</config>
+    <config name="node_database_password" type="String">sitcarp</config>
     <config name="node_database_name" type="String">dilemma_game</config>
     <config name="node_database_tablename" type="String">node</config>
 
@@ -131,9 +131,9 @@
     <config name="parameter_database_type" type="String">mysql</config>
     <config name="parameter_database_hostname" type="String">127.0.0.1</config>
     <config name="parameter_database_management_username" type="String">practis_manager</config>
-    <config name="parameter_database_management_password" type="String">practis</config>
-    <config name="parameter_database_username" type="String">practis_user</config>
-    <config name="parameter_database_password" type="String">practis</config>
+    <config name="parameter_database_management_password" type="String">sitcarp</config>
+    <config name="parameter_database_username" type="String">practis</config>
+    <config name="parameter_database_password" type="String">sitcarp</config>
     <config name="parameter_database_name" type="String">dilemma_game</config>
     <config name="parameter_database_tablename" type="String">parameter</config>
 
@@ -141,9 +141,9 @@
     <config name="result_database_type" type="String">mysql</config>
     <config name="result_database_hostname" type="String">127.0.0.1</config>
     <config name="result_database_management_username" type="String">practis_manager</config>
-    <config name="result_database_management_password" type="String">practis</config>
-    <config name="result_database_username" type="String">practis_user</config>
-    <config name="result_database_password" type="String">practis</config>
+    <config name="result_database_management_password" type="String">sitcarp</config>
+    <config name="result_database_username" type="String">practis</config>
+    <config name="result_database_password" type="String">sitcarp</config>
     <config name="result_database_name" type="String">dilemma_game</config>
     <config name="result_database_tablename" type="String">result</config>
   </configuration>
