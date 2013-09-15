@@ -229,20 +229,31 @@ module Practis
       # get the parameter with 'ready' state.
       # [2013/09/08 I.Noda] 
       # I'm not sure the following algorithm can work.
-      if (p_ready = @database_connector.read_record(
-          :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
+#      if (p_ready = @database_connector.read_record(
+#          :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
+      if (p_ready = 
+          @database_connector.read_record(:parameter, 
+                                          [:eq, [:field, "state"],
+                                           PARAMETER_STATE_READY])).length > 0
         p_ready.each do |p|
           break if request_number <= 0
           if (matches = @parameter_pool.select { |pp|
               p["parameter_id"].to_i == pp.uid }).length == 1
             # update the allocating parameter state
-            if @database_connector.update_parameter(
-                {allocated_node_id: src_id,
-                 executing_node_id: src_id,
-                 allocation_start: iso_time_format(timeval),
-                 execution_start: nil,
-                 state: PARAMETER_STATE_ALLOCATING},
-                "parameter_id = #{p["parameter_id"].to_i}") < 0
+#            if @database_connector.update_parameter(
+#                {allocated_node_id: src_id,
+#                 executing_node_id: src_id,
+#                 allocation_start: iso_time_format(timeval),
+#                 execution_start: nil,
+#                 state: PARAMETER_STATE_ALLOCATING},
+#                "parameter_id = #{p["parameter_id"].to_i}") < 0
+            if @database_connector.update_parameter({ allocated_node_id: src_id,
+                                                      executing_node_id: src_id,
+                                                      allocation_start: iso_time_format(timeval),
+                                                      execution_start: nil,
+                                                      state: PARAMETER_STATE_ALLOCATING},
+                                                    [:eq, [:field, "parameter_id"],
+                                                     p["parameter_id"].to_i]) < 0
               error("fault to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
@@ -262,9 +273,13 @@ module Practis
             info("all parameter is already allocated!")
             break
           end
-          condition = parameter.parameter_set.map { |p|
-            "#{p.name} = '#{p.value}'" }.join(" and ")
-          debug(condition)
+#          condition = parameter.parameter_set.map { |p|
+#            "#{p.name} = '#{p.value}'" }.join(" and ")
+          condition = [:and] ;
+          parameter.parameter_set.map { |p|
+            condition.push([:eq, [:field, p.name], p.value]) ;
+          }
+#          debug("condition: #{condition}") ;
           ##[2013/09/08 I.Noda]
           ## use read_count instead of read_record to check existense.
 #          if (retval = 
@@ -324,12 +339,19 @@ module Practis
       if (timeval = @database_connector.read_time(:parameter)).nil?
         return -1
       end
-      if (retval = @database_connector.update_record(
-          :parameter,
-          {state: PARAMETER_STATE_EXECUTING,
-           execution_start: iso_time_format(timeval),
-           execution_node_id: executor_id},
-          "parameter_id = #{parameter_id}")).length != 0
+#      if (retval = @database_connector.update_record(
+#          :parameter,
+#          {state: PARAMETER_STATE_EXECUTING,
+#           execution_start: iso_time_format(timeval),
+#           execution_node_id: executor_id},
+#          "parameter_id = #{parameter_id}")).length != 0
+      if (retval = 
+          @database_connector.update_record(:parameter,
+                                            { state: PARAMETER_STATE_EXECUTING,
+                                              execution_start: iso_time_format(timeval),
+                                              execution_node_id: executor_id},
+                                            [:eq, [:field, "parameter_id"],
+                                             parameter_id])).length != 0
         error("fail to update the started parameter state. #{retval}")
         return -1
       end
@@ -344,12 +366,19 @@ module Practis
     #returned_value :: On success, 0 is returned. On error, a negative value is
     #returned.
     def update_node_state(node_id, queueing, executing)
-      if (retval = @database_connector.update_record(
-          :node,
-          {queueing: queueing,
-           executing: executing,
-           state: NODE_STATE_RUNNING},
-           "node_id = #{node_id}")).length != 0
+#      if (retval = @database_connector.update_record(
+#          :node,
+#          {queueing: queueing,
+#           executing: executing,
+#           state: NODE_STATE_RUNNING},
+#           "node_id = #{node_id}")).length != 0
+      if (retval = 
+          @database_connector.update_record(:node,
+                                            { queueing: queueing,
+                                              executing: executing,
+                                              state: NODE_STATE_RUNNING},
+                                            [:eq, [:field, "node_id"],
+                                             node_id])).length != 0
         error("fail to update the node state. #{retval}")
         return -1
       end
@@ -359,8 +388,12 @@ module Practis
     ##------------------------------------------------------------
     def upload_result(msg)
       result_id = msg[:result_id].to_i
-      if (retval = @database_connector.read_record(
-          :result, "result_id = #{result_id}")).length != 0
+#      if (retval = @database_connector.read_record(
+#          :result, "result_id = #{result_id}")).length != 0
+      if (retval = 
+          @database_connector.read_record(:result, 
+                                          [:eq, [:field, "result_id"],
+                                           result_id])).length != 0
         error("the result already exist. #{retval}")
         return -1
       end
@@ -425,12 +458,19 @@ module Practis
     def decrease_keepalive(node)
       if node.keepalive < 0
         cluster_tree.delete(:id, node.id)
-        if (retval = @database_connector.update_record(
-            :node,
-            {queueing: 0,
-             executing: 0,
-             state: NODE_STATE_TIMEOUT},
-            "node_id = #{node.id}")).length > 0
+#        if (retval = @database_connector.update_record(
+#            :node,
+#            {queueing: 0,
+#             executing: 0,
+#             state: NODE_STATE_TIMEOUT},
+#            "node_id = #{node.id}")).length > 0
+        if (retval =
+            @database_connector.update_record(:node,
+                                              { queueing: 0,
+                                                executing: 0,
+                                                state: NODE_STATE_TIMEOUT},
+                                              [:eq, [:field, "node_id"],
+                                               node.id])).length > 0
           retval.each { |r| error(r) }
         end
       else
@@ -506,8 +546,12 @@ module Practis
 #      finished = nil
       finished = [] ; 
       ## >>> [2013/09/01 I.Noda]
-      if (retval = @database_connector.read_record(
-          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+#      if (retval = @database_connector.read_record(
+#          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+      if (retval = 
+          @database_connector.read_record(:parameter, 
+                                          [:eq, [:field, "state"],
+                                           PARAMETER_STATE_FINISH])).length > 0
         finished = retval
       end
       hash = {}
@@ -569,8 +613,12 @@ module Practis
 #      finished = nil
       finished = [] ; 
       ## >>> [2013/09/01 I.Noda]
-      if (retval = @database_connector.read_record(
-          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+#      if (retval = @database_connector.read_record(
+#          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+      if (retval = 
+          @database_connector.read_record(:parameter, 
+                                          [:eq, [:field, "state"],
+                                           PARAMETER_STATE_FINISH])).length > 0
         finished = retval
       end
       hash = {}
@@ -824,8 +872,12 @@ module Practis
     def get_parameter_progress_overview
       # get finished results
       finished = [] ; 
-      if (retval = @database_connector.read_record(
-          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+#      if (retval = @database_connector.read_record(
+#          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
+      if (retval = 
+          @database_connector.read_record(:parameter, 
+                                          [:eq, [:field, "state"],
+                                           PARAMETER_STATE_FINISH])).length > 0
         finished = retval
       end
       # prepare result hash table.
