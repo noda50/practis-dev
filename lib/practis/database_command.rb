@@ -24,6 +24,7 @@ module Practis
 
       def initialize(database_schema)
         @database_schema = JSON.parse(database_schema, :symbolize_names => true)
+        setup() ; ##[2013/09/15 I.Noda]
       end
 
       def get_schema
@@ -45,6 +46,89 @@ module Practis
         end
         generate(database, table, arg_hash, condition)
       end
+
+      ##--------------------------------------------------
+      ##---setup()
+      ##   setup hash table for lookup
+      def setup()
+        @databaseDef = {} ;
+        @database_schema.each{|db|
+          tableDef = {} ;
+          @databaseDef[db[:database]] = { :schema => db, :table => tableDef } ;
+          db[:tables].each{|table|
+            fieldDef = {} ;
+            tableDef[table[:name]] = {:schema => table, :field => fieldDef} ;
+            table[:fields].each{|field|
+              fieldDef[field[:field]] = field ;
+            }
+          }
+        }
+      end
+      ##--------------------------------------------------
+      ##---getDatabaseDef(database)
+      def getDatabaseDef(database)
+        dbDef = @databaseDef[database] ;
+        if(dbDef.nil?) then
+          error("unknown database: #{database}") ;
+          raise("unknown database: #{database}") ;
+        else
+          return dbDef ;
+        end
+      end
+
+      ##--------------------------------------------------
+      ##---getDatabaseSchema(database)
+      def getDatabaseSchema(database)
+        getDatabaseDef(database)[:schema] ;
+      end
+
+      ##--------------------------------------------------
+      ##---getDatabaseTables(database)
+      def getDatabaseTables(database)
+        getDatabaseDef(database)[:table] ;
+      end
+
+      ##--------------------------------------------------
+      ##---getTableDef(database, table)
+      def getTableDef(database, table)
+        tblDef = getDatabaseTables(database)[table] ;
+        if(tblDef.nil?) then
+          error("unknown table: #{table} in #{database}") ;
+          raise("unknown table: #{table} in #{database}") ;
+        else
+          return tblDef ;
+        end
+      end
+
+      ##--------------------------------------------------
+      ##---getTableSchema(database, table)
+      def getTableSchema(database, table)
+        getTableDef(database, table)[:schema] ;
+      end
+
+      ##--------------------------------------------------
+      ##---getTableFields(database, table)
+      def getTableFields(database, table)
+        getTableDef(database, table)[:field] ;
+      end
+
+      ##--------------------------------------------------
+      ##---getFieldSchema(database, table, field)
+      def getFieldSchema(database, table, field)
+        fldDef = getTableFields(database,table)[field] ;
+        if(fldDef.nil?) then
+          error("unknown field: #{field} on #{table} in #{database}") ;
+          raise("unknown field: #{field} on #{table} in #{database}") ;
+        else
+          return fldDef ;
+        end
+      end
+
+      ##--------------------------------------------------
+      ##---getFieldType(database, table, field)
+      def getFieldType(database, table, field)
+        getFieldSchema(database, table, field)[:type] ; 
+      end
     end
 
     class MysqlCommandGenerator < DatabaseCommandGenerator
@@ -56,19 +140,24 @@ module Practis
 
       ##--------------------------------------------------
       def generate(database, table, arg_hash, condition)
-        tbl = nil
-        if !database.nil? && !table.nil?
-          db = @database_schema.select { |i| i[:database] == database }
-          tbl = db.map { |i| i[:tables].select { |j| j[:name] == table } }
-          if tbl.length > 1
-            error("there exists same name tables.")
-            return nil
-          elsif tbl.length < 1
-            error("there exists no table :#{table}.")
-            return nil
-          end
-          tbl = tbl[0][0]
-        end
+        #[2013/09/15 I.Noda] 
+        # now, using getTableSchema()
+#        tbl = nil
+#        if !database.nil? && !table.nil?
+#          db = @database_schema.select { |i| i[:database] == database }
+#          tbl = db.map { |i| i[:tables].select { |j| j[:name] == table } }
+#          if tbl.length > 1
+#            error("there exists same name tables.")
+#            return nil
+#          elsif tbl.length < 1
+#            error("there exists no table :#{table}.")
+#            return nil
+#          end
+#          tbl = tbl[0][0]
+#        end
+        tbl = ((!database.nil? && !table.nil?) ?
+               getTableSchema(database, table) :
+               nil) ;
         query = ""
         case arg_hash[:type]
         when "cdatabase"
@@ -211,25 +300,28 @@ module Practis
           end
         end
         retval = " WHERE "
-        db = @database_schema.inject(nil) do |a, s|
-          s[:tables].inject(nil) { |tbl, t|
-            t[:name] == table ? t : tbl }.nil? ? a : s
-        end
-        if db.nil?
-          error("specified database is not included. #{database}")
-          return nil
-        end
-        tbl = db[:tables].inject(nil) { |a, s| s[:name] == table ? s : a }
-        if tbl.nil?
-          error("specified table is not included. #{table}")
-          return nil
-        end
+        # [2013/09/15 I.Noda] 
+        # now, using getTableField() method to pickup field defs.
+#        db = @database_schema.inject(nil) do |a, s|
+#          s[:tables].inject(nil) { |tbl, t|
+#            t[:name] == table ? t : tbl }.nil? ? a : s
+#        end
+#        if db.nil?
+#          error("specified database is not included. #{database}")
+#          return nil
+#        end
+#        tbl = db[:tables].inject(nil) { |a, s| s[:name] == table ? s : a }
+#        if tbl.nil?
+#          error("specified table is not included. #{table}")
+#          return nil
+#        end
         retval << conds.map { |cond|
-          field = tbl[:fields].select { |f| f[:field] == cond[:key] }
-          if field.length != 1
-            error("condition #{cond[:key]} does not exist!")
-            next
-          end
+#          field = tbl[:fields].select { |f| f[:field] == cond[:key] }
+#          if field.length != 1
+#            error("condition #{cond[:key]} does not exist!")
+#            next
+#          end
+          field = getFieldSchema(database, table, cond[:key]) ;
           #<<<<<[2013/09/13 I.Noda]
           # for precise comparison of double value
 #          field[0][:type] == "float" || field[0][:type] == "double" ?
@@ -239,7 +331,8 @@ module Practis
           condstr = nil ;
           col = cond[:key] ;
           val = cond[:value] ;
-          if(field[0][:type] == "float" || field[0][:type] == "double") then
+#          if(field[0][:type] == "float" || field[0][:type] == "double") then
+          if(field[:type] == "float" || field[:type] == "double") then
             valA = val.to_f * OuterRatio_RealComp ;
             valB = val.to_f * InnerRatio_RealComp ;
             if(val.to_f > 0.0) then
@@ -536,18 +629,6 @@ module Practis
       ##------------------------------
       def conditionToSql_Direct(database, table, condition)
         return condition[1];
-      end
-
-      ##------------------------------
-      ## temporal
-      def getFieldType(database, table, fieldName)
-        case(fieldName)
-          when /^i/ then return "int" ;
-          when /^f/ then return "float" ;
-          when /^t/ then return "time" ;
-          when /^b/ then return "boolean" ;
-          else "string" ;
-        end
       end
 
       ##------------------------------
