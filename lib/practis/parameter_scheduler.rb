@@ -211,6 +211,7 @@ module Practis
       attr_reader :variable_set
       attr_reader :oa
       attr_reader :analysis
+      attr_reader :current_total
 
       def initialize(variable_set)
         @variable_set = chk_arg(Array, variable_set)
@@ -255,6 +256,7 @@ module Practis
         @total_experiment = get_total
         @allocated_numbers = []        
         @available_numbers = @total_experiment.times.map { |i| i }
+        @current_total = @available_numbers.size
         # (2013/09/12) ==========================================
       end
       
@@ -336,6 +338,7 @@ module Practis
         @analysis[:size] = next_area.size*@unassigned_total_size
         @available_numbers += @analysis[:size].times.map { |i| i }
         @total_experiment = get_total
+        @current_total = @available_numbers.size
       end
 
       # return parameter combination indexes

@@ -9,7 +9,7 @@ class VarianceAnalysis
     @effect_Factor = []
 
     @m = result_set[:results].values.inject(:+).inject(:+)
-    @ss = result_set[:results].values.inject(:+).inject{|ss, n| ss + n**2}
+    @ss = result_set[:results].values.inject(:+).inject(0){|ss, n| ss + n**2}
     @numResult = result_set[:results].values.inject(:+).size    
     @ct = @m**2
     @m = @m.to_f / @numResult
@@ -27,7 +27,6 @@ class VarianceAnalysis
         end
       }
       effFact[:effect] = 0.0
-      pp effFact
       effFact[:results].each_value{|v| effFact[:effect] += ((v.inject(:+)**2).to_f / v.size)}
       effFact[:effect] -= @ct
       effFact[:free] = 1 #(2水準なので常に1)

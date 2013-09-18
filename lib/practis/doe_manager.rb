@@ -29,20 +29,13 @@ module Practis
 
     def initialize(config_file, parameter_file, database_file, result_file, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
-      # @va_queue = []
+      
       @variable_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
       @total_parameters = @variable_set.get_total
-      
-      # hash = {:size => @variable_set.get_total, :list => {}}
-      # :list[] = {:are => , :result => []} 
-      # @id_list_queue = []
-      # @id_list_queue.push(hash)
       
       # [2013/09/13 H-Matsushima]
       @area_list = []
       @area_list.push(@variable_set.scheduler.scheduler.analysis[:area])
-
-      # @va_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
       # @doe_file = open("doe.log", "w")
@@ -183,8 +176,7 @@ module Practis
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
-      # :TODO
-      if @variable_set.get_available <= 0
+      if @variable_set.get_available <= 0 && @to_be_varriance_analysis
         variance_analysis
       end
 
@@ -220,7 +212,6 @@ module Practis
       uploaded_result_count = 0
       result_list = { :area => @variable_set.scheduler.scheduler.analysis[:area],
                       :results => {} }
-      tmp_flag = false
       @variable_set.scheduler.scheduler.analysis[:result_id].each{|area, ids|
         if !result_list[:results].key?(area)
           result_list[:results][area] = []
@@ -228,30 +219,28 @@ module Practis
         ids.each{|v|
           if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
             uploaded_result_count += 1
-            retval.each{ |r| result_list[:results][area].push(r["value"]) }
+            retval.each{ |r| 
+              result_list[:results][area].push(r["value"]) 
+            }
           else
             debug("retval: #{retval}")
-            p "nothing?: #{v}"
-            tmp_flag = true
           end
         }
-        if tmp_flag then 
-          pp @variable_set.scheduler.scheduler.analysis 
-          pp @variable_set.scheduler.scheduler.oa
-        end
       }
-      pp @variable_set.scheduler.scheduler.analysis[:result_id]
+      p "variance analysis ====================================="
+      p "result list:"
+      pp result_list
 
-      if uploaded_result_count >= @area_list[0].size
+      if uploaded_result_count >= @variable_set.scheduler.scheduler.current_total
         debug("result length: #{result_list.size}")
         debug("result: #{result_list}")
-        pp @variable_set.scheduler.scheduler.oa.colums
-        result_list[:area].each{|a| pp @variable_set.scheduler.scheduler.oa.get_parameter_set(a)}
-        pp result_list
-        p "================================================"
+        
         va = VarianceAnalysis.new(result_list,
                                   @variable_set.scheduler.scheduler.oa.table,
                                   @variable_set.scheduler.scheduler.oa.colums)
+        p "variance factor"
+        pp va
+        
         if va.e_f >= 1
           num_significance = []
           new_param_list = []
@@ -262,107 +251,70 @@ module Practis
             end            
           }
           if 0 < num_significance.size
-            @variable_set.variable_set.each { |v|
-              if num_significance.include?(v.name)
-                new_param_list.push(generate_new_parameter(v))
+            @variable_set.scheduler.scheduler.oa.colums.each{|oc|
+              if num_significance.include?(oc.parameter_name)
+                var = []
+                result_list[:area].each{|r|
+                  var.push(@variable_set.scheduler.scheduler.oa.get_parameter(r, oc.id))
+                }
+                tmp = generate_new_parameter(var.uniq!, oc.parameter_name)
+                if !tmp.nil?
+                  new_param_list.push(tmp)
+                else
+                  # ignored area is added for analysis to next_area_list
+                end
               end
             }
-            # generate new_param_list & extend orthogonal array
-            next_area_list = generate_next_search_area(@variable_set.scheduler.scheduler.analysis[:area],
-                                                          @variable_set.scheduler.scheduler.oa,
-                                                          new_param_list)
-            debug("next area list: ")
-            pp next_area_list
-            pp @variable_set.scheduler.scheduler.oa
-            @area_list += next_area_list
+
+            if 0 < new_param_list.size 
+              # generate new_param_list & extend orthogonal array
+              next_area_list = generate_next_search_area(@variable_set.scheduler.scheduler.analysis[:area],
+                                                            @variable_set.scheduler.scheduler.oa,
+                                                            new_param_list)
+              debug("next area list: ")
+              pp next_area_list
+              @area_list += next_area_list
+            end
           end
         end
 
         @area_list.shift
-        @variable_set.scheduler.scheduler.update_analysis(@area_list[0])
-
         if @area_list.size <= 0 
           @to_be_varriance_analysis = false
+        else
+          @variable_set.scheduler.scheduler.update_analysis(@area_list[0])  
         end
-        
-        # debug("#{pp @area_list}")
-        # exit(0)
       end
-    end
-
-    ##------------------------------------------------------------
-    # var: parameter (Practis::Variable)
-    # divide_size: 
-    # return array of variable_array
-    def divide_parameter_range(var, divide_size = 2)
-      parameters_array = []
-
-      tmp_name = Marshal.load(Marshal.dump(var.name))
-      tmp_type = Marshal.load(Marshal.dump(var.type))
-      # tmp_start = BigDecimal(Marshal.load(Marshal.dump(var.parameters[0])).to_s)
-      # tmp_end = BigDecimal(Marshal.load(Marshal.dump(var.parameters[var.parameters.length - 1])).to_s)
-      tmp_start = cast_decimal(Marshal.load(Marshal.dump(var.parameters[0])))
-      tmp_end = cast_decimal(Marshal.load(Marshal.dump(var.parameters[var.parameters.length - 1])))
-      tmp_divide_size = divide_size
-
-      # divided_range = ((tmp_end - tmp_start) / tmp_divide_size.to_f)
-      divided_range = (tmp_end - tmp_start) / BigDecimal(tmp_divide_size.to_s)
-
-      # tmp_start = cast_to_type(tmp_type.to_s, tmp_start)
-      # tmp_end = cast_to_type(tmp_type.to_s, tmp_end)
-      # divided_range = cast_to_type(tmp_type.to_s, divided_range)
-
-      if divided_range != 0
-        divide_size.times{|i|
-          if i == 0
-            tmp_pattern = "[{\"type\":\"include_range\",\"start\":" + 
-                            tmp_start.to_s + ",\"end\":" + 
-                            # (tmp_start + (i + 1) * divided_range).to_s + 
-                            # ",\"step\":"+ divided_range.to_s + "}]"
-                            cast_to_type(tmp_type.to_s, tmp_start + (i + 1) * divided_range).to_s +                             
-                            ",\"step\":"+ cast_to_type(tmp_type.to_s, divided_range).to_s + "}]"
-          elsif (i + 1) == divide_size
-            tmp_pattern = "[{\"type\":\"include_range\",\"start\":" + 
-                            # (tmp_start + i * divided_range).to_s + ",\"end\":" + 
-                            # tmp_end.to_s + ",\"step\":"+ divided_range.to_s + "}]"
-                            cast_to_type(tmp_type.to_s, (tmp_start + i * divided_range)).to_s + 
-                            ",\"end\":" + cast_to_type(tmp_type.to_s, tmp_end).to_s + 
-                            ",\"step\":"+ cast_to_type(tmp_type.to_s, divided_range).to_s + "}]"
-          else
-            tmp_pattern = "[{\"type\":\"include_range\",\"start\":" + 
-                            # (tmp_start + i * divided_range).to_s + ",\"end\":" + (tmp_start + (i + 1) * divided_range).to_s + 
-                            # ",\"step\":"+ divided_range.to_s + "}]"
-                            cast_to_type(tmp_type.to_s, tmp_start + i * divided_range).to_s + 
-                            ",\"end\":" + cast_to_type(tmp_type.to_s, tmp_start + (i + 1) * divided_range).to_s + 
-                            ",\"step\":"+ cast_to_type(tmp_type.to_s, divided_range).to_s + "}]"
-          end
-          debug("#{tmp_pattern}")
-          parameters_array.push(Practis::Variable.new(tmp_name, tmp_type.to_s, tmp_pattern))
-        }
-
-        return parameters_array
-      else
-        return nil
-      end
+      p "end variance analysis ====================================="
+      puts
     end
 
     # search only "inside" significant parameter
-    def generate_new_parameter(var)
+    def generate_new_parameter(var, para_name)
+      p "generate new parameter ====================================="
+      pp var
       oa = @variable_set.scheduler.scheduler.oa
-      var_min = var.parameters.min
-      var_max = var.parameters.max
+      # var_min = var.parameters.min
+      # var_max = var.parameters.max
+      var_min = var.min
+      var_max = var.max
       min=nil
       max=nil
       oa.colums.each{|c|
-        if var.name == c.parameter_name
+        if para_name == c.parameter_name
           if 2 < c.parameters.size
-            min = c.parameters.min_by{|v| v > var_min ? v : 0}
-            max = c.parameters.max_by{|v| v < var_max ? v : 0}
+            if c.parameters.find{|v| var_min<v && v<var_max}.nil?
+              min = var_min
+              max = var_max
+            else
+              min = c.parameters.min_by{|v| v > var_min ? 0 : v}
+              max = c.parameters.max_by{|v| v < var_max ? v : 0}
+              return nil
+            end
           else
             min = var_min
             max = var_max
           end
-          break
         end
       }
       var_diff = cast_decimal((max - min).abs / 3.0)
@@ -375,17 +327,22 @@ module Practis
 
       # var.name
       new_var ={:case => "inside", 
-                :param => {:name => var.name, :variables => new_array}}
+                :param => {:name => para_name, :variables => new_array}}
+      print " ==> "
+      pp new_var
+      pp @variable_set.scheduler.scheduler.oa.get_table
+      p "end generate new parameter ====================================="
+      puts
       return new_var
     end
 
     # return array of new searching parameters (area) 
     def generate_next_search_area(area, oa, new_param_list)
       new_area = []
-
-      debug("new param list: #{new_param_list}")
-      debug("area: #{area}")
+      p "generate next search ====================================="
+      p "new_param_list:"
       pp new_param_list
+      
 
       extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
       new_area += oa.generate_new_analysis_area(area, new_param_list[0], extclm)
@@ -401,6 +358,9 @@ module Practis
         end
       end
       debug("#{new_area}")
+      pp new_area
+      p "end generate next search ====================================="
+      puts
       return new_area
     end
 
@@ -413,61 +373,7 @@ module Practis
       end
     end
 
-    ##------------------------------------------------------------
-    # override method
     #
-    def get_parameter_progress
-      finished = nil
-      if (retval = @database_connector.read_record(
-          :parameter, "state = #{PARAMETER_STATE_FINISH}")).length > 0
-        finished = retval
-      end
-      hash = {}
-      total = @variable_set.get_total
-      hash[:total_parameters] = total
-      hash[:finished_parameters] = @finished_parameters
-      va = []
-      @variable_set.variable_set.each do |v|
-        va.push({:name => v.name, :values => v.parameters})
-      end
-      hash[:variables] = va
-      pa = []
-      hash[:progress] = pa
-      l = @variable_set.variable_set.length
-      (0..l - 2).each do |i|
-        (i + 1..l - 1).each do |j|
-          v1 = @variable_set.variable_set[i]
-          v2 = @variable_set.variable_set[j]
-          hash_progress = {}
-          hash_progress[:variable_pair] = [v1.name, v2.name]
-          hash_progress[:total] = total / v1.parameters.length / \
-              v2.parameters.length
-          efa = []
-          v1.parameters.each do |p1|
-            v2.parameters.each do |p2|
-              count = 0
-              finished.each do |f|
-                if f[v1.name] == p1 and f[v2.name] == p2
-                  count += 1
-                end
-              end
-              efa.push({:value => [p1, p2], :finish => count})
-            end
-          end
-          hash_progress[:each_finish] = efa
-          pa.push(hash_progress)
-        end
-      end
-      begin
-        json = JSON.generate(hash)
-        return json
-      rescue Exception => e
-        error("fail to generate parameter progress json. #{e.message}")
-        error(e.backtrace)
-      end
-      return nil
-    end
-
     private
     def value_to_indexes(v, total_indexes, total_num)
       indexes = []
@@ -481,7 +387,7 @@ module Practis
       end
       return indexes
     end
-
+    #
     private
     def cast_to_type(type, var)
       case type
@@ -498,47 +404,7 @@ module Practis
         else nil
       end
     end
-
-    private
-    def check_uploaded_result_count
-      if @area_list.size <= 0 
-        @to_be_varriance_analysis = false
-        return false
-      end
-
-
-
-      # if @id_list_queue.length <= 0
-      #   @to_be_varriance_analysis = false;
-      #   return false
-      # end
-      
-      # uploaded_result_count = 0
-      # result_list = []
-      # @id_list_queue[0][:list].each{|lk, lv|
-      #   tmp = []
-      #   lv.each{ |v|
-      #     if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
-      #       uploaded_result_count += 1
-      #       retval.each{ |r| tmp.push(r["value"]) }
-      #     else
-      #       debug("retval: #{retval}")
-      #     end
-      #   }
-      #   result_list.push(tmp)
-      # }
-      # debug("list queue size: #{@id_list_queue.length}")
-      # debug("id list: #{@id_list_queue[0][:list]}")# debug("id list: #{@id_list}")
-      # debug("result length: #{result_list.size}")
-      # debug("result: #{result_list}")
-
-      # if uploaded_result_count >= @id_list_queue[0][:size]
-      #   return true
-      # else
-      #   return false
-      # end
-    end
-
+    #
     def show_param_combination
       for j in 0...@paramCombinationArray[0].size
         for i in 0...@paramCombinationArray.size

@@ -93,12 +93,19 @@ class OrthogonalArray
         break
       end
     }
-    if twice 
-      @colums.each{|oc|
-        if oc.parameter_name != parameter[:name]
+    if twice
+      @table.each_with_index{|c, i|
+        extend_flag = true
+        @colums.each{|oc| 
+          if oc.id == i && oc.parameter_name == parameter[:name]
+            extend_flag = false
+            break
+          end 
+        }
+        if extend_flag
           copy = []
-          @table[oc.id].each{ |b| copy.push(b) }
-          @table[oc.id] += copy
+          @table[i].each{ |b| copy.push(b) }
+          @table[i] += copy
         end
       }
     end
@@ -121,6 +128,9 @@ class OrthogonalArray
         break
       end
     }
+    p "new bit: #{new_param[:param][:name]}"
+    pp new_bit
+
     @table[id].each_with_index{|v, i|
       new_bit.each{|b|
         if b == v
