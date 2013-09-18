@@ -1,3 +1,4 @@
+require 'pp'
 class VarianceAnalysis
 
   attr_reader :effect_Factor
@@ -26,6 +27,7 @@ class VarianceAnalysis
         end
       }
       effFact[:effect] = 0.0
+      pp effFact
       effFact[:results].each_value{|v| effFact[:effect] += ((v.inject(:+)**2).to_f / v.size)}
       effFact[:effect] -= @ct
       effFact[:free] = 1 #(2水準なので常に1)

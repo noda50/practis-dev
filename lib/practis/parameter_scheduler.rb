@@ -250,9 +250,7 @@ module Practis
         @analysis = {:area => @oa.analysis_area[0],
                     :result_id => {},
                     :size => @oa.table[0].size*@unassigned_total_size}
-        # @analysis[:area] = @oa.analysis_area[0]
         @experimentSize = @oa.table[0].size
-
         
         @total_experiment = get_total
         @allocated_numbers = []        
@@ -260,7 +258,6 @@ module Practis
         # (2013/09/12) ==========================================
       end
       
-
       # get parameter set from variable_set
       def get_parameter_set(id=nil)
         # already allocated all parameters
@@ -268,21 +265,15 @@ module Practis
           debug("no available parameter, \n" +
                 "total index num: #{@total_indexes.length}, \n" +
                 "total indexes: #{@total_indexes}, \n" +
-                "total number: #{@total_experiment} \n" + 
                 "available: #{@available_numbers.length}, \n" +
                 "allocated: #{@allocated_numbers.length} \n")
           return nil
         end
 
         v = @available_numbers.shift
-        debug("v: #{v}, unassigned_total: #{@unassigned_total}")
         v_index = v / @unassigned_total_size
         @allocated_numbers.push(v)
-
         not_allocate_indexes = value_to_indexes(v % @unassigned_total_size)
-        # debug("check indexes: #{indexes}")
-
-        # allocate parameters
         parameter_array = []
         @variable_set.size.times{ |i|
           unassign_flag = true
@@ -317,11 +308,34 @@ module Practis
         return @oa.table[0].size*@unassigned_total_size
       end
 
+      #
+      def already_allocation(already_id=nil, new_id=nil)
+        if already_id.nil? || new_id.nil?
+          error("error id is empty:")
+          pp @analysis
+        end
+        flag = false
+        @analysis[:result_id].each_value{|arr|
+          # pp arr
+          arr.each_with_index{|v, i|
+            if v == new_id
+              arr[i] = already_id
+              flag = true
+              # pp arr
+              break
+            end
+          }
+          if flag then break end
+        }
+      end
+
       # 
       def update_analysis(next_area)
         @analysis[:area] = next_area
         @analysis[:result_id] = {}
         @analysis[:size] = next_area.size*@unassigned_total_size
+        @available_numbers += @analysis[:size].times.map { |i| i }
+        @total_experiment = get_total
       end
 
       # return parameter combination indexes

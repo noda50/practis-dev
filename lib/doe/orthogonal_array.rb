@@ -106,9 +106,39 @@ class OrthogonalArray
   end
 
   # for a kind of parameter
-  def generate_new_analysis_area(old_rows, add_point_case, exteded_column)
+  def generate_new_analysis_area(old_rows, new_param, exteded_column)
     new_rows = []
-    old_rows.each{|row| new_rows.push(row + (@table[exteded_column.id].size / 2))}
+    # old_rows.each{|row| new_rows.push(row + (@table[exteded_column.id].size / 2))}
+    add_point_case = new_param[:case]
+    new_bit =[]
+    id=nil
+    @colums.each{|c|
+      if c.parameter_name == new_param[:param][:name]
+        id = c.id
+        new_param[:param][:variables].each{|v|
+          new_bit.push(c.get_bit_string(v))
+        }
+        break
+      end
+    }
+    @table[id].each_with_index{|v, i|
+      new_bit.each{|b|
+        if b == v
+          # compare get_row(old_rows) with get_row(i)
+          old_rows.each{|r|
+            row_i = get_row(i)
+            row_r = get_row(r)
+            row_i.delete_at(id)
+            row_r.delete_at(id)
+            if (row_i - row_r).size == 0
+              new_rows.push(i)
+            end
+          }
+        end
+      }
+    }
+    new_rows.uniq!
+
     old_lower_value_rows = []
     old_upper_value_rows = []
     old_lower_value = nil

@@ -107,7 +107,11 @@ class OrthogonalColumn
 		return @corresponds[bit_string]
 	end
 	# 
-	def get_bit_string(parameter)
+	def get_bit_string(valiable)
+		return @corresponds.key(valiable)
+	end
+	# 
+	def get_bit_string_set(parameter)
 		if parameter[:name] != @parameter_name
 			return nil
 		end
