@@ -261,6 +261,10 @@ class OrthogonalArray
     return @table[col][row].to_i(2)
   end
   #
+  def get_bit_string(col, row)
+    return @table[col][row]
+  end
+  #
   def get_parameter(row, col)
     return @colums[col].get_parameter(@table[col][row])
   end

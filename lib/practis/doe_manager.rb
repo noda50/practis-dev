@@ -218,9 +218,10 @@ module Practis
         end
         ids.each{|v|
           if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
-            uploaded_result_count += 1
+            # uploaded_result_count += 1
             retval.each{ |r| 
-              result_list[:results][area].push(r["value"]) 
+              result_list[:results][area].push(r["value"])
+              uploaded_result_count += 1
             }
           else
             debug("retval: #{retval}")
@@ -257,11 +258,12 @@ module Practis
                 result_list[:area].each{|r|
                   var.push(@variable_set.scheduler.scheduler.oa.get_parameter(r, oc.id))
                 }
-                tmp = generate_new_parameter(var.uniq!, oc.parameter_name)
-                if !tmp.nil?
-                  new_param_list.push(tmp)
+                tmp_var,tmp_area = generate_new_parameter(var.uniq!, oc.parameter_name, result_list[:area])
+                if tmp_area.empty?
+                  new_param_list.push(tmp_var)
                 else
                   # ignored area is added for analysis to next_area_list
+                  @area_list += tmp_area
                 end
               end
             }
@@ -290,16 +292,16 @@ module Practis
     end
 
     # search only "inside" significant parameter
-    def generate_new_parameter(var, para_name)
+    def generate_new_parameter(var, para_name, area)
       p "generate new parameter ====================================="
       pp var
       oa = @variable_set.scheduler.scheduler.oa
-      # var_min = var.parameters.min
-      # var_max = var.parameters.max
       var_min = var.min
       var_max = var.max
       min=nil
       max=nil
+      exist_area = []
+      new_area = []
       oa.colums.each{|c|
         if para_name == c.parameter_name
           if 2 < c.parameters.size
@@ -307,9 +309,49 @@ module Practis
               min = var_min
               max = var_max
             else
-              min = c.parameters.min_by{|v| v > var_min ? 0 : v}
-              max = c.parameters.max_by{|v| v < var_max ? v : 0}
-              return nil
+              min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
+              max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
+              min_bit = c.get_bit_string(min)
+              max_bit = c.get_bit_string(max)
+
+              oa.table[c.id].each_with_index{|b, i|
+                if  b == min_bit || b == max_bit
+                  area.each{|row|
+                    flag = true
+                    oa.table.each_with_index{|o, j|
+                      if j != c.id
+                        if o[i] != o[row]
+                          flag = false
+                          break
+                        end
+                      end
+                    }
+                    if flag then exist_area.push(i) end
+                  }
+                end
+              }
+              new_area.push(exist_area)
+              new_area_a =[]
+              new_area_b =[]
+              exist_area.each{|row|
+                tmp_bit = oa.get_bit_string(c.id, row)
+                if tmp_bit[tmp_bit.size - 1] == "0"
+                  new_area_a.push(row)
+                elsif tmp_bit[tmp_bit.size-1] == "1"
+                  new_area_b.push(row)
+                end
+              }
+              area.each{|row|
+                tmp_bit = oa.get_bit_string(c.id, row)
+                if tmp_bit[tmp_bit.size - 1] == "0"
+                  new_area_b.push(row)
+                elsif tmp_bit[tmp_bit.size - 1] == "1"
+                  new_area_a.push(row)
+                end
+              }
+              new_area.push(new_area_a)
+              new_area.push(new_area_b)
+              break # return exist_area
             end
           else
             min = var_min
@@ -333,7 +375,7 @@ module Practis
       pp @variable_set.scheduler.scheduler.oa.get_table
       p "end generate new parameter ====================================="
       puts
-      return new_var
+      return new_var,new_area
     end
 
     # return array of new searching parameters (area) 
@@ -363,6 +405,7 @@ module Practis
       puts
       return new_area
     end
+
 
     ##------------------------------------------------------------
     def cast_decimal(var)
