@@ -34,8 +34,12 @@ module Practis
       @total_parameters = @variable_set.get_total
       
       # [2013/09/13 H-Matsushima]
-      @area_list = []
-      @area_list.push(@variable_set.scheduler.scheduler.analysis[:area])
+      @mutexAnalysis = Mutex.new
+      # @area_list = []
+      # @area_list.push(@variable_set.scheduler.scheduler.oa.analysis_area[0])
+      @result_list_queue = []
+      @result_list_queue.push(generate_result_list(@variable_set.scheduler.scheduler.oa.analysis_area[0]))
+      @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
       # @doe_file = open("doe.log", "w")
@@ -105,8 +109,24 @@ module Practis
             else
               info("wait to finish analyzing result !")
               debug("id_queue flag: #{@to_be_varriance_analysis}")
+              debug("execution queue length: #{@result_list_queue.size}")
+              #[2013/09/20]
+              if @alloc_counter < (@result_list_queue.size - 1)
+                @alloc_counter += 1
+                @variable_set.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
+              end
+              # ========
               break
             end
+          # else
+          #   #[2013/09/20]
+          #   area_index = @variable_set.scheduler.scheduler.get_v_index
+          #   debug("area_index: #{area_index}, id:#{newId}")
+          #   # debug("#{@result_list_queue[@alloc_counter]}")
+          #   if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
+          #     @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
+          #   end
+          #   # ======
           end
 
           # condition = parameter.parameter_set.map { |p|
@@ -134,7 +154,15 @@ module Practis
               parameter.state = PARAMETER_STATE_ALLOCATING
               parameters.push(parameter)
               @parameter_pool.push(parameter)
-              request_number -= 1 
+              request_number -= 1
+              # [2013/09/20]
+              area_index = @variable_set.scheduler.scheduler.get_v_index
+              debug("area_index: #{area_index}, id:#{newId}")
+              # debug("#{@result_list_queue[@alloc_counter]}")
+              if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
+                @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
+              end
+              # ======
             end
           else
             warn("the parameter already executed on previous or by the others." +
@@ -144,9 +172,13 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                @variable_set.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
+                already_id = @variable_set.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
                 parameter.state = r["state"]
                 @parameter_pool.push(parameter)
+                # [2013/09/20]
+                area_index = @variable_set.scheduler.scheduler.get_v_index
+                @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(r["parameter_id"])
+                # ============
               }
             }
             debug("parameter.state = #{parameter.state.inspect}");
@@ -177,7 +209,7 @@ module Practis
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
       if @variable_set.get_available <= 0 && @to_be_varriance_analysis
-        variance_analysis
+        @mutexAnalysis.synchronize{variance_analysis}        
       end
 
       debug(cluster_tree.to_s)
@@ -210,33 +242,50 @@ module Practis
     # variance analysis
     def variance_analysis
       uploaded_result_count = 0
-      result_list = { :area => @variable_set.scheduler.scheduler.analysis[:area],
-                      :results => {} }
-      @variable_set.scheduler.scheduler.analysis[:result_id].each{|area, ids|
-        if !result_list[:results].key?(area)
-          result_list[:results][area] = []
-        end
-        ids.each{|v|
-          if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
-            # uploaded_result_count += 1
+      # [2013/09/20]
+      @result_list_queue[0][:area].each{|a| @result_list_queue[0][:results][a].clear}
+      @result_list_queue[0][:area].each{|a|
+        @result_list_queue[0][:id][a].each{|id|
+          if (retval = @database_connector.read_record(:result, "result_id = '#{id}'")).length > 0
+            uploaded_result_count += 1
             retval.each{ |r| 
-              result_list[:results][area].push(r["value"])
-              uploaded_result_count += 1
+              @result_list_queue[0][:results][a].push(r["value"])
+              # uploaded_result_count += 1
             }
           else
             debug("retval: #{retval}")
           end
         }
       }
+      # =======
+      # @variable_set.scheduler.scheduler.analysis[:result_id].each{|area, ids|
+      #   if !result_list[:results].key?(area)
+      #     result_list[:results][area] = []
+      #   end
+      #   ids.each{|v|
+      #     if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
+      #       uploaded_result_count += 1
+      #       retval.each{ |r| 
+      #         result_list[:results][area].push(r["value"])
+      #         # uploaded_result_count += 1
+      #       }
+      #     else
+      #       debug("retval: #{retval}")
+      #     end
+      #   }
+      # }
+      # ========
       p "variance analysis ====================================="
       p "result list:"
-      pp result_list
+      pp @result_list_queue[0]#result_list
 
       if uploaded_result_count >= @variable_set.scheduler.scheduler.current_total
-        debug("result length: #{result_list.size}")
-        debug("result: #{result_list}")
+        # debug("result length: #{result_list.size}")
+        # debug("result: #{result_list}")
+        debug("result length: #{@result_list_queue[0][:results].size}")
+        debug("result: #{@result_list_queue[0]}")        
         
-        va = VarianceAnalysis.new(result_list,
+        va = VarianceAnalysis.new(@result_list_queue[0],
                                   @variable_set.scheduler.scheduler.oa.table,
                                   @variable_set.scheduler.scheduler.oa.colums)
         p "variance factor"
@@ -255,42 +304,51 @@ module Practis
             @variable_set.scheduler.scheduler.oa.colums.each{|oc|
               if num_significance.include?(oc.parameter_name)
                 var = []
-                result_list[:area].each{|r|
+                #result_list[:area].each{|r|
+                @result_list_queue[0][:area].each{|r|
                   var.push(@variable_set.scheduler.scheduler.oa.get_parameter(r, oc.id))
                 }
-                tmp_var,tmp_area = generate_new_parameter(var.uniq!, oc.parameter_name, result_list[:area])
+                tmp_var,tmp_area = generate_new_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
                 if tmp_area.empty?
                   new_param_list.push(tmp_var)
                 else
                   # ignored area is added for analysis to next_area_list
-                  @area_list += tmp_area
+                  tmp_area.each{|a_list|
+                    @result_list_queue.push(generate_result_list(a_list))
+                  }
+                  # @area_list += tmp_area
                 end
               end
             }
 
             if 0 < new_param_list.size 
               # generate new_param_list & extend orthogonal array
-              next_area_list = generate_next_search_area(@variable_set.scheduler.scheduler.analysis[:area],
-                                                            @variable_set.scheduler.scheduler.oa,
-                                                            new_param_list)
+              next_area_list = generate_next_search_area(@result_list_queue[0][:area],#result_list[:area],
+                                                          @variable_set.scheduler.scheduler.oa,
+                                                          new_param_list)
               debug("next area list: ")
               pp next_area_list
-              @area_list += next_area_list
+              next_area_list.each{|a_list|
+                @result_list_queue.push(generate_result_list(a_list))
+              }
+              # @area_list += next_area_list
             end
           end
         end
 
-        @area_list.shift
-        if @area_list.size <= 0 
+        @result_list_queue.shift
+        @alloc_counter -= 1
+        # @area_list.shift
+        # if @area_list.size <= 0
+        if @result_list_queue.size <= 0
           @to_be_varriance_analysis = false
-        else
-          @variable_set.scheduler.scheduler.update_analysis(@area_list[0])  
+        # else
+        #   @variable_set.scheduler.scheduler.update_analysis(@area_list[0])  
         end
       end
       p "end variance analysis ====================================="
       puts
     end
-
     # search only "inside" significant parameter
     def generate_new_parameter(var, para_name, area)
       p "generate new parameter ====================================="
@@ -377,7 +435,6 @@ module Practis
       puts
       return new_var,new_area
     end
-
     # return array of new searching parameters (area) 
     def generate_next_search_area(area, oa, new_param_list)
       new_area = []
@@ -405,7 +462,15 @@ module Practis
       puts
       return new_area
     end
-
+    # 
+    def generate_result_list(area)
+      result_list = { :area => area, :id => {}, :results => {} }
+      result_list[:area].each{|a|
+        result_list[:id][a] = []
+        result_list[:results][a] = []
+      }
+      return result_list
+    end
 
     ##------------------------------------------------------------
     def cast_decimal(var)

@@ -251,6 +251,7 @@ module Practis
         @analysis = {:area => @oa.analysis_area[0],
                     :result_id => {},
                     :size => @oa.table[0].size*@unassigned_total_size}
+        @v_index = nil
         @experimentSize = @oa.table[0].size
         
         @total_experiment = get_total
@@ -273,7 +274,7 @@ module Practis
         end
 
         v = @available_numbers.shift
-        v_index = v / @unassigned_total_size
+        @v_index = v / @unassigned_total_size
         @allocated_numbers.push(v)
         not_allocate_indexes = value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
@@ -281,7 +282,7 @@ module Practis
           unassign_flag = true
           @oa.colums.each{|col|
             if @variable_set[i].name == col.parameter_name
-              parameter_array.push(@oa.get_parameter(@analysis[:area][v_index], col.id))
+              parameter_array.push(@oa.get_parameter(@analysis[:area][@v_index], col.id))
               unassign_flag = false
               break
             end
@@ -291,10 +292,10 @@ module Practis
           end 
         }
 
-        if !@analysis[:result_id].key?(@analysis[:area][v_index])
-          @analysis[:result_id][@analysis[:area][v_index]] = []
+        if !@analysis[:result_id].key?(@analysis[:area][@v_index])
+          @analysis[:result_id][@analysis[:area][@v_index]] = []
         end
-        @analysis[:result_id][@analysis[:area][v_index]].push(id)
+        @analysis[:result_id][@analysis[:area][@v_index]].push(id)
 
         return parameter_array
       end
@@ -318,17 +319,19 @@ module Practis
         end
         flag = false
         @analysis[:result_id].each_value{|arr|
-          # pp arr
           arr.each_with_index{|v, i|
             if v == new_id
               arr[i] = already_id
               flag = true
-              # pp arr
               break
             end
           }
           if flag then break end
         }
+      end
+
+      def get_v_index
+        return @v_index
       end
 
       # 
