@@ -1,0 +1,180 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__) + '/../lib')
+
+require 'json'
+require 'optparse'
+
+require 'practis'
+require 'practis/manager'
+require 'practis/doe_manager'
+
+
+# Allow access control of cross domain.
+def cors_headers
+  headers 'Access-Control-Allow-Origin' => 'http://localhost',
+    'Access-Control-Allow-Headers' => 'origin, x-requested-with, content-type'
+end
+
+# Parse command line options.
+options = {}
+OptionParser.new do |o|
+  o.on("-D DIRECTORY", "--directory=DIRECTORY",
+       "specify the directory that configurations are placed.") {|v|
+       options[:directory] = v}
+  o.on("-a ADDRESS", "--addr=ADDRESS",
+       "specify the IP address of the manager") {|v| options[:addr] = v}
+  ##<<<[2013/08/30 I.Noda]
+  ## add to specify web address and port
+  o.on("-w ADDRESS", "--web-addr=ADDRESS",
+       "specify the IP address of web server") {|v| options[:webAddr] = v}
+  o.on("--web-port=PORT",
+       "specify the TCP/IP port of web server") {|v| options[:webPort] = v}
+  ##>>>[2013/08/30 I.Noda]
+  o.on("-c CONFIG_FILE", "--config=CONFIG_FILE",
+       "specify the practis config file") {|v| options[:config] = v}
+  o.on("-d DATABASE_FILE", "--database=DATABASE_FILE",
+       "specify the practis database file") {|v| options[:database] = v}
+  o.on("-v PARAMETER_FILE", "--parameter=PARAMETER_FILE",
+       "specify the practis parameter file") {|v| options[:parameter] = v}
+  o.on("-r RESULT_FILE", "--result=RESULT_FILE",
+       "specify the practis result file") {|v| options[:result] = v}
+  begin
+    o.parse!
+  rescue
+    STDERR.puts "Invalid option."
+    STDERR.puts "options: #{o}"
+    exit
+  end
+end
+
+
+addr = options[:addr]
+##<<<[2013/08/30 I.Noda]
+## add to specify web address and port
+$webAddr = options[:webAddr] || options[:addr]
+$webPort = options[:webPort] || 4567 # default of sinatra
+##>>>[2013/08/30 I.Noda]
+
+config_file, database_file, parameter_file, result_file = nil, nil, nil, nil
+
+if (directory = options[:directory]) and File.directory?(directory)
+  config_file = File.join(directory, "practis_configuration.xml")
+  database_file = File.join(directory, "practis_database.xml")
+  parameter_file = File.join(directory, "practis_parameters.xml")
+  result_file = File.join(directory, "practis_result.xml")
+  unless File.exist?(config_file) and File.exist?(database_file) and
+      File.exist?(parameter_file) and File.exist?(result_file)
+    config_file, database_file, parameter_file, result_file = nil, nil, nil, nil
+  end
+end
+if config_file.nil?
+  if (config_file = options[:config]).nil?
+    config_file = "sample/default/practis_configuration.xml"
+  end
+end
+if database_file.nil?
+  if (database_file = options[:database]).nil?
+    database_file = "sample/default/practis_database.xml"
+  end
+end
+if parameter_file.nil?
+  if (parameter_file = options[:parameter]).nil?
+    parameter_file = "sample/default/practis_parameters.xml"
+  end
+end
+if result_file.nil?
+  if (result_file = options[:result]).nil?
+    result_file = "sample/default/practis_result.xml"
+  end
+end
+
+$manager = Practis::DoeManager.new(config_file, parameter_file, database_file,
+                                result_file, addr)
+manager_thread = Thread.new do
+  $manager.loop
+end
+
+# run web server
+require 'sinatra'
+
+class ManagerWeb < Sinatra::Base
+
+  options '/*' do
+    response["Access-Control-Allow-Headers"] = "origin, x-requested-with, " +
+      "content-type"
+  end
+
+  set :public_folder, "public"
+
+  ##<<<[2013/08/30 I.Noda]
+  ## add to specify web address and port
+  set :bind, $webAddr
+  set :port, $webPort 
+  ##>>>[2013/08/30 I.Noda]
+
+  get '/' do
+    send_file File.join('public', 'index.html')
+  end
+
+  get '/cluster.json' do
+    cors_headers
+    content_type 'application/json', :charset => 'utf-8'
+    $manager.get_cluster_json
+  end
+
+  get '/parameter-progress.json' do
+    cors_headers
+    content_type 'application/json', :charset => 'utf-8'
+    [$manager.get_parameter_progress]
+  end
+
+  ## <<< [2013/09/01 I.Noda]
+  ## more efficient progress info.
+  get '/parameter-progress2.json' do
+    cors_headers
+    content_type 'application/json', :charset => 'utf-8'
+    [$manager.get_parameter_progress2]
+  end
+  ## >>> [2013/09/01 I.Noda]
+
+  ## <<< [2013/09/02 I.Noda]
+  ## more efficient progress info.
+  get '/parameter-progress-overview.json' do
+    cors_headers
+    content_type 'application/json', :charset => 'utf-8'
+    [$manager.get_parameter_progress_overview]
+  end
+  ## >>> [2013/09/02 I.Noda]
+
+
+  get '/results.json' do
+    cors_headers
+    content_type 'application/json', :charset => 'utf-8'
+    [$manager.get_results]
+  end
+
+end
+
+web_thread = Thread.new do
+  ManagerWeb.run!
+end
+
+thread_list = [manager_thread, web_thread]
+running = true
+while running
+  thread_list.each do |th|
+    unless th.alive?
+      th.join
+      running = false
+    end
+  end
+  sleep 3
+end
+
+thread_list.each do |th|
+  if th.alive?
+    Thread.kill(th)
+  end
+end

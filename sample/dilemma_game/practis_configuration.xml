@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<practis>
+  <configuration number="">
+
+    <!-- Common configurations -->
+
+    <!-- Project name -->
+    <config name="project_name" type="String">sample</config>
+    
+    <!-- writen by matsushima -->
+    <config name="execution_name" type="String">dilemma_game</config>
+
+    <!-- Specify debug level from FATAL, ERROR, WARN, INFO and DEBUG -->
+    <config name="debug_level" type="String">DEBUG</config>
+
+    <!-- Logger output option -->
+    <config name="debug_output" type="String">STDERR</config>
+
+    <!-- sleep time of Manager every loop -->
+    <config name="loop_sleep_duration" type="Integer">10</config>
+    <config name="message_handler_duration" type="Integer">30</config>
+    <config name="keepalive_duration" type="Integer">180</config>
+    <config name="keepalive_expired_duration" type="Integer">360</config>
+    <!-- After this timeout seconds, allocating or executing parameter is assumed as timeout.
+    -->
+    <config name="parameter_execution_expired_timeout" type="Integer">300</config>
+    <config name="parameter_allocation_expired_timeout" type="Integer">300</config>
+
+    <!-- scheduler (to be able to use Design of Experiment... writen by matsushima -->
+    <config name="parameter_scheduler" type="String">DesginOfExperimentScheduler</config>
+
+    <!-- Specify how to check keep alive.
+      database: update the cluster state using database.
+      message: the cluster states are gathered by Manager.
+    -->
+    <config name="keepalive_type" type="String">database</config>
+    <!--config name="keepalive_type" type="String">message</config-->
+
+    <!-- Manager specific configurations -->
+    <config name="max_clusters" type="Integer">1000</config>
+
+    <!-- Executor specific configurations -->
+    <config name="parallel" type="Integer">1</config>
+    <config name="keepalive_thread_duration" type="Integer">30</config>
+    <config name="executable_path" type="String">work/bin</config>
+
+    <!-- Executable
+      The executable is executed by the executors on shell with
+      "executable executable_args1 executable_args2 ..." command.
+    -->
+    <!--config name="executable" type="String">ruby</config>
+    <config name="executable_arg1" type="String">-I</config>
+    <config name="executable_arg2" type="String">lib</config>
+    <config name="executable_arg3" type="String">-I</config>
+    <config name="executable_arg4" type="String">work/bin</config>
+    <config name="executable_arg5" type="String">work/bin/simple_equation.rb</config-->
+
+    <!--config name="executable_command" type="String">ruby -I lib -I work/bin work/bin/simple_equation.rb</config-->
+    
+    <config name="executable_command" type="String">ruby -I lib -I work/bin/lib work/bin/dilemma_game.rb</config>
+
+    <!-- comment out sample: simple_equation
+    <config name="executable_command" type="String">ruby -I lib -I work/bin/lib work/bin/simple_equation.rb</config>
+    -->
+
+    <!-- Executable files and directories -->
+    <config name="executable_transfer" type="String">
+      <item>sample/dilemma_game/dilemma_game.rb</item>
+      <item>sample/dilemma_game/lib</item>
+    </config>
+    <!--
+         <config name="executable_transfer1" type="String">sample/simple_equation/simple_equation.rb</config>
+         <config name="executable_transfer2" type="String">sample/simple_equation/equation.rb</config>
+    -->
+    
+    
+    
+
+    <!-- Followings are the configurations of the practis database.
+         The schemas of the database are defined in database configuration file.
+         You have to set the same database name with it.
+    -->
+    <!-- Project name -->
+    <config name="project_name" type="String">sample</config>
+    <config name="execution_name" type="String">dilemma_game</config>
+
+    <!-- Database commons -->
+    <config name="database_query_retry" type="Integer">-1</config>
+
+    <!-- Project database -->
+    <config name="project_database_type" type="String">mysql</config>
+    <config name="project_database_hostname" type="String">127.0.0.1</config>
+    <config name="project_database_management_username" type="String">practis_manager</config>
+    <config name="project_database_management_password" type="String">sitcarp</config>
+    <config name="project_database_username" type="String">practis</config>
+    <config name="project_database_password" type="String">sitcarp</config>
+    <config name="project_database_name" type="String">dilemma_game</config>
+    <config name="project_database_tablename" type="String">project</config>
+
+    <!-- Execution database -->
+    <config name="execution_database_type" type="String">mysql</config>
+    <config name="execution_database_hostname" type="String">127.0.0.1</config>
+    <config name="execution_database_management_username" type="String">practis_manager</config>
+    <config name="execution_database_management_password" type="String">sitcarp</config>
+    <config name="execution_database_username" type="String">practis</config>
+    <config name="execution_database_password" type="String">sitcarp</config>
+    <config name="execution_database_name" type="String">dilemma_game</config>
+    <config name="execution_database_tablename" type="String">execution</config>
+
+    <!-- Executable database -->
+    <config name="executable_database_type" type="String">mysql</config>
+    <config name="executable_database_hostname" type="String">127.0.0.1</config>
+    <config name="executable_database_management_username" type="String">practis_manager</config>
+    <config name="executable_database_management_password" type="String">sitcarp</config>
+    <config name="executable_database_username" type="String">practis</config>
+    <config name="executable_database_password" type="String">sitcarp</config>
+    <config name="executable_database_name" type="String">dilemma_game</config>
+    <config name="executable_database_tablename" type="String">executable</config>
+
+    <!-- Node database -->
+    <config name="node_database_type" type="String">mysql</config>
+    <config name="node_database_hostname" type="String">127.0.0.1</config>
+    <config name="node_database_management_username" type="String">practis_manager</config>
+    <config name="node_database_management_password" type="String">sitcarp</config>
+    <config name="node_database_username" type="String">practis</config>
+    <config name="node_database_password" type="String">sitcarp</config>
+    <config name="node_database_name" type="String">dilemma_game</config>
+    <config name="node_database_tablename" type="String">node</config>
+
+    <!-- Parameter database -->
+    <config name="parameter_database_type" type="String">mysql</config>
+    <config name="parameter_database_hostname" type="String">127.0.0.1</config>
+    <config name="parameter_database_management_username" type="String">practis_manager</config>
+    <config name="parameter_database_management_password" type="String">sitcarp</config>
+    <config name="parameter_database_username" type="String">practis</config>
+    <config name="parameter_database_password" type="String">sitcarp</config>
+    <config name="parameter_database_name" type="String">dilemma_game</config>
+    <config name="parameter_database_tablename" type="String">parameter</config>
+
+    <!-- Result database -->
+    <config name="result_database_type" type="String">mysql</config>
+    <config name="result_database_hostname" type="String">127.0.0.1</config>
+    <config name="result_database_management_username" type="String">practis_manager</config>
+    <config name="result_database_management_password" type="String">sitcarp</config>
+    <config name="result_database_username" type="String">practis</config>
+    <config name="result_database_password" type="String">sitcarp</config>
+    <config name="result_database_name" type="String">dilemma_game</config>
+    <config name="result_database_tablename" type="String">result</config>
+  </configuration>
+</practis>

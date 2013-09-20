@@ -3,6 +3,9 @@
 
 require 'practis'
 require 'practis/parameter'
+require 'doe/orthogonal_array'
+require 'csv'
+require 'pp'
 
 
 module Practis
@@ -19,9 +22,9 @@ module Practis
       @mutex = Mutex.new() ;
     end
 
-    def get_parameter_set
+    def get_parameter_set(id=nil)
       @mutex.synchronize{
-        if (parameter_array = @scheduler.get_parameter_set).nil? ||
+        if (parameter_array = @scheduler.get_parameter_set(id)).nil? ||
             parameter_array.include?(nil)
           return nil
         end
@@ -66,7 +69,7 @@ module Practis
         end
       end
 
-      def get_parameter_set
+      def get_parameter_set(id=nil)
         parameter_array = []
         # check whether all of the parameters are allocated?
         if current_indexes[current_indexes.length - 1] >=
@@ -148,7 +151,7 @@ module Practis
         debug("random scheduler initiated, #{@total_number}")
       end
 
-      def get_parameter_set
+      def get_parameter_set(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, total: #{@total_indexes.length}, " +
@@ -163,7 +166,7 @@ module Practis
         @available_numbers.delete(v)
         parameter_array = []
         indexes = value_to_indexes(v)
-#        debug("indexes: #{indexes}")
+        # debug("indexes: #{indexes}")
 
         # allocate parameters
         variable_set.length.times do |i|
@@ -193,7 +196,175 @@ module Practis
           k -= l * divider
           indexes.push(l)
         end
-#        debug("value_to_indexes: v=#{v}, indexes=#{indexes.inspect}");
+        #debug("value_to_indexes: v=#{v}, indexes=#{indexes.inspect}");
+        return indexes
+      end
+    end
+
+    # 
+    class DesginOfExperimentScheduler
+
+      include Practis
+
+      attr_reader :current_indexes
+      attr_reader :total_indexes
+      attr_reader :variable_set
+      attr_reader :oa
+      attr_reader :analysis
+      attr_reader :current_total
+
+      def initialize(variable_set)
+        @variable_set = chk_arg(Array, variable_set)
+        # (2013/09/12) written by matsushima ==================
+        assign_list = {}
+        CSV.foreach("lib/doe/ExperimentalDesign.ini") do |r|
+          if r[1] == "is_assigned"
+            assign_list[r[0]] = true
+          elsif r[1] == "is_unassigned"
+            assign_list[r[0]] = false
+          end
+        end
+
+        parameters = []
+        @unassigned = []
+        @total_indexes = []
+        @unassigned_total = []
+        @variable_set.each{|v|
+          chk_arg(Practis::Variable, v)
+          @total_indexes.push(v.length)
+          if assign_list[v.name]
+            parameters.push({:name => v.name, :variables => v.parameters})
+          else
+            @unassigned.push({:name => v.name, :variables => v.parameters})
+            @unassigned_total.push(v.length)
+          end
+        }
+        
+        @total_number = 1
+        @total_indexes.collect {|t| @total_number *= t}
+        @allocated_numbers = []
+        @available_numbers = @total_number.times.map { |i| i }
+        @unassigned_total_size = 1
+        @unassigned_total.collect{|t| @unassigned_total_size *= t}
+
+        @oa = OrthogonalArray.new(parameters)
+        @analysis = {:area => @oa.analysis_area[0],
+                    :result_id => {},
+                    :size => @oa.table[0].size*@unassigned_total_size}
+        @v_index = nil
+        @experimentSize = @oa.table[0].size
+        
+        @total_experiment = get_total
+        @allocated_numbers = []        
+        @available_numbers = @total_experiment.times.map { |i| i }
+        @current_total = @available_numbers.size
+        # (2013/09/12) ==========================================
+      end
+      
+      # get parameter set from variable_set
+      def get_parameter_set(id=nil)
+        # already allocated all parameters
+        if @available_numbers.length <= 0
+          debug("no available parameter, \n" +
+                "total index num: #{@total_indexes.length}, \n" +
+                "total indexes: #{@total_indexes}, \n" +
+                "available: #{@available_numbers.length}, \n" +
+                "allocated: #{@allocated_numbers.length} \n")
+          return nil
+        end
+
+        v = @available_numbers.shift
+        @v_index = v / @unassigned_total_size
+        @allocated_numbers.push(v)
+        not_allocate_indexes = value_to_indexes(v % @unassigned_total_size)
+        parameter_array = []
+        @variable_set.size.times{ |i|
+          unassign_flag = true
+          @oa.colums.each{|col|
+            if @variable_set[i].name == col.parameter_name
+              parameter_array.push(@oa.get_parameter(@analysis[:area][@v_index], col.id))
+              unassign_flag = false
+              break
+            end
+          }
+          if unassign_flag
+            parameter_array.push(variable_set[i].get_n(not_allocate_indexes[i]))
+          end 
+        }
+
+        if !@analysis[:result_id].key?(@analysis[:area][@v_index])
+          @analysis[:result_id][@analysis[:area][@v_index]] = []
+        end
+        @analysis[:result_id][@analysis[:area][@v_index]].push(id)
+
+        return parameter_array
+      end
+
+      # 
+      def get_available
+        return @available_numbers.length
+      end
+
+      # 
+      def get_total
+        # return @experimentSize*@unassigned_total_size
+        return @oa.table[0].size*@unassigned_total_size
+      end
+
+      #
+      def already_allocation(already_id=nil, new_id=nil)
+        if already_id.nil? || new_id.nil?
+          error("error id is empty:")
+          pp @analysis
+        end
+        flag = false
+        @analysis[:result_id].each_value{|arr|
+          arr.each_with_index{|v, i|
+            if v == new_id
+              arr[i] = already_id
+              flag = true
+              break
+            end
+          }
+          if flag then break end
+        }
+      end
+
+      def get_v_index
+        return @v_index
+      end
+
+      # 
+      def update_analysis(next_area)
+        @analysis[:area] = next_area
+        @analysis[:result_id] = {}
+        @analysis[:size] = next_area.size*@unassigned_total_size
+        @available_numbers += @analysis[:size].times.map { |i| i }
+        @total_experiment = get_total
+        @current_total = @available_numbers.size
+      end
+
+      # return parameter combination indexes
+      private
+      def get_assignedSet(n = 0)
+        arr = Array.new
+        for i in 0...@assignedOA.size
+          arr.push(@assignedOA[i][n])
+        end
+        return arr
+      end
+
+      private
+      def value_to_indexes(v)
+        indexes = []
+        k = v
+        divider = @total_number
+        @total_indexes.each do |i|
+          divider = (divider / i).to_i
+          l = (k / divider).to_i
+          k -= l * divider
+          indexes.push(l)
+        end
         return indexes
       end
     end
