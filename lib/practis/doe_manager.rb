@@ -35,8 +35,6 @@ module Practis
       
       # [2013/09/13 H-Matsushima]
       @mutexAnalysis = Mutex.new
-      # @area_list = []
-      # @area_list.push(@variable_set.scheduler.scheduler.oa.analysis_area[0])
       @result_list_queue = []
       @result_list_queue.push(generate_result_list(@variable_set.scheduler.scheduler.oa.analysis_area[0]))
       @alloc_counter = 0
@@ -118,20 +116,8 @@ module Practis
               # ========
               break
             end
-          # else
-          #   #[2013/09/20]
-          #   area_index = @variable_set.scheduler.scheduler.get_v_index
-          #   debug("area_index: #{area_index}, id:#{newId}")
-          #   # debug("#{@result_list_queue[@alloc_counter]}")
-          #   if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
-          #     @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
-          #   end
-          #   # ======
           end
 
-          # condition = parameter.parameter_set.map { |p|
-          #   "#{p.name} = '#{p.value}'" }.join(" and ")
-          # debug("#{condition}, id: #{parameter.uid}")
           condition = [:and] ;
           parameter.parameter_set.map { |p|
             condition.push([:eq, [:field, p.name], p.value]) ;
@@ -157,8 +143,6 @@ module Practis
               request_number -= 1
               # [2013/09/20]
               area_index = @variable_set.scheduler.scheduler.get_v_index
-              debug("area_index: #{area_index}, id:#{newId}")
-              # debug("#{@result_list_queue[@alloc_counter]}")
               if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
                 @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
               end
@@ -250,31 +234,12 @@ module Practis
             uploaded_result_count += 1
             retval.each{ |r| 
               @result_list_queue[0][:results][a].push(r["value"])
-              # uploaded_result_count += 1
             }
           else
             debug("retval: #{retval}")
           end
         }
       }
-      # =======
-      # @variable_set.scheduler.scheduler.analysis[:result_id].each{|area, ids|
-      #   if !result_list[:results].key?(area)
-      #     result_list[:results][area] = []
-      #   end
-      #   ids.each{|v|
-      #     if (retval = @database_connector.read_record(:result, "result_id = '#{v}'")).length > 0
-      #       uploaded_result_count += 1
-      #       retval.each{ |r| 
-      #         result_list[:results][area].push(r["value"])
-      #         # uploaded_result_count += 1
-      #       }
-      #     else
-      #       debug("retval: #{retval}")
-      #     end
-      #   }
-      # }
-      # ========
       p "variance analysis ====================================="
       p "result list:"
       pp @result_list_queue[0]#result_list
@@ -316,7 +281,6 @@ module Practis
                   tmp_area.each{|a_list|
                     @result_list_queue.push(generate_result_list(a_list))
                   }
-                  # @area_list += tmp_area
                 end
               end
             }
@@ -331,19 +295,14 @@ module Practis
               next_area_list.each{|a_list|
                 @result_list_queue.push(generate_result_list(a_list))
               }
-              # @area_list += next_area_list
             end
           end
         end
 
         @result_list_queue.shift
         @alloc_counter -= 1
-        # @area_list.shift
-        # if @area_list.size <= 0
         if @result_list_queue.size <= 0
           @to_be_varriance_analysis = false
-        # else
-        #   @variable_set.scheduler.scheduler.update_analysis(@area_list[0])  
         end
       end
       p "end variance analysis ====================================="
