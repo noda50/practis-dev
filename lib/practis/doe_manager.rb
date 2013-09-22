@@ -27,10 +27,10 @@ module Practis
     attr_reader :va_queue
     attr_reader :current_var_set
 
-    def initialize(config_file, parameter_file, database_file, result_file, myaddr = nil)
+    def initialize(config_file, parameter_file, database_file, result_file, doe_ini, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
-      
       @variable_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
+      @variable_set.scheduler.scheduler.init_doe(doe_ini)
       @total_parameters = @variable_set.get_total
       
       # [2013/09/13 H-Matsushima]
@@ -319,15 +319,30 @@ module Practis
       max=nil
       exist_area = []
       new_area = []
+      new_array = nil
       oa.colums.each{|c|
         if para_name == c.parameter_name
+          var_diff = cast_decimal((var_max - var_min).abs / 3.0)
+          if var_min.class == Fixnum
+            new_array = [var_min+var_diff.to_i, var_max-var_diff.to_i]
+          elsif var_min.class == Float
+            new_array = [(var_min+var_diff).round(5), (var_max-var_diff).round(5)]
+          end
+
           if 2 < c.parameters.size
             if c.parameters.find{|v| var_min<v && v<var_max}.nil?
-              min = var_min
-              max = var_max
+              # min = var_min
+              # max = var_max
+              break
             else
-              min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
-              max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
+              if !(c.parameter.include?(new_array[0]) && c.parameter.include?(new_array[1]))
+                min_bit = c.get_bit_string(new_array.min)
+                max_bit = c.get_bit_string(new_array.max)
+              else
+                min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
+                max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
+              end
+
               min_bit = c.get_bit_string(min)
               max_bit = c.get_bit_string(max)
 
@@ -348,8 +363,8 @@ module Practis
                 end
               }
               new_area.push(exist_area)
-              new_area_a =[]
-              new_area_b =[]
+              new_area_a = []
+              new_area_b = []
               exist_area.each{|row|
                 tmp_bit = oa.get_bit_string(c.id, row)
                 if tmp_bit[tmp_bit.size - 1] == "0"
@@ -368,21 +383,20 @@ module Practis
               }
               new_area.push(new_area_a)
               new_area.push(new_area_b)
-              break # return exist_area
+              break
             end
-          else
-            min = var_min
-            max = var_max
+          # else
+          #   min = var_min
+          #   max = var_max
           end
         end
       }
-      var_diff = cast_decimal((max - min).abs / 3.0)
-
-      if min.class == Fixnum
-        new_array = [min+var_diff.to_i, max-var_diff.to_i]
-      elsif min.class == Float
-        new_array = [(min+var_diff).round(5), (max-var_diff).round(5)]
-      end
+      # var_diff = cast_decimal((max - min).abs / 3.0)
+      # if min.class == Fixnum
+      #   new_array = [min+var_diff.to_i, max-var_diff.to_i]
+      # elsif min.class == Float
+      #   new_array = [(min+var_diff).round(5), (max-var_diff).round(5)]
+      # end
 
       # var.name
       new_var ={:case => "inside", 
@@ -398,10 +412,10 @@ module Practis
     def generate_next_search_area(area, oa, new_param_list)
       new_area = []
       p "generate next search ====================================="
+      p "old area: #{area} --> "
       p "new_param_list:"
       pp new_param_list
       
-
       extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
       new_area += oa.generate_new_analysis_area(area, new_param_list[0], extclm)
       
