@@ -335,7 +335,7 @@ module Practis
               # max = var_max
               break
             else
-              if !(c.parameter.include?(new_array[0]) && c.parameter.include?(new_array[1]))
+              if !(c.parameters.include?(new_array[0]) && c.parameters.include?(new_array[1]))
                 min_bit = c.get_bit_string(new_array.min)
                 max_bit = c.get_bit_string(new_array.max)
               else
