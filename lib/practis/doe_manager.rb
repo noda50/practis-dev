@@ -250,6 +250,17 @@ module Practis
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")        
         
+        deb = []
+        @result_list_queue[0][:area].each{|a|
+          @result_list_queue[0][:id][a].each{|id|
+            if (retval = @database_connector.read_record(:parameter, "parameter_id = '#{id}'")).length > 0
+              retval.each{|r|
+                deb.push(r["Noise"], r["NumOfGameIteration"])
+              }
+            end
+          }
+        }
+        pp deb
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @variable_set.scheduler.scheduler.oa.table,
                                   @variable_set.scheduler.scheduler.oa.colums)
@@ -278,6 +289,8 @@ module Practis
                   new_param_list.push(tmp_var)
                 else
                   # ignored area is added for analysis to next_area_list
+                  p "== exist area =="
+                  pp tmp_area
                   tmp_area.each{|a_list|
                     @result_list_queue.push(generate_result_list(a_list))
                   }
@@ -285,7 +298,7 @@ module Practis
               end
             }
 
-            if 0 < new_param_list.size 
+            if 0 < new_param_list.size
               # generate new_param_list & extend orthogonal array
               next_area_list = generate_next_search_area(@result_list_queue[0][:area],#result_list[:area],
                                                           @variable_set.scheduler.scheduler.oa,
@@ -311,7 +324,7 @@ module Practis
     # search only "inside" significant parameter
     def generate_new_parameter(var, para_name, area)
       p "generate new parameter ====================================="
-      pp var
+      p "var: #{var}"
       oa = @variable_set.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
@@ -329,22 +342,22 @@ module Practis
             new_array = [(var_min+var_diff).round(5), (var_max-var_diff).round(5)]
           end
 
+          p "divided parameter! ==> new array: #{pp new_array}"
+          p "parameters: #{c.parameters}"
+
           if 2 < c.parameters.size
             if c.parameters.find{|v| var_min<v && v<var_max}.nil?
-              # min = var_min
-              # max = var_max
               break
             else
-              if !(c.parameters.include?(new_array[0]) && c.parameters.include?(new_array[1]))
+              if c.parameters.include?(new_array[0]) && c.parameters.include?(new_array[1])
                 min_bit = c.get_bit_string(new_array.min)
                 max_bit = c.get_bit_string(new_array.max)
               else
                 min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
                 max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
+                min_bit = c.get_bit_string(min)
+                max_bit = c.get_bit_string(max)
               end
-
-              min_bit = c.get_bit_string(min)
-              max_bit = c.get_bit_string(max)
 
               oa.table[c.id].each_with_index{|b, i|
                 if  b == min_bit || b == max_bit
@@ -385,25 +398,16 @@ module Practis
               new_area.push(new_area_b)
               break
             end
-          # else
-          #   min = var_min
-          #   max = var_max
           end
         end
       }
-      # var_diff = cast_decimal((max - min).abs / 3.0)
-      # if min.class == Fixnum
-      #   new_array = [min+var_diff.to_i, max-var_diff.to_i]
-      # elsif min.class == Float
-      #   new_array = [(min+var_diff).round(5), (max-var_diff).round(5)]
-      # end
 
       # var.name
       new_var ={:case => "inside", 
                 :param => {:name => para_name, :variables => new_array}}
       print " ==> "
       pp new_var
-      pp @variable_set.scheduler.scheduler.oa.get_table
+      # pp @variable_set.scheduler.scheduler.oa.get_table
       p "end generate new parameter ====================================="
       puts
       return new_var,new_area
