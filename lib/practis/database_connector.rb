@@ -38,21 +38,21 @@ module Practis
         @database_parser.parse
       end
 
-      def setup_database(variable_set, result_set, config)
+      def setup_database(paramDefs, result_set, config)
         # add parameter fields to parameter table
-        variable_set.each do |v|
-          if (type_field = type_to_sqltype(v.type.to_s)).nil?
-            error("type field requires any types. #{v}")
+        paramDefs.each do |paramDef|
+          if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
+            error("type field requires any types. #{paramDef}")
             next
           end
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),
               # [2013/09/08 I.Noda] for speed up in large-scale sim.
-              #{field: v.name, type: type_field, null: "NO"}
-              {field: v.name, type: type_field, null: "NO", key: "MUL"}
+              #{field: paramDef.name, type: type_field, null: "NO"}
+              {field: paramDef.name, type: type_field, null: "NO", key: "MUL"}
                                        ) < 0
-            error("fail to add a filed. #{v.name}, #{type_field}")
+            error("fail to add a filed. #{paramDef.name}, #{type_field}")
           end
         end
         # add result fields to result table

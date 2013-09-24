@@ -30,13 +30,13 @@ module Practis
     def initialize(config_file, parameter_file, database_file, result_file, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
       
-      @variable_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
-      @total_parameters = @variable_set.get_total
+      @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
+      @total_parameters = @paramDefSet.get_total
       
       # [2013/09/13 H-Matsushima]
       @mutexAnalysis = Mutex.new
       @result_list_queue = []
-      @result_list_queue.push(generate_result_list(@variable_set.scheduler.scheduler.oa.analysis_area[0]))
+      @result_list_queue.push(generate_result_list(@paramDefSet.scheduler.scheduler.oa.analysis_area[0]))
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
@@ -100,7 +100,7 @@ module Practis
       @mutexAllocateParameter.synchronize{
         while request_number > 0
           newId = getNewParameterId
-          if (parameter = @variable_set.get_next(newId)).nil?
+          if (parameter = @paramDefSet.get_next(newId)).nil?
             if !@to_be_varriance_analysis
               info("all parameter is already allocated!")
               break
@@ -111,7 +111,7 @@ module Practis
               #[2013/09/20]
               if @alloc_counter < (@result_list_queue.size - 1)
                 @alloc_counter += 1
-                @variable_set.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
+                @paramDefSet.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
               end
               # ========
               break
@@ -142,7 +142,7 @@ module Practis
               @parameter_pool.push(parameter)
               request_number -= 1
               # [2013/09/20]
-              area_index = @variable_set.scheduler.scheduler.get_v_index
+              area_index = @paramDefSet.scheduler.scheduler.get_v_index
               if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
                 @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
               end
@@ -156,11 +156,11 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                already_id = @variable_set.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
+                already_id = @paramDefSet.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
                 parameter.state = r["state"]
                 @parameter_pool.push(parameter)
                 # [2013/09/20]
-                area_index = @variable_set.scheduler.scheduler.get_v_index
+                area_index = @paramDefSet.scheduler.scheduler.get_v_index
                 @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(r["parameter_id"])
                 # ============
               }
@@ -192,12 +192,12 @@ module Practis
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
-      if @variable_set.get_available <= 0 && @to_be_varriance_analysis
+      if @paramDefSet.get_available <= 0 && @to_be_varriance_analysis
         @mutexAnalysis.synchronize{variance_analysis}        
       end
 
       debug(cluster_tree.to_s)
-      info("not allocated parameters: #{@variable_set.get_available}, " +
+      info("not allocated parameters: #{@paramDefSet.get_available}, " +
            "ready: #{ready_n}, " +
            "allocating: #{allocating_n}, " +
            "executing: #{executing_n}, " +
@@ -208,7 +208,7 @@ module Practis
         @message_handler.join
       end
 
-      if @variable_set.get_available <= 0 and @parameter_pool.length <= 0
+      if @paramDefSet.get_available <= 0 and @parameter_pool.length <= 0
         if !@to_be_varriance_analysis # 2013/08/01
           if (retval = allocate_parameters(1, 1)).length == 0
             retval.each {|r| debug("#{r}")}
@@ -244,15 +244,15 @@ module Practis
       p "result list:"
       pp @result_list_queue[0]#result_list
 
-      if uploaded_result_count >= @variable_set.scheduler.scheduler.current_total
+      if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
         # debug("result length: #{result_list.size}")
         # debug("result: #{result_list}")
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")        
         
         va = VarianceAnalysis.new(@result_list_queue[0],
-                                  @variable_set.scheduler.scheduler.oa.table,
-                                  @variable_set.scheduler.scheduler.oa.colums)
+                                  @paramDefSet.scheduler.scheduler.oa.table,
+                                  @paramDefSet.scheduler.scheduler.oa.colums)
         p "variance factor"
         pp va
         
@@ -266,12 +266,12 @@ module Practis
             end            
           }
           if 0 < num_significance.size
-            @variable_set.scheduler.scheduler.oa.colums.each{|oc|
+            @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
               if num_significance.include?(oc.parameter_name)
                 var = []
                 #result_list[:area].each{|r|
                 @result_list_queue[0][:area].each{|r|
-                  var.push(@variable_set.scheduler.scheduler.oa.get_parameter(r, oc.id))
+                  var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
                 }
                 tmp_var,tmp_area = generate_new_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
                 if tmp_area.empty?
@@ -288,7 +288,7 @@ module Practis
             if 0 < new_param_list.size 
               # generate new_param_list & extend orthogonal array
               next_area_list = generate_next_search_area(@result_list_queue[0][:area],#result_list[:area],
-                                                          @variable_set.scheduler.scheduler.oa,
+                                                          @paramDefSet.scheduler.scheduler.oa,
                                                           new_param_list)
               debug("next area list: ")
               pp next_area_list
@@ -312,7 +312,7 @@ module Practis
     def generate_new_parameter(var, para_name, area)
       p "generate new parameter ====================================="
       pp var
-      oa = @variable_set.scheduler.scheduler.oa
+      oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
       min=nil
@@ -386,10 +386,10 @@ module Practis
 
       # var.name
       new_var ={:case => "inside", 
-                :param => {:name => para_name, :variables => new_array}}
+                :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
       pp new_var
-      pp @variable_set.scheduler.scheduler.oa.get_table
+      pp @paramDefSet.scheduler.scheduler.oa.get_table
       p "end generate new parameter ====================================="
       puts
       return new_var,new_area

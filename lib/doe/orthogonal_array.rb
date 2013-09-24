@@ -56,7 +56,7 @@ class OrthogonalArray
 
     id = 0
     parameters.each{|prm|
-      oc = OrthogonalColumn.new(id , prm[:name], prm[:variables])
+      oc = OrthogonalColumn.new(id , prm[:name], prm[:paramDefs])
       @colums.push(oc)
       id += 1
     }
@@ -76,7 +76,7 @@ class OrthogonalArray
       if oc.parameter_name == parameter[:name]
         ext_column = oc
         old_level = oc.level        
-        oc.update_level(parameter[:variables].size)
+        oc.update_level(parameter[:paramDefs].size)
         old_digit_num = oc.digit_num
         if oc.equal_digit_num(old_digit_num)
           oc.padding(old_digit_num, old_level)
@@ -89,7 +89,7 @@ class OrthogonalArray
           @table[oc.id] += copy
           @l_size *= 2
         end
-        oc.assign_parameter(old_level, add_point_case, parameter[:variables])
+        oc.assign_parameter(old_level, add_point_case, parameter[:paramDefs])
         break
       end
     }
@@ -122,7 +122,7 @@ class OrthogonalArray
     @colums.each{|c|
       if c.parameter_name == new_param[:param][:name]
         id = c.id
-        new_param[:param][:variables].each{|v|
+        new_param[:param][:paramDefs].each{|v|
           new_bit.push(c.get_bit_string(v))
         }
         break
