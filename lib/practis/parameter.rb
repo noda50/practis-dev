@@ -10,51 +10,73 @@ require 'practis/parameter_scheduler'
 module Practis
 
   #=== an instance of Parameter Value class
-  class Parameter
+  class ParamValue
 
     include Practis
 
-    # a name of the parameter.
-    attr_reader :name
+    # a name of the parameter.  ## now access from @paramDef
+#    attr_reader :name
     # a type of the parameter.
-    attr_reader :type
+#    attr_reader :type
     # a value of this parameter
     attr_reader :value
 
+    ##--------------------------------------------------
     #=== initialize method.
     #name :: a parameter name.
     #type :: a parameter type.
     #value :: a value of the parameter.
-    def initialize(name, type, value)
-      @name = chk_arg(String, name)
-      @type = string_to_type(chk_arg(String, type))
-      @value = chk_arg(@type, value, true)
+#    def initialize(name, type, value)
+    def initialize(paramDef, value)
+      @paramDef = paramDef
+#      @name = chk_arg(String, name)
+#      @type = string_to_type(chk_arg(String, type))
+      @value = chk_arg(self.type(), value, true)
     end
+
+    ##--------------------------------------------------
+    def name
+      @paramDef.name
+    end
+
+    ##--------------------------------------------------
+    def type
+      @paramDef.type
+    end
+
+    ##--------------------------------------------------
+    def to_json(obj=nil)
+      ({ :name => name(), 
+         :type => type(),
+         :value => @value }).to_json
+    end
+
   end
 
 
-  #=== a set of Parameter instance
-  class ParameterSet
+  #=== a set of ParamValue instance
+  class ParamValueSet
 
     include Practis
 
-    # An array object of Parameter class.
-    attr_accessor :parameter_set
-    # The state of the parameter set.
+    # An array object of ParamValue class.
+    attr_accessor :paramValues
+    # The state of the paramValueSet
     attr_accessor :state
     # An unique identifier
     attr_reader :uid
 
     #=== initialize method.
-    #uid :: an unique identifier of the parameter set.
-    #parameter_set :: an initial parameter set if specified.
-    def initialize(uid = nil, parameter_set = nil)
+    #uid :: an unique identifier of the paramValue set.
+    #paramValues :: an initial paramValue set if specified.
+    def initialize(uid = nil, paramValues = nil)
       uid ||= Practis::ParamDefSet.allocate_new_id
       @uid = chk_arg(Integer, uid)
-      @parameter_set = chk_arg(Array, parameter_set, true)
-      @parameter_set.each { |p| chk_arg(Parameter, p) }
+      @paramValues = chk_arg(Array, paramValues, true)
+      @paramValues.each { |p| chk_arg(ParamValue, p) }
       @state = PARAMETER_STATE_READY
     end
+
   end
 
   #=== Definition of Parameter that generates Parameters from Pattern.
@@ -177,16 +199,14 @@ module Practis
 
     #=== get a next available parameter value set.
     def get_next(newId)
-      return nil if (parameter_array =
-                     chk_arg(Array, @scheduler.get_parameter_set(newId), true)).nil?
-      parameter_set = []
-      @paramDefs.length.times { |i| parameter_set
-        .push(Parameter.new(@paramDefs[i].name,
-                            type_to_string(@paramDefs[i].type),
-                            parameter_array[i])) }
+      return nil if (value_array =
+                     chk_arg(Array, @scheduler.get_paramValues(newId), true)).nil?
+      paramValues = []
+      @paramDefs.length.times { |i| 
+        paramValues.push(ParamValue.new(@paramDefs[i],  value_array[i])) }
       ##[2013/09/07 I.Noda] now, id is given. (taken from database by caller)
       #newId = Practis::ParamDefSet.allocate_new_id ;
-      return ParameterSet.new(newId, parameter_set)
+      return ParamValueSet.new(newId, paramValues)
     end
 
     #=== get a number of available paramValue set.
@@ -209,21 +229,21 @@ module Practis
     end
 
     ## [2013/09/07 I.Noda] not used anymore
-    #=== Allocate a new id for a parameter set.
-    #ID must be unique, this method allocate a new ID for a parameter set.
+    #=== Allocate a new id for a paramValueSet.
+    #ID must be unique, this method allocate a new ID for a paramValueSet.
     #id :: if you want to specify a static id, use this arg.
     #returned_value :: an allocated new id.
     def self.allocate_new_id(id=nil)
       new_id = -1
       if id.nil?
         count = 0
-        max_parameter = Practis::PARAMETER_ID_DURATION
+        max_paramValue = Practis::PARAMETER_ID_DURATION
         while true
-          new_id = rand(max_parameter).to_i
+          new_id = rand(max_paramValue).to_i
           (@@id_pool.push(new_id); break) unless @@id_pool.include?(new_id)
           count += 1
-          max_parameter += Practis::PARAMETER_ID_DURATION \
-            if count > max_parameter
+          max_paramValue += Practis::PARAMETER_ID_DURATION \
+            if count > max_paramValue
         end
       else
         new_id = id

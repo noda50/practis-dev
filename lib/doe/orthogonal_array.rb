@@ -269,7 +269,7 @@ class OrthogonalArray
     return @colums[col].get_parameter(@table[col][row])
   end
   # 
-  def get_parameter_set(row)
+  def get_paramValues(row)
     p_set = []
     @colums.each{ |oc|
       p_set.push(get_parameter(row, oc.id))
@@ -280,7 +280,7 @@ class OrthogonalArray
   def get_assigned_parameters
     show = []
     for i in 0...@table[0].size
-      show.push(get_parameter_set(i))
+      show.push(get_paramValues(i))
     end
     return show
   end

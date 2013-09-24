@@ -22,15 +22,15 @@ module Practis
       @mutex = Mutex.new() ;
     end
 
-    def get_parameter_set(id=nil)
+    def get_paramValues(id=nil)
       @mutex.synchronize{
-        if (parameter_array = @scheduler.get_parameter_set(id)).nil? ||
+        if (parameter_array = @scheduler.get_paramValues(id)).nil? ||
             parameter_array.include?(nil)
           return nil
         end
         return parameter_array
       }
-      # parameter_array = @scheduler.get_parameter_set
+      # parameter_array = @scheduler.get_paramValues
       # if parameter_array.nil? then return nil
       # elsif parameter_array.include?(nil) then return nil
       # else return parameter_array
@@ -69,7 +69,7 @@ module Practis
         end
       end
 
-      def get_parameter_set(id=nil)
+      def get_paramValues(id=nil)
         parameter_array = []
         # check whether all of the parameters are allocated?
         if current_indexes[current_indexes.length - 1] >=
@@ -151,7 +151,7 @@ module Practis
         debug("random scheduler initiated, #{@total_number}")
       end
 
-      def get_parameter_set(id=nil)
+      def get_paramValues(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, total: #{@total_indexes.length}, " +
@@ -264,7 +264,7 @@ module Practis
       end
       
       # get parameter set from paramDefList
-      def get_parameter_set(id=nil)
+      def get_paramValues(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, \n" +

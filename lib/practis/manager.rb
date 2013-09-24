@@ -27,7 +27,7 @@ module Practis
     # parameter definition with ParamDefSet class.
     attr_reader :paramDefSet
     # store parameters that once allocated, but returned or quited.
-    attr_accessor :parameter_pool
+    attr_accessor :paramValueSet_pool
 
     # current project id
     attr_reader :project_id
@@ -146,7 +146,7 @@ module Practis
         @result_fields.push({name: r[0], type: r[1]})
       end
       debug("loaded result fields: #{@result_fields}")
-      @parameter_pool = []
+      @paramValueSet_pool = []
 
       # [2013/09/07 I.Noda] for exclusive parameter allocation
       @mutexAllocateParameter = Mutex.new() ;
@@ -220,9 +220,9 @@ module Practis
     end
 
     ##------------------------------------------------------------
-    #=== Allocate requested number of parameters.
-    def allocate_parameters(request_number, src_id)
-      parameters = []   # allocated parameters
+    #=== Allocate requested number of parameter value sets
+    def allocate_paramValueSets(request_number, src_id)
+      paramValueSetList = []   # allocated parameter value sets
       if (timeval = @database_connector.read_time(:parameter)).nil?
         return nil
       end
@@ -237,7 +237,7 @@ module Practis
                                            PARAMETER_STATE_READY])).length > 0
         p_ready.each do |p|
           break if request_number <= 0
-          if (matches = @parameter_pool.select { |pp|
+          if (matches = @paramValueSet_pool.select { |pp|
               p["parameter_id"].to_i == pp.uid }).length == 1
             # update the allocating parameter state
 #            if @database_connector.update_parameter(
@@ -257,7 +257,7 @@ module Practis
               error("fault to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
-              parameters.push(matches[0])
+              paramValueSetList.push(matches[0])
               request_number -= 1
             end
             next
@@ -265,18 +265,16 @@ module Practis
         end
       end
 
-      # generate the parameters from the scheduler
+      # generate the parameter value sets from the scheduler
       @mutexAllocateParameter.synchronize{
         while request_number > 0
           newId = getNewParameterId() ;
-          if (parameter = @paramDefSet.get_next(newId)).nil?
+          if (paramValueSet = @paramDefSet.get_next(newId)).nil?
             info("all parameter is already allocated!")
             break
           end
-#          condition = parameter.parameter_set.map { |p|
-#            "#{p.name} = '#{p.value}'" }.join(" and ")
           condition = [:and] ;
-          parameter.parameter_set.map { |p|
+          paramValueSet.paramValues.map { |p|
             condition.push([:eq, [:field, p.name], p.value]) ;
           }
 #          debug("condition: #{condition}") ;
@@ -287,20 +285,20 @@ module Practis
 #                                              condition)).length == 0
           if(0 ==
              (count = @database_connector.read_count(:parameter, condition)))
-            arg_hash = ({ parameter_id: parameter.uid,
+            arg_hash = ({ parameter_id: paramValueSet.uid,
                           allocated_node_id: src_id,
                           executing_node_id: src_id,
                           allocation_start: iso_time_format(timeval),
                           execution_start: nil,
                           state: PARAMETER_STATE_ALLOCATING})
-            parameter.parameter_set.each { |p|
+            paramValueSet.paramValues.each { |p|
               arg_hash[(p.name).to_sym] = p.value }
             if @database_connector.insert_record(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
             else
-              parameter.state = PARAMETER_STATE_ALLOCATING
-              parameters.push(parameter)
-              @parameter_pool.push(parameter)
+              paramValueSet.state = PARAMETER_STATE_ALLOCATING
+              paramValueSetList.push(paramValueSet)
+              @paramValueSet_pool.push(paramValueSet)
               request_number -= 1
             end
           else
@@ -312,7 +310,7 @@ module Practis
               retval.each do |r|
                 warn("result of read_record under (#{condition}): #{r}")
                 parameter.state = r["state"]
-                @parameter_pool.push(parameter)
+                @paramValueSet_pool.push(parameter)
               end
             }
             debug("parameter.state = #{parameter.state.inspect}");
@@ -320,7 +318,7 @@ module Practis
           end
         end
       } # @mutexAllocateParameter.synchronize
-      return parameters
+      return paramValueSetList
     end
 
     ##------------------------------------------------------------
@@ -421,9 +419,9 @@ module Practis
         current_finished = @database_connector.update_parameter_state(
           @parameter_execution_expired_timeout)
       current_finished.each do |finished_id|
-        @parameter_pool.each do |p|
+        @paramValueSet_pool.each do |p|
           if p.uid == finished_id
-            @parameter_pool.delete(p)
+            @paramValueSet_pool.delete(p)
             break
           end
         end
@@ -443,8 +441,8 @@ module Practis
       # All parameters are finished, finalize
       if @total_parameters <= @finished_parameters
         # check
-        if @paramDefSet.get_available <= 0 and @parameter_pool.length <= 0
-          if (retval = allocate_parameters(1, 1)).length == 0
+        if @paramDefSet.get_available <= 0 and @paramValueSet_pool.length <= 0
+          if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")}
             finalize
           else

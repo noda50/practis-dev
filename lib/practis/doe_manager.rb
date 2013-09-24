@@ -46,7 +46,7 @@ module Practis
     # === methods of manager.rb ===
     # create_executable_command
     # allocate_node(node_type, address, id=nil, parallel=nil)
-    # allocate_parameters(request_number, src_id) # <- override
+    # allocate_paramValueSets(request_number, src_id) # <- override
 
     # update_started_parameter_state(parameter_id, executor_id)
     # update_node_state(node_id, queueing, executing)
@@ -64,8 +64,8 @@ module Practis
     ##------------------------------------------------------------
     # override method
     #=== Allocate requested number of parameters.
-    def allocate_parameters(request_number, src_id)
-      parameters = []   # allocated parameters
+    def allocate_paramValueSets(request_number, src_id)
+      paramValueSetList = []   # allocated parameter value sets
       if (timeval = @database_connector.read_time(:parameter)).nil?
         return nil
       end
@@ -75,7 +75,7 @@ module Practis
           :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
         p_ready.each do |p|
           break if request_number <= 0
-          if (matches = @parameter_pool.select { |pp|
+          if (matches = @paramValueSet_pool.select { |pp|
               p["parameter_id"].to_i == pp.uid }).length == 1
             # update the allocating parameter state
             if @database_connector.update_parameter(
@@ -88,7 +88,7 @@ module Practis
               error("failt to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
-              parameters.push(matches[0])
+              paramValueSetList.push(matches[0])
               request_number -= 1
             end
             next
@@ -96,11 +96,11 @@ module Practis
         end
       end
 
-      # generate the parameters from the scheduler
+      # generate the parameter value sets from the scheduler
       @mutexAllocateParameter.synchronize{
         while request_number > 0
           newId = getNewParameterId
-          if (parameter = @paramDefSet.get_next(newId)).nil?
+          if (paramValueSet = @paramDefSet.get_next(newId)).nil?
             if !@to_be_varriance_analysis
               info("all parameter is already allocated!")
               break
@@ -119,27 +119,27 @@ module Practis
           end
 
           condition = [:and] ;
-          parameter.parameter_set.map { |p|
+          paramValueSet.paramValues.map { |p|
             condition.push([:eq, [:field, p.name], p.value]) ;
           }
 
           if(0 ==
              (count = @database_connector.read_count(:parameter, condition)))
-            arg_hash = {parameter_id: parameter.uid,
+            arg_hash = {parameter_id: paramValueSet.uid,
                         allocated_node_id: src_id,
                         executing_node_id: src_id,
                         allocation_start: iso_time_format(timeval),
                         execution_start: nil,
                         state: PARAMETER_STATE_ALLOCATING}
-            parameter.parameter_set.each { |p|
+            paramValueSet.paramValues.each { |p|
               arg_hash[(p.name).to_sym] = p.value
             }
             if @database_connector.insert_record(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
             else
-              parameter.state = PARAMETER_STATE_ALLOCATING
-              parameters.push(parameter)
-              @parameter_pool.push(parameter)
+              paramValueSet.state = PARAMETER_STATE_ALLOCATING
+              paramValueSetList.push(paramValueSet)
+              @paramValueSet_pool.push(paramValueSet)
               request_number -= 1
               # [2013/09/20]
               area_index = @paramDefSet.scheduler.scheduler.get_v_index
@@ -157,20 +157,20 @@ module Practis
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
                 already_id = @paramDefSet.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
-                parameter.state = r["state"]
-                @parameter_pool.push(parameter)
+                paramValueSet.state = r["state"]
+                @paramValueSet_pool.push(paramValueSet)
                 # [2013/09/20]
                 area_index = @paramDefSet.scheduler.scheduler.get_v_index
                 @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(r["parameter_id"])
                 # ============
               }
             }
-            debug("parameter.state = #{parameter.state.inspect}");
+            debug("paramValueSet.state = #{paramValueSet.state.inspect}");
             next
           end
         end
       }
-      return parameters
+      return paramValueSetList
     end
 
     ##------------------------------------------------------------
@@ -182,9 +182,9 @@ module Practis
       end
       ready_n, allocating_n, executing_n, @finished_parameters, current_finished = @database_connector.update_parameter_state(@parameter_execution_expired_timeout)
       current_finished.each do |finished_id|
-        @parameter_pool.each do |p|
+        @paramValueSet_pool.each do |p|
           if p.uid == finished_id
-            @parameter_pool.delete(p)
+            @paramValueSet_pool.delete(p)
             break
           end
         end
@@ -208,7 +208,7 @@ module Practis
         @message_handler.join
       end
 
-      if @paramDefSet.get_available <= 0 and @parameter_pool.length <= 0
+      if @paramDefSet.get_available <= 0 and @paramValueSet_pool.length <= 0
         if !@to_be_varriance_analysis # 2013/08/01
           if (retval = allocate_parameters(1, 1)).length == 0
             retval.each {|r| debug("#{r}")}

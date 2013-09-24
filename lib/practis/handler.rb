@@ -242,7 +242,7 @@ module Practis
                 "#{parsed_message[:request_number]}, " +
                 " from #{parsed_message[:src_id]}")
           # Allocate parameters in JSON
-          parameters = @parent.allocate_parameters(
+          parameters = @parent.allocate_paramValueSets(
             parsed_message[:request_number].to_i, parsed_message[:src_id].to_i)
           if parameters.length > 0
             info("#{self.class.name}: allocated parameters #{parameters}")
@@ -252,6 +252,7 @@ module Practis
           # Create AckSendParameters message.
           debug("#{self.class.name}: send AckSendParameters message to " +
                 "#{parsed_message[:src_id]}")
+#          debug("...parameters=#{parameters}") ;
           if (retval = psend(socket,
               create_message(MSG_TYPE_ASP, parsed_message[:src_id].to_i,
                              @parent.mynode.id, parameters))) < 0
@@ -268,15 +269,15 @@ module Practis
           if data[:status] == MSG_STATUS_OK
             debug("#{self.class.name}: succeed ReqParameters process.")
             parameters.each { |parameter|
-              @parent.parameter_pool.length.times { |i|
-                (@parent.parameter_pool[i].state = PARAMETER_STATE_EXECUTING;
-                 break) if @parent.parameter_pool[i].uid == parameter.uid } }
+              @parent.paramValueSet_pool.length.times { |i|
+                (@parent.paramValueSet_pool[i].state = PARAMETER_STATE_EXECUTING;
+                 break) if @parent.paramValueSet_pool[i].uid == parameter.uid } }
           else
             warn("#{self.class.name}: failed ReqParameters process")
             parameters.each { |parameter|
-              @parent.parameter_pool.length.times { |i|
-                (@parent.parameter_pool[i].state = PARAMETER_STATE_READY;
-                 break) if @parent.parameter_pool[i].uid == parameter.uid } }
+              @parent.paramValueSet_pool.length.times { |i|
+                (@parent.paramValueSet_pool[i].state = PARAMETER_STATE_READY;
+                 break) if @parent.paramValueSet_pool[i].uid == parameter.uid } }
           end
           # Finish the thread.
           finish
