@@ -309,11 +309,11 @@ module Practis
               |retval|
               retval.each do |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                parameter.state = r["state"]
-                @paramValueSet_pool.push(parameter)
+                paramValueSet.state = r["state"]
+                @paramValueSet_pool.push(paramValueSet)
               end
             }
-            debug("parameter.state = #{parameter.state.inspect}");
+            debug("paramValueSet.state = #{paramValueSet.state.inspect}");
             next  ## [2013/09/08 I.Noda]  ??? should retry if state is not set?
           end
         end

@@ -23,8 +23,8 @@ module Practis
       attr_reader :paramDefList   # Store parsed Parameter Definitions.
 
       # The path to ParamDef tag in a inputted parameter configuration file.
-      PARAMDEF_PATH = "practis/exhaustive/variables/variable"
-#      PARAMDEF_PATH = "practis/exhaustive/paramDefs/paramDef"
+#      PARAMDEF_PATH = "practis/exhaustive/variables/variable"
+      PARAMDEF_PATH = "practis/exhaustive/parameters/parameter"
 
       # Range of a parameter value
       RANGE_TYPE = "range_type"
