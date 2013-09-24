@@ -66,7 +66,7 @@ class OrthogonalColumn
 	    end
 	  when OUTSIDE_MINUS
 	    right_digit_of_min = @corresponds.min_by(&:last)[0]
-	    if right_digit_of_min[right_digit_of_max.size - 1] == "0"
+	    if right_digit_of_min[right_digit_of_min.size - 1] == "0"
 	      add_parameters.sort!
 	    else
 	      add_parameters.reverse!

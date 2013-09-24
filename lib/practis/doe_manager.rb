@@ -198,6 +198,7 @@ module Practis
 
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@variable_set.get_available}, " +
+           "parameter pool: #{@parameter_pool.length}, " + 
            "ready: #{ready_n}, " +
            "allocating: #{allocating_n}, " +
            "executing: #{executing_n}, " +
@@ -211,7 +212,8 @@ module Practis
       if @variable_set.get_available <= 0 and @parameter_pool.length <= 0
         if !@to_be_varriance_analysis # 2013/08/01
           if (retval = allocate_parameters(1, 1)).length == 0
-            retval.each {|r| debug("#{r}")}
+            retval.each {|r| debug("#{r}")} 
+            debug("call finalize !")
             finalize
             # @doe_file.close
           else
@@ -245,22 +247,9 @@ module Practis
       pp @result_list_queue[0]#result_list
 
       if uploaded_result_count >= @variable_set.scheduler.scheduler.current_total
-        # debug("result length: #{result_list.size}")
-        # debug("result: #{result_list}")
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")        
         
-        deb = []
-        @result_list_queue[0][:area].each{|a|
-          @result_list_queue[0][:id][a].each{|id|
-            if (retval = @database_connector.read_record(:parameter, "parameter_id = '#{id}'")).length > 0
-              retval.each{|r|
-                deb.push(r["Noise"], r["NumOfGameIteration"])
-              }
-            end
-          }
-        }
-        pp deb
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @variable_set.scheduler.scheduler.oa.table,
                                   @variable_set.scheduler.scheduler.oa.colums)
@@ -280,14 +269,16 @@ module Practis
             @variable_set.scheduler.scheduler.oa.colums.each{|oc|
               if num_significance.include?(oc.parameter_name)
                 var = []
-                #result_list[:area].each{|r|
                 @result_list_queue[0][:area].each{|r|
                   var.push(@variable_set.scheduler.scheduler.oa.get_parameter(r, oc.id))
                 }
-                tmp_var,tmp_area = generate_new_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
-                if tmp_area.empty?
+                tmp_var,tmp_area = generate_new_inside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
+                # tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+                # tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+
+                if tmp_area.empty? and !tmp_var[:param][:variables].nil?
                   new_param_list.push(tmp_var)
-                else
+                elsif !tmp_area.empty?
                   # ignored area is added for analysis to next_area_list
                   p "== exist area =="
                   pp tmp_area
@@ -321,8 +312,8 @@ module Practis
       p "end variance analysis ====================================="
       puts
     end
-    # search only "inside" significant parameter
-    def generate_new_parameter(var, para_name, area)
+    # search only "inside" significant parameter(TODO: new parameter is determined by f-value)
+    def generate_new_inside_parameter(var, para_name, area)
       p "generate new parameter ====================================="
       p "var: #{var}"
       oa = @variable_set.scheduler.scheduler.oa
@@ -412,6 +403,97 @@ module Practis
       puts
       return new_var,new_area
     end
+    # TODO: new parameter is determined by f-value
+    def generate_new_outsidep_parameter(var, para_name, area)
+      p "generate new outside(+) parameter ====================================="
+      p "var: #{var}"
+      oa = @variable_set.scheduler.scheduler.oa
+      var_min = var.min
+      var_max = var.max
+      min=nil
+      max=nil
+
+      new_area = []
+      new_array = nil
+
+      oa.colums.each{|c|
+        if para_name == c.parameter_name
+          if c.parameters.max <= var_max
+            min=c.parameters.min
+            max=c.parameters.max
+            var_diff = cast_decimal((var_max - var_min).abs / 3.0)
+
+            if var_min.class == Fixnum
+              # new_array = [var_max+var_diff.to_i, var_max+(2*var_diff).to_i]
+              new_array = [var_max+2, var_max+4]
+            elsif var_min.class == Float
+              # new_array = [(var_max+var_diff).round(5), (var_max+2*var_diff).round(5)]
+              new_array = [(var_max+0.0025).round(5), (var_max+0.005).round(5)]
+            end
+
+            p "generate outside(+) parameter! ==> new array: #{pp new_array}"
+            p "parameters: #{c.parameters}"
+          end
+          break
+        end
+      }
+
+      # var.name
+      new_var ={:case => "outside(+)", 
+                :param => {:name => para_name, :variables => new_array}}
+      print " ==> "
+      pp new_var
+      # pp @variable_set.scheduler.scheduler.oa.get_table
+      p "end generate outside(+) parameter ====================================="
+      puts
+      return new_var,new_area
+    end
+    # TODO: new parameter is determined by f-value
+    def generate_new_outsidem_parameter(var, para_name, area)
+      p "generate new outside(-) parameter ====================================="
+      p "var: #{var}"
+      oa = @variable_set.scheduler.scheduler.oa
+      var_min = var.min
+      var_max = var.max
+      min=nil
+      max=nil
+
+      new_area = []
+      new_array = nil
+
+      oa.colums.each{|c|
+        if para_name == c.parameter_name
+          if var_min <= c.parameters.min
+            min=c.parameters.min
+            max=c.parameters.max
+            var_diff = cast_decimal((var_max - var_min).abs / 3.0)
+
+            if var_min.class == Fixnum
+              # new_array = [var_min-var_diff.to_i, var_min-(2*var_diff).to_i]
+              new_array = [var_min-4, var_min-2]
+            elsif var_min.class == Float
+              # new_array = [(var_min-var_diff).round(5), (var_min-2*var_diff).round(5)]
+              new_array = [(var_min-0.005).round(5), (var_min-0.0025).round(5)]
+            end
+
+            p "generate outside(-) parameter! ==> new array: #{pp new_array}"
+            p "parameters: #{c.parameters}"
+          end
+          break
+        end
+      }
+
+      # var.name
+      new_var ={:case => "outside(-)", 
+                :param => {:name => para_name, :variables => new_array}}
+      print " ==> "
+      pp new_var
+      # pp @variable_set.scheduler.scheduler.oa.get_table
+      p "end generate outside(-) parameter ====================================="
+      puts
+      return new_var,new_area
+    end
+
     # return array of new searching parameters (area) 
     def generate_next_search_area(area, oa, new_param_list)
       new_area = []
@@ -456,6 +538,12 @@ module Practis
       else
         return BigDecimal(var.to_s)
       end
+    end
+
+    # TODO: 
+    private
+    def check_duplicate_parameters
+      
     end
 
     #
