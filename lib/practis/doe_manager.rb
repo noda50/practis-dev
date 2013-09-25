@@ -259,10 +259,12 @@ module Practis
         if va.e_f >= 1
           num_significance = []
           new_param_list = []
+          priority = 0.0
           va.effect_Factor.each{|ef|
             # significant parameter is decided
             if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
               num_significance.push(ef[:name])
+              priority += ef[:f_value]
             end            
           }
           if 0 < num_significance.size
@@ -283,22 +285,24 @@ module Practis
                   p "== exist area =="
                   pp tmp_area
                   tmp_area.each{|a_list|
-                    @result_list_queue.push(generate_result_list(a_list))
+                    @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
                   }
                 end
               end
             }
-
+            priority /= num_significance.size
             if 0 < new_param_list.size
+              # new_param_list.each{|pl| pl[:param][:name]}
               # generate new_param_list & extend orthogonal array
-              next_area_list = generate_next_search_area(@result_list_queue[0][:area],#result_list[:area],
+              next_area_list = generate_next_search_area(@result_list_queue[0][:area],
                                                           @variable_set.scheduler.scheduler.oa,
                                                           new_param_list)
               debug("next area list: ")
               pp next_area_list
               next_area_list.each{|a_list|
-                @result_list_queue.push(generate_result_list(a_list))
+                @result_list_queue.push(generate_result_list(a_list, priority))
               }
+              @result_list_queue.sort_by!{|v| @alloc_counter < @result_list_queue.index(v) ? v[:priority] : 0 }
             end
           end
         end
@@ -522,8 +526,8 @@ module Practis
       return new_area
     end
     # 
-    def generate_result_list(area)
-      result_list = { :area => area, :id => {}, :results => {} }
+    def generate_result_list(area, priority=0)
+      result_list = { :area => area, :id => {}, :results => {}, :priority => priority }
       result_list[:area].each{|a|
         result_list[:id][a] = []
         result_list[:results][a] = []
