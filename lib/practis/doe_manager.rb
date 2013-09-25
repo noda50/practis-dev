@@ -29,15 +29,9 @@ module Practis
 
     def initialize(config_file, parameter_file, database_file, result_file, doe_ini, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
-<<<<<<< HEAD
-      @variable_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
-      @variable_set.scheduler.scheduler.init_doe(doe_ini)
-      @total_parameters = @variable_set.get_total
-=======
-      
       @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
+      @variable_set.scheduler.scheduler.init_doe(doe_ini)
       @total_parameters = @paramDefSet.get_total
->>>>>>> master
       
       # [2013/09/13 H-Matsushima]
       @mutexAnalysis = Mutex.new
@@ -203,12 +197,8 @@ module Practis
       end
 
       debug(cluster_tree.to_s)
-<<<<<<< HEAD
-      info("not allocated parameters: #{@variable_set.get_available}, " +
-           "parameter pool: #{@parameter_pool.length}, " + 
-=======
       info("not allocated parameters: #{@paramDefSet.get_available}, " +
->>>>>>> master
+           "parameter pool: #{@parameter_pool.length}, " + 
            "ready: #{ready_n}, " +
            "allocating: #{allocating_n}, " +
            "executing: #{executing_n}, " +
@@ -256,13 +246,7 @@ module Practis
       p "result list:"
       pp @result_list_queue[0]#result_list
 
-<<<<<<< HEAD
-      if uploaded_result_count >= @variable_set.scheduler.scheduler.current_total
-=======
       if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
-        # debug("result length: #{result_list.size}")
-        # debug("result: #{result_list}")
->>>>>>> master
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")        
         
@@ -310,13 +294,8 @@ module Practis
             if 0 < new_param_list.size
               # new_param_list.each{|pl| pl[:param][:name]}
               # generate new_param_list & extend orthogonal array
-<<<<<<< HEAD
               next_area_list = generate_next_search_area(@result_list_queue[0][:area],
-                                                          @variable_set.scheduler.scheduler.oa,
-=======
-              next_area_list = generate_next_search_area(@result_list_queue[0][:area],#result_list[:area],
                                                           @paramDefSet.scheduler.scheduler.oa,
->>>>>>> master
                                                           new_param_list)
               debug("next area list: ")
               pp next_area_list
@@ -340,13 +319,8 @@ module Practis
     # search only "inside" significant parameter(TODO: new parameter is determined by f-value)
     def generate_new_inside_parameter(var, para_name, area)
       p "generate new parameter ====================================="
-<<<<<<< HEAD
       p "var: #{var}"
-      oa = @variable_set.scheduler.scheduler.oa
-=======
-      pp var
       oa = @paramDefSet.scheduler.scheduler.oa
->>>>>>> master
       var_min = var.min
       var_max = var.max
       min=nil
@@ -428,11 +402,6 @@ module Practis
                 :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
       pp new_var
-<<<<<<< HEAD
-      # pp @variable_set.scheduler.scheduler.oa.get_table
-=======
-      pp @paramDefSet.scheduler.scheduler.oa.get_table
->>>>>>> master
       p "end generate new parameter ====================================="
       puts
       return new_var,new_area
