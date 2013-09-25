@@ -243,6 +243,7 @@ module Practis
         }
       }
       p "variance analysis ====================================="
+      p "alloc_counter: #{@alloc_counter}, queue size: #{@result_list_queue.size}"
       p "result list:"
       pp @result_list_queue[0]#result_list
 
@@ -265,7 +266,7 @@ module Practis
             if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
               num_significance.push(ef[:name])
               priority += ef[:f_value]
-            end            
+            end
           }
           if 0 < num_significance.size
             @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
@@ -301,7 +302,11 @@ module Practis
               next_area_list.each{|a_list|
                 @result_list_queue.push(generate_result_list(a_list, priority))
               }
-              @result_list_queue.sort_by!{|v| @alloc_counter < @result_list_queue.index(v) ? v[:priority] : 0 }
+              if @alloc_counter < @result_list_queue.size-2
+                tmp_queue = @result_list_queue.slice!(@alloc_counter+1...@result_list_queue.size)
+                tmp_queue.sort_by!{|v| -v[:priority]}
+                @result_list_queue += tmp_queue
+              end
             end
           end
         end
