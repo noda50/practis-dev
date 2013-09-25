@@ -42,6 +42,7 @@ class VarianceAnalysis
     @effect_Factor.each{|fact| fact[:f_value] = fact[:effect] / @e_v}
   end
 
+  # 
   def get_f_value(name)
     @effect_Factor.each{|ef|
       if ef[:name] == name

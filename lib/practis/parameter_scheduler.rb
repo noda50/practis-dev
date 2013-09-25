@@ -214,7 +214,7 @@ module Practis
       attr_reader :current_total
 
       def initialize(paramDefs)
-        @paramDefList = chk_arg(Array, pramDefs)
+        @paramDefList = chk_arg(Array, paramDefs)
         # (2013/09/12) written by matsushima ==================
         # assign_list = {}
         # CSV.foreach("lib/doe/ExperimentalDesign.ini") do |r|
@@ -280,11 +280,9 @@ module Practis
           chk_arg(Practis::ParamDef, paramDef)
           @total_indexes.push(paramDef.length)
           if assign_list[paramDef.name]
-            parameters.push({ :name => paramDef.name,
-                              :paramDefs => paramDef.paramDefs})
+            parameters.push({ :name => paramDef.name, :paramDefs => paramDef.values})
           else
-            @unassigned.push({ :name => paramDef.name, 
-                               :paramDefs => paramDef.paramDefs})
+            @unassigned.push({ :name => paramDef.name, :paramDefs => paramDef.values})
             @unassigned_total.push(paramDef.length)
           end
         }

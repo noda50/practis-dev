@@ -30,7 +30,7 @@ module Practis
     def initialize(config_file, parameter_file, database_file, result_file, doe_ini, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
       @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
-      @variable_set.scheduler.scheduler.init_doe(doe_ini)
+      @paramDefSet.scheduler.scheduler.init_doe(doe_ini)
       @total_parameters = @paramDefSet.get_total
       
       # [2013/09/13 H-Matsushima]
@@ -198,7 +198,7 @@ module Practis
 
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@paramDefSet.get_available}, " +
-           "parameter pool: #{@parameter_pool.length}, " + 
+           "paramValueSet pool: #{@paramValueSet_pool.length}, " + 
            "ready: #{ready_n}, " +
            "allocating: #{allocating_n}, " +
            "executing: #{executing_n}, " +
@@ -211,7 +211,7 @@ module Practis
 
       if @paramDefSet.get_available <= 0 and @paramValueSet_pool.length <= 0
         if !@to_be_varriance_analysis # 2013/08/01
-          if (retval = allocate_parameters(1, 1)).length == 0
+          if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")} 
             debug("call finalize !")
             finalize
@@ -278,7 +278,7 @@ module Practis
                 # tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
                 # tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
 
-                if tmp_area.empty? and !tmp_var[:param][:variables].nil?
+                if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
                   new_param_list.push(tmp_var)
                 elsif !tmp_area.empty?
                   # ignored area is added for analysis to next_area_list
@@ -292,7 +292,6 @@ module Practis
             }
             priority /= num_significance.size
             if 0 < new_param_list.size
-              # new_param_list.each{|pl| pl[:param][:name]}
               # generate new_param_list & extend orthogonal array
               next_area_list = generate_next_search_area(@result_list_queue[0][:area],
                                                           @paramDefSet.scheduler.scheduler.oa,
