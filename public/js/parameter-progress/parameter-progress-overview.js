@@ -67,7 +67,7 @@ for (var i = 0.0; i < 10.0; i += 1.0) {
           //return d3.hsl(i * 360.0 / 10.0, 0.8, 0.5).toString();});
 }
 
-var variables = [],
+var parameters = [],
 total_parameters = 0
 finished_parameters = 0,
 progress = [];
@@ -82,20 +82,20 @@ function load_parameter_progress(url) {
 
     total_parameters = json.total_parameters;
     finished_parameters = json.finished_parameters;
-    json.variables;
+    json.parameters;
 
-    json.variables.forEach(function(v, i) {
-      variables.push({name : v.name, values : v.values});
-      d3.select('#row-variable').append('option').text(v.name);
-      d3.select('#column-variable').append('option').text(v.name);
+    json.parameters.forEach(function(v, i) {
+      parameters.push({name : v.name, values : v.values});
+      d3.select('#row-parameter').append('option').text(v.name);
+      d3.select('#column-parameter').append('option').text(v.name);
     });
 
     // set default selection
-    if (variables.length > 1) {
+    if (parameters.length > 1) {
       // <<< [2013/08/30 I.Noda]
       // switch row and column order
-      //d3.select('#column-variable').node().selectedIndex = 1;
-      d3.select('#row-variable').node().selectedIndex = 1;
+      //d3.select('#column-parameter').node().selectedIndex = 1;
+      d3.select('#row-parameter').node().selectedIndex = 1;
       // >>> [2013/08/30 I.Noda]
     }
 
@@ -107,14 +107,14 @@ function load_parameter_progress(url) {
     update();
 
     function update() {
-      var row_i = d3.select('#row-variable').node().selectedIndex;
-      var row_v = d3.select('#row-variable').node().options[row_i].value;
+      var row_i = d3.select('#row-parameter').node().selectedIndex;
+      var row_v = d3.select('#row-parameter').node().options[row_i].value;
 
-      var column_i = d3.select('#column-variable').node().selectedIndex;
-      var column_v = d3.select('#column-variable').node().options[column_i].value;
+      var column_i = d3.select('#column-parameter').node().selectedIndex;
+      var column_v = d3.select('#column-parameter').node().options[column_i].value;
 
       var rows = [];
-      variables.forEach(function (v, i) {
+      parameters.forEach(function (v, i) {
         if (v.name == row_v) {
           v.values.forEach(function (val, j) {
             rows.push({name : v.name, value : val});
@@ -126,7 +126,7 @@ function load_parameter_progress(url) {
       // >>> [2013/08/30 I.Noda]
 
       var columns = [];
-      variables.forEach(function (v, i) {
+      parameters.forEach(function (v, i) {
         if (v.name == column_v) {
           v.values.forEach(function (val, j) {
             columns.push({name : v.name, value : val});
@@ -141,13 +141,13 @@ function load_parameter_progress(url) {
       rows.forEach(function(r, i) {
         columns.forEach(function(c, j) {
           progress.forEach(function(p, k) {
-            if (p.variable_pair[0] == r.name && p.variable_pair[1] == c.name) {
+            if (p.parameter_pair[0] == r.name && p.parameter_pair[1] == c.name) {
               p.each_finish.forEach(function(e, l) {
                 if (e.value[0] == r.value && e.value[1] == c.value) {
                   pmatrix[i][j].z = e.finish / p.total;
                 }
               });
-            } else if (p.variable_pair[1] == r.name && p.variable_pair[0] == c.name) {
+            } else if (p.parameter_pair[1] == r.name && p.parameter_pair[0] == c.name) {
               p.each_finish.forEach(function(e, l) {
                 if (e.value[0] == r.value && e.value[1] == c.value) {
                   pmatrix[j][i].z = e.finish / p.total;
@@ -255,9 +255,9 @@ function load_parameter_progress(url) {
               d3.selectAll(".column text").classed("active", function(d, i) { return i == d.x; });
 
               function vlength(name) {
-                for (var i = 0; i < variables.length; i++) {
-                  if (variables[i].name == name)
-                    return variables[i].values.length;
+                for (var i = 0; i < parameters.length; i++) {
+                  if (parameters[i].name == name)
+                    return parameters[i].values.length;
                 }
               }
               divpopup.selectAll("#popup-title").text("Parameter (" + rows[d.y].name + ":" + rows[d.y].value + ", " + columns[d.x].name + ":" + columns[d.x].value + ")");
@@ -285,11 +285,11 @@ function load_parameter_progress(url) {
       }
     }
 
-    d3.select('#row-variable').on('change', function() {
+    d3.select('#row-parameter').on('change', function() {
       update();
     });
 
-    d3.select('#column-variable').on('change', function() {
+    d3.select('#column-parameter').on('change', function() {
       update();
     });
   });

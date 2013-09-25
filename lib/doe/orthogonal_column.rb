@@ -116,7 +116,7 @@ class OrthogonalColumn
 			return nil
 		end
 		bit_string = []
-		parameter[:variables].each{ |v| bit_string.push(@corresponds.key(v)) }
+		parameter[:paramDefs].each{ |v| bit_string.push(@corresponds.key(v)) }
 		return bit_string
 	end
 end
