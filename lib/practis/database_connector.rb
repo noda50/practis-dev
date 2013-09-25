@@ -38,21 +38,21 @@ module Practis
         @database_parser.parse
       end
 
-      def setup_database(variable_set, result_set, config)
+      def setup_database(paramDefs, result_set, config)
         # add parameter fields to parameter table
-        variable_set.each do |v|
-          if (type_field = type_to_sqltype(v.type.to_s)).nil?
-            error("type field requires any types. #{v}")
+        paramDefs.each do |paramDef|
+          if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
+            error("type field requires any types. #{paramDef}")
             next
           end
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),
               # [2013/09/08 I.Noda] for speed up in large-scale sim.
-              #{field: v.name, type: type_field, null: "NO"}
-              {field: v.name, type: type_field, null: "NO", key: "MUL"}
+              #{field: paramDef.name, type: type_field, null: "NO"}
+              {field: paramDef.name, type: type_field, null: "NO", key: "MUL"}
                                        ) < 0
-            error("fail to add a filed. #{v.name}, #{type_field}")
+            error("fail to add a filed. #{paramDef.name}, #{type_field}")
           end
         end
         # add result fields to result table
@@ -359,9 +359,17 @@ module Practis
         finished_parameters = []
         finished_parameter_ids = []
 
+        #[2013/09/24 I.Noda] for speed up
+        parameterIdTable = {}
+        parameters.each{|p|
+          id = p["parameter_id"].to_i ;
+          parameterIdTable[id] = (parameterIdTable[id] || Array.new).push(p) ;
+        }
+
         results.each do |r|
-          ps = parameters.select { |p|
-            p["parameter_id"].to_i == r["result_id"].to_i }
+#          ps = parameters.select { |p|
+#            p["parameter_id"].to_i == r["result_id"].to_i }
+          ps = parameterIdTable[r["result_id"].to_i] ;
           ps.each do |p|
             if p["state"] != PARAMETER_STATE_FINISH
 #              unless (retval = pconnector.update_record(
@@ -427,18 +435,39 @@ module Practis
         results = rconnector.read_record      # current stored results
 
         # count the number of the parameter each state.
-        p_ready = parameters.select { |p|
-          p["state"] == PARAMETER_STATE_READY }.length
-        p_alloc = parameters.select { |p|
-          p["state"] == PARAMETER_STATE_ALLOCATING }.length
-        p_execu = parameters.select { |p|
-          p["state"] == PARAMETER_STATE_EXECUTING }.length
-        p_finis = parameters.select { |p|
-          p["state"] == PARAMETER_STATE_FINISH }.length
-        parameters.select { |p| p["state"] == PARAMETER_STATE_EXECUTING }
-            .each do |p|
-          if (results.select { |r| p["parameter_id"] == r["result_id"] })
-              .length > 0
+        # [2013/09/24 I.Noda] change for speed up
+        p_ready = p_alloc = p_execu = p_finis = 0 ;
+        parameters.each{|p|
+          case(p["state"])
+          when PARAMETER_STATE_READY then p_ready += 1 ;
+          when PARAMETER_STATE_ALLOCATING then p_alloc += 1 ;
+          when PARAMETER_STATE_EXECUTING then p_execu += 1 ;
+          when PARAMETER_STATE_FINISH then p_finis += 1 ;
+          end
+        }
+#        p_ready = parameters.select { |p|
+#          p["state"] == PARAMETER_STATE_READY }.length
+#        p_alloc = parameters.select { |p|
+#          p["state"] == PARAMETER_STATE_ALLOCATING }.length
+#        p_execu = parameters.select { |p|
+#          p["state"] == PARAMETER_STATE_EXECUTING }.length
+#        p_finis = parameters.select { |p|
+#          p["state"] == PARAMETER_STATE_FINISH }.length
+
+        # [2013/09/24 I.Noda] change for speed up
+        resultIdTable = {} ;
+        results.each{|r|
+          id = r["result_id"].to_i;
+          resultIdTable[id] = (resultIdTable[id] || Array.new()).push(r)
+        }
+
+#        parameters.select { |p| p["state"] == PARAMETER_STATE_EXECUTING }
+#            .each do |p|
+        parameters.each do |p|
+          next if (p["state"] != PARAMETER_STATE_EXECUTING) ;
+#          if (results.select { |r| p["parameter_id"] == r["result_id"] })
+#              .length > 0
+          if(resultIdTable[p["parameter_id"].to_i]) then
 #            if (retval = pconnector.update_record(
 #                {state: PARAMETER_STATE_FINISH},
 #                "parameter_id = #{p["parameter_id"]}")).length != 0

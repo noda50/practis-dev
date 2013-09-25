@@ -14,23 +14,23 @@ module Practis
     attr_reader :scheduler
 
     #=== initialize method.
-    #variable_set :: a reference to a VariableSet object.
+    #paramDef_set :: a reference to a ParamDefSet object.
     #scheduler_name :: a class name of scheduler.
-    def initialize(variable_set, scheduler_name="RoundrobinScheduler")
+    def initialize(paramDefList, scheduler_name="RoundrobinScheduler")
       @scheduler = Practis::Scheduler.const_get(scheduler_name)
-        .new(variable_set)
+        .new(paramDefList)
       @mutex = Mutex.new() ;
     end
 
-    def get_parameter_set(id=nil)
+    def get_paramValues(id=nil)
       @mutex.synchronize{
-        if (parameter_array = @scheduler.get_parameter_set(id)).nil? ||
+        if (parameter_array = @scheduler.get_paramValues(id)).nil? ||
             parameter_array.include?(nil)
           return nil
         end
         return parameter_array
       }
-      # parameter_array = @scheduler.get_parameter_set
+      # parameter_array = @scheduler.get_paramValues
       # if parameter_array.nil? then return nil
       # elsif parameter_array.include?(nil) then return nil
       # else return parameter_array
@@ -55,21 +55,21 @@ module Practis
 
       attr_reader :current_indexes
       attr_reader :total_indexes
-      attr_reader :variable_set
+      attr_reader :paramDefList
 
-      def initialize(variable_set)
-        @variable_set = chk_arg(Array, variable_set)
+      def initialize(paramDefs)
+        @paramDefList = chk_arg(Array, paramDefs)
         @current_indexes = []
         @total_indexes = []
-        @variable_set.each do |variable|
-          chk_arg(Practis::Variable, variable)
+        @paramDefList.each do |paramDef|
+          chk_arg(Practis::ParamDef, paramDef)
           @current_indexes.push(0)
-          @total_indexes.push(variable.length)
-          debug(variable)
+          @total_indexes.push(paramDef.length)
+          debug(paramDef)
         end
       end
 
-      def get_parameter_set(id=nil)
+      def get_paramValues(id=nil)
         parameter_array = []
         # check whether all of the parameters are allocated?
         if current_indexes[current_indexes.length - 1] >=
@@ -79,8 +79,8 @@ module Practis
           return nil
         end
         # allocate parameters
-        variable_set.length.times { |i|
-          parameter_array.push(variable_set[i].get_n(current_indexes[i])) }
+        paramDefList.length.times { |i|
+          parameter_array.push(paramDefList[i].get_n(current_indexes[i])) }
         # increment
         current_indexes[0] += 1
         current_indexes.length.times do |i|
@@ -135,23 +135,23 @@ module Practis
 
       attr_reader :current_indexes
       attr_reader :total_indexes
-      attr_reader :variable_set
+      attr_reader :paramDefList
 
-      def initialize(variable_set)
-        @variable_set = chk_arg(Array, variable_set)
+      def initialize(paramDefs)
+        @paramDefList = chk_arg(Array, paramDefs)
         @total_indexes = []
-        @variable_set.each do |variable|
-          chk_arg(Practis::Variable, variable)
-          @total_indexes.push(variable.length)
+        @paramDefList.each do |paramDef|
+          chk_arg(Practis::ParamDef, paramDef)
+          @total_indexes.push(paramDef.length)
         end
         @total_number = get_total
         @allocated_numbers = []
-        #@available_numbers = (0..@total_number - 1).map {|i| i}
+        # @available_numbers = (0..@total_number - 1).map {|i| i}
         @available_numbers = @total_number.times.map { |i| i }
         debug("random scheduler initiated, #{@total_number}")
       end
 
-      def get_parameter_set(id=nil)
+      def get_paramValues(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, total: #{@total_indexes.length}, " +
@@ -169,8 +169,8 @@ module Practis
         # debug("indexes: #{indexes}")
 
         # allocate parameters
-        variable_set.length.times do |i|
-          parameter_array.push(variable_set[i].get_n(indexes[i]))
+        paramDefList.length.times do |i|
+          parameter_array.push(paramDefList[i].get_n(indexes[i]))
         end
         return parameter_array
       end
@@ -208,13 +208,13 @@ module Practis
 
       attr_reader :current_indexes
       attr_reader :total_indexes
-      attr_reader :variable_set
+      attr_reader :paramDefList
       attr_reader :oa
       attr_reader :analysis
       attr_reader :current_total
 
-      def initialize(variable_set)
-        @variable_set = chk_arg(Array, variable_set)
+      def initialize(paramDefs)
+        @paramDefList = chk_arg(Array, paramDefs)
         # (2013/09/12) written by matsushima ==================
         # assign_list = {}
         # CSV.foreach("lib/doe/ExperimentalDesign.ini") do |r|
@@ -276,14 +276,14 @@ module Practis
         @unassigned = []
         @total_indexes = []
         @unassigned_total = []
-        @variable_set.each{|v|
-          chk_arg(Practis::Variable, v)
-          @total_indexes.push(v.length)
-          if assign_list[v.name]
-            parameters.push({:name => v.name, :variables => v.parameters})
+        @paramDefList.each{|paramDef|
+          chk_arg(Practis::ParamDef, paramDef)
+          @total_indexes.push(paramDef.length)
+          if assign_list[paramDef.name]
+            parameters.push({ :name => paramDef.name, :paramDefs => paramDef.values})
           else
-            @unassigned.push({:name => v.name, :variables => v.parameters})
-            @unassigned_total.push(v.length)
+            @unassigned.push({ :name => paramDef.name, :paramDefs => paramDef.values})
+            @unassigned_total.push(paramDef.length)
           end
         }
         
@@ -308,8 +308,8 @@ module Practis
         # (2013/09/12) ==========================================
       end
       
-      # get parameter set from variable_set
-      def get_parameter_set(id=nil)
+      # get parameter set from paramDefList
+      def get_paramValues(id=nil)
         # already allocated all parameters
         if @available_numbers.length <= 0
           debug("no available parameter, \n" +
@@ -325,17 +325,17 @@ module Practis
         @allocated_numbers.push(v)
         not_allocate_indexes = value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
-        @variable_set.size.times{ |i|
+        @paramDefList.size.times{ |i|
           unassign_flag = true
           @oa.colums.each{|col|
-            if @variable_set[i].name == col.parameter_name
+            if @paramDefList[i].name == col.parameter_name
               parameter_array.push(@oa.get_parameter(@analysis[:area][@v_index], col.id))
               unassign_flag = false
               break
             end
           }
           if unassign_flag
-            parameter_array.push(variable_set[i].get_n(not_allocate_indexes[i]))
+            parameter_array.push(paramDefList[i].get_n(not_allocate_indexes[i]))
           end 
         }
 

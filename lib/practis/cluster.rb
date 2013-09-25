@@ -228,7 +228,7 @@ module Practis
 
     #=== Update method.
     #
-    #Update matching ndoes variables.
+    #Update matching nodes variables.
     #
     #keytype :: Used by ClusterNode.match.
     #key :: Used by ClusterNode.match.

@@ -12,7 +12,7 @@ module Practis
   module Parser
 
     # Parse a parameter configuration file of PRACTIS, generate an exhaustive 
-    # variables. 
+    # values
     # The format of the configuration file can be checked in the 
     # "sample" directory.
     class ParameterParser
@@ -20,18 +20,19 @@ module Practis
       include Practis
 
       attr_reader :file           # A file path of a configuration file.
-      attr_reader :variable_set   # Store parsed variables.
+      attr_reader :paramDefList   # Store parsed Parameter Definitions.
 
-      # The path to Variable tag in a inputted parameter configuration file.
-      VARIABLE_PATH = "practis/exhaustive/variables/variable"
+      # The path to ParamDef tag in a inputted parameter configuration file.
+#      PARAMDEF_PATH = "practis/exhaustive/variables/variable"
+      PARAMDEF_PATH = "practis/exhaustive/parameters/parameter"
 
-      # Range of a variable.
+      # Range of a parameter value
       RANGE_TYPE = "range_type"
       RANGE_RANGE = "range"
       RANGE_LIST = "list"
       RANGE_TYPES = [RANGE_RANGE, RANGE_LIST]
 
-      # Generic tags in a variable tag.
+      # Generic tags in a parameter definition tag.
       GENERIC_ATTRS = [NAME_ATTR, DATA_TYPE_ATTR]
 
       # Condition type: add or remove a condition for a vairable.
@@ -52,15 +53,15 @@ module Practis
       LIST_TAG = "list_values/list_value"
 
       # Indexes of an array that temporary stores values.
-      NAME_NUM = 0        # variable name
+      NAME_NUM = 0        # parameter name
       ARGUMENT_NUM = 1    # argument type
-      VARIABLES_NUM = 2   # variables
+      PARAMDEFS_NUM = 2   # parameter definition
       PATTERN_NUM = 2     # pattern
 
       def initialize(file)
         @file = file
         (error("input file does not exist."); exit) unless filecheck
-        @variable_set = nil
+        @paramDefList = nil
       end
 
       #=== Parse a practis parameter file configuration file.
@@ -68,25 +69,25 @@ module Practis
       def parse
         return -1 unless filecheck
         doc = REXML::Document.new(open(file))
-        variable_array = []
-        doc.elements.each(VARIABLE_PATH) do |e|
-          vallist = []  # a variable list, [0]:name, [1]:artument type,
-                        # [2]:variables
+        paramDef_array = []
+        doc.elements.each(PARAMDEF_PATH) do |e|
+          vallist = []  # a paramdef list, [0]:name, [1]:value type,
+                        # [2]:paramValues (?)
           get_generic(e, vallist)
           if parse_condition(e, vallist) < 0
             error("fail to parse condition.")
           end
-          variable_array.push(Practis::Variable.new(vallist[NAME_NUM],
+          paramDef_array.push(Practis::ParamDef.new(vallist[NAME_NUM],
                                                     vallist[ARGUMENT_NUM],
                                                     vallist[PATTERN_NUM]))
         end
-        @variable_set = variable_array
+        @paramDefList = paramDef_array
         return 0
       end
 
-      # Simpley print variables.
-      def print_variables
-        return @variable_set.inject("") { |s, v| s << v.to_s }
+      # Simpley print paramDefs
+      def print_paramDefs
+        return @paramDefList.inject("") { |s, v| s << v.to_s }
       end
 
       private
@@ -96,13 +97,13 @@ module Practis
         return File.exist?(file)
       end
 
-      # Get values of generic variable.
+      # Get values of generic paramDef.
       def get_generic(e, l)
         # Add a name and an argument type.
         GENERIC_ATTRS.each { |tag| l.push(e.attributes[tag]) }
       end
 
-      # Convert a variable with variable type.
+      # Convert a paramDef with value type.
       def convert_type(s, argument_type)
         case argument_type
         when DATA_TYPE_INTEGER then return s.to_i

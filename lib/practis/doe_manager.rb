@@ -29,14 +29,14 @@ module Practis
 
     def initialize(config_file, parameter_file, database_file, result_file, doe_ini, myaddr = nil)
       super(config_file, parameter_file, database_file, result_file, myaddr)
-      @variable_set = Practis::VariableSet.new(@variable_set.variable_set, "DesginOfExperimentScheduler")
-      @variable_set.scheduler.scheduler.init_doe(doe_ini)
-      @total_parameters = @variable_set.get_total
+      @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
+      @paramDefSet.scheduler.scheduler.init_doe(doe_ini)
+      @total_parameters = @paramDefSet.get_total
       
       # [2013/09/13 H-Matsushima]
       @mutexAnalysis = Mutex.new
       @result_list_queue = []
-      @result_list_queue.push(generate_result_list(@variable_set.scheduler.scheduler.oa.analysis_area[0]))
+      @result_list_queue.push(generate_result_list(@paramDefSet.scheduler.scheduler.oa.analysis_area[0]))
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
@@ -46,7 +46,7 @@ module Practis
     # === methods of manager.rb ===
     # create_executable_command
     # allocate_node(node_type, address, id=nil, parallel=nil)
-    # allocate_parameters(request_number, src_id) # <- override
+    # allocate_paramValueSets(request_number, src_id) # <- override
 
     # update_started_parameter_state(parameter_id, executor_id)
     # update_node_state(node_id, queueing, executing)
@@ -64,8 +64,8 @@ module Practis
     ##------------------------------------------------------------
     # override method
     #=== Allocate requested number of parameters.
-    def allocate_parameters(request_number, src_id)
-      parameters = []   # allocated parameters
+    def allocate_paramValueSets(request_number, src_id)
+      paramValueSetList = []   # allocated parameter value sets
       if (timeval = @database_connector.read_time(:parameter)).nil?
         return nil
       end
@@ -75,7 +75,7 @@ module Practis
           :parameter, "state = '#{PARAMETER_STATE_READY}'")).length > 0
         p_ready.each do |p|
           break if request_number <= 0
-          if (matches = @parameter_pool.select { |pp|
+          if (matches = @paramValueSet_pool.select { |pp|
               p["parameter_id"].to_i == pp.uid }).length == 1
             # update the allocating parameter state
             if @database_connector.update_parameter(
@@ -88,7 +88,7 @@ module Practis
               error("failt to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
-              parameters.push(matches[0])
+              paramValueSetList.push(matches[0])
               request_number -= 1
             end
             next
@@ -96,11 +96,11 @@ module Practis
         end
       end
 
-      # generate the parameters from the scheduler
+      # generate the parameter value sets from the scheduler
       @mutexAllocateParameter.synchronize{
         while request_number > 0
           newId = getNewParameterId
-          if (parameter = @variable_set.get_next(newId)).nil?
+          if (paramValueSet = @paramDefSet.get_next(newId)).nil?
             if !@to_be_varriance_analysis
               info("all parameter is already allocated!")
               break
@@ -111,7 +111,7 @@ module Practis
               #[2013/09/20]
               if @alloc_counter < (@result_list_queue.size - 1)
                 @alloc_counter += 1
-                @variable_set.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
+                @paramDefSet.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
               end
               # ========
               break
@@ -119,30 +119,30 @@ module Practis
           end
 
           condition = [:and] ;
-          parameter.parameter_set.map { |p|
+          paramValueSet.paramValues.map { |p|
             condition.push([:eq, [:field, p.name], p.value]) ;
           }
 
           if(0 ==
              (count = @database_connector.read_count(:parameter, condition)))
-            arg_hash = {parameter_id: parameter.uid,
+            arg_hash = {parameter_id: paramValueSet.uid,
                         allocated_node_id: src_id,
                         executing_node_id: src_id,
                         allocation_start: iso_time_format(timeval),
                         execution_start: nil,
                         state: PARAMETER_STATE_ALLOCATING}
-            parameter.parameter_set.each { |p|
+            paramValueSet.paramValues.each { |p|
               arg_hash[(p.name).to_sym] = p.value
             }
             if @database_connector.insert_record(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
             else
-              parameter.state = PARAMETER_STATE_ALLOCATING
-              parameters.push(parameter)
-              @parameter_pool.push(parameter)
+              paramValueSet.state = PARAMETER_STATE_ALLOCATING
+              paramValueSetList.push(paramValueSet)
+              @paramValueSet_pool.push(paramValueSet)
               request_number -= 1
               # [2013/09/20]
-              area_index = @variable_set.scheduler.scheduler.get_v_index
+              area_index = @paramDefSet.scheduler.scheduler.get_v_index
               if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
                 @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
               end
@@ -156,21 +156,21 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                already_id = @variable_set.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
-                parameter.state = r["state"]
-                @parameter_pool.push(parameter)
+                already_id = @paramDefSet.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
+                paramValueSet.state = r["state"]
+                @paramValueSet_pool.push(paramValueSet)
                 # [2013/09/20]
-                area_index = @variable_set.scheduler.scheduler.get_v_index
+                area_index = @paramDefSet.scheduler.scheduler.get_v_index
                 @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(r["parameter_id"])
                 # ============
               }
             }
-            debug("parameter.state = #{parameter.state.inspect}");
+            debug("paramValueSet.state = #{paramValueSet.state.inspect}");
             next
           end
         end
       }
-      return parameters
+      return paramValueSetList
     end
 
     ##------------------------------------------------------------
@@ -182,9 +182,9 @@ module Practis
       end
       ready_n, allocating_n, executing_n, @finished_parameters, current_finished = @database_connector.update_parameter_state(@parameter_execution_expired_timeout)
       current_finished.each do |finished_id|
-        @parameter_pool.each do |p|
+        @paramValueSet_pool.each do |p|
           if p.uid == finished_id
-            @parameter_pool.delete(p)
+            @paramValueSet_pool.delete(p)
             break
           end
         end
@@ -192,13 +192,13 @@ module Practis
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
-      if @variable_set.get_available <= 0 && @to_be_varriance_analysis
+      if @paramDefSet.get_available <= 0 && @to_be_varriance_analysis
         @mutexAnalysis.synchronize{variance_analysis}        
       end
 
       debug(cluster_tree.to_s)
-      info("not allocated parameters: #{@variable_set.get_available}, " +
-           "parameter pool: #{@parameter_pool.length}, " + 
+      info("not allocated parameters: #{@paramDefSet.get_available}, " +
+           "paramValueSet pool: #{@paramValueSet_pool.length}, " + 
            "ready: #{ready_n}, " +
            "allocating: #{allocating_n}, " +
            "executing: #{executing_n}, " +
@@ -209,9 +209,9 @@ module Practis
         @message_handler.join
       end
 
-      if @variable_set.get_available <= 0 and @parameter_pool.length <= 0
+      if @paramDefSet.get_available <= 0 and @paramValueSet_pool.length <= 0
         if !@to_be_varriance_analysis # 2013/08/01
-          if (retval = allocate_parameters(1, 1)).length == 0
+          if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")} 
             debug("call finalize !")
             finalize
@@ -246,59 +246,62 @@ module Practis
       p "result list:"
       pp @result_list_queue[0]#result_list
 
-      if uploaded_result_count >= @variable_set.scheduler.scheduler.current_total
+      if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")        
         
         va = VarianceAnalysis.new(@result_list_queue[0],
-                                  @variable_set.scheduler.scheduler.oa.table,
-                                  @variable_set.scheduler.scheduler.oa.colums)
+                                  @paramDefSet.scheduler.scheduler.oa.table,
+                                  @paramDefSet.scheduler.scheduler.oa.colums)
         p "variance factor"
         pp va
         
         if va.e_f >= 1
           num_significance = []
           new_param_list = []
+          priority = 0.0
           va.effect_Factor.each{|ef|
             # significant parameter is decided
             if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
               num_significance.push(ef[:name])
+              priority += ef[:f_value]
             end            
           }
           if 0 < num_significance.size
-            @variable_set.scheduler.scheduler.oa.colums.each{|oc|
+            @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
               if num_significance.include?(oc.parameter_name)
                 var = []
                 @result_list_queue[0][:area].each{|r|
-                  var.push(@variable_set.scheduler.scheduler.oa.get_parameter(r, oc.id))
+                  var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
                 }
                 tmp_var,tmp_area = generate_new_inside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
                 # tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
                 # tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
 
-                if tmp_area.empty? and !tmp_var[:param][:variables].nil?
+                if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
                   new_param_list.push(tmp_var)
                 elsif !tmp_area.empty?
                   # ignored area is added for analysis to next_area_list
                   p "== exist area =="
                   pp tmp_area
                   tmp_area.each{|a_list|
-                    @result_list_queue.push(generate_result_list(a_list))
+                    @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
                   }
                 end
               end
             }
-
+            priority /= num_significance.size
             if 0 < new_param_list.size
               # generate new_param_list & extend orthogonal array
-              next_area_list = generate_next_search_area(@result_list_queue[0][:area],#result_list[:area],
-                                                          @variable_set.scheduler.scheduler.oa,
+              next_area_list = generate_next_search_area(@result_list_queue[0][:area],
+                                                          @paramDefSet.scheduler.scheduler.oa,
                                                           new_param_list)
               debug("next area list: ")
               pp next_area_list
               next_area_list.each{|a_list|
-                @result_list_queue.push(generate_result_list(a_list))
+                @result_list_queue.push(generate_result_list(a_list, priority))
               }
+              @result_list_queue.sort_by!{|v| @alloc_counter < @result_list_queue.index(v) ? v[:priority] : 0 }
             end
           end
         end
@@ -316,7 +319,7 @@ module Practis
     def generate_new_inside_parameter(var, para_name, area)
       p "generate new parameter ====================================="
       p "var: #{var}"
-      oa = @variable_set.scheduler.scheduler.oa
+      oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
       min=nil
@@ -395,10 +398,9 @@ module Practis
 
       # var.name
       new_var ={:case => "inside", 
-                :param => {:name => para_name, :variables => new_array}}
+                :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
       pp new_var
-      # pp @variable_set.scheduler.scheduler.oa.get_table
       p "end generate new parameter ====================================="
       puts
       return new_var,new_area
@@ -522,8 +524,8 @@ module Practis
       return new_area
     end
     # 
-    def generate_result_list(area)
-      result_list = { :area => area, :id => {}, :results => {} }
+    def generate_result_list(area, priority=0)
+      result_list = { :area => area, :id => {}, :results => {}, :priority => priority }
       result_list[:area].each{|a|
         result_list[:id][a] = []
         result_list[:results][a] = []

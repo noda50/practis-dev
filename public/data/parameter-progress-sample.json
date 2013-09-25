@@ -1,14 +1,14 @@
 {
  "total_parameters" : 36,
  "finished_parameters" : 18,
- "variables" : [
+ "parameters" : [
   {"name": "m", "values": [1, 2, 3]},
   {"name": "s", "values": [1, 2, 3, 4]},
   {"name": "t", "values": [1, 2, 3]}
  ],
  "progress" : [
  {
-   "variable_pair" : ["m", "s"],
+   "parameter_pair" : ["m", "s"],
    "patterns" : [3, 4],
    "total" : 3,
    "each_finish" : [
@@ -27,7 +27,7 @@
    ]
  },
  {
-   "variable_pair" : ["s", "t"],
+   "parameter_pair" : ["s", "t"],
    "pattern" : [4, 3],
    "total" : 3,
    "each_finish" : [
@@ -46,7 +46,7 @@
    ]
  },
  {
-   "variable_pair" : ["t", "m"],
+   "parameter_pair" : ["t", "m"],
    "pattern" : [3, 3],
    "total" : 3,
    "each_finish" : [

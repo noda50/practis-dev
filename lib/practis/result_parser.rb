@@ -12,7 +12,7 @@ module Practis
   module Parser
 
     # Parse a parameter configuration file of PRACTIS, generate an exhaustive 
-    # variables. 
+    # parameter values.
     # The format of the configuration file can be checked in the 
     # "sample" directory.
     class ResultParser
@@ -20,9 +20,9 @@ module Practis
       include Practis
 
       attr_reader :file         # A file path of a configuration file.
-      attr_reader :result_set   # Store parsed variables.
+      attr_reader :result_set   # Store parsed results
 
-      # The path to Variable tag in a inputted parameter configuration file.
+      # The path to result tag in a inputted parameter configuration file.
       RESULT_PATH = 'practis/results/result'
       NULL_ATTR = "null"
       # Generic attributes in a result tag.
@@ -57,7 +57,7 @@ module Practis
         return file.nil? ? false : File.exist?(file)
       end
 
-      # Get values of generic variable.
+      # Get values of generic variable. (?)
       def get_generic(e, l)
         GENERIC_ATTRS.each { |a| l.push(e.attributes[a]) }
       end

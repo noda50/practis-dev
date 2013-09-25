@@ -24,10 +24,10 @@ module Practis
     ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     # message handler
     attr_reader :message_handler
-    # variables definition with VariableSet class.
-    attr_reader :variable_set
+    # parameter definition with ParamDefSet class.
+    attr_reader :paramDefSet
     # store parameters that once allocated, but returned or quited.
-    attr_accessor :parameter_pool
+    attr_accessor :paramValueSet_pool
 
     # current project id
     attr_reader :project_id
@@ -102,11 +102,11 @@ module Practis
         error("failed to parse parameter file.")
         finalize
       end
-      debug(pparser.print_variables)
+      debug(pparser.print_paramDefs)
       if (scheduler_name = @config.read("parameter_scheduler")).nil?
-        @variable_set = Practis::VariableSet.new(pparser.variable_set)
+        @paramDefSet = Practis::ParamDefSet.new(pparser.paramDefList)
       else
-        @variable_set = Practis::VariableSet.new(pparser.variable_set,
+        @paramDefSet = Practis::ParamDefSet.new(pparser.paramDefList,
                                                  scheduler_name)
       end
       # parse result configuration
@@ -115,7 +115,7 @@ module Practis
       debug("results: #{rparser.result_set}")
 
       # set up the databases.
-      @database_connector.setup_database(@variable_set.variable_set,
+      @database_connector.setup_database(@paramDefSet.paramDefs,
                                          rparser.result_set, @config)
 
       # Register current project to DB.
@@ -146,7 +146,7 @@ module Practis
         @result_fields.push({name: r[0], type: r[1]})
       end
       debug("loaded result fields: #{@result_fields}")
-      @parameter_pool = []
+      @paramValueSet_pool = []
 
       # [2013/09/07 I.Noda] for exclusive parameter allocation
       @mutexAllocateParameter = Mutex.new() ;
@@ -220,9 +220,9 @@ module Practis
     end
 
     ##------------------------------------------------------------
-    #=== Allocate requested number of parameters.
-    def allocate_parameters(request_number, src_id)
-      parameters = []   # allocated parameters
+    #=== Allocate requested number of parameter value sets
+    def allocate_paramValueSets(request_number, src_id)
+      paramValueSetList = []   # allocated parameter value sets
       if (timeval = @database_connector.read_time(:parameter)).nil?
         return nil
       end
@@ -237,7 +237,7 @@ module Practis
                                            PARAMETER_STATE_READY])).length > 0
         p_ready.each do |p|
           break if request_number <= 0
-          if (matches = @parameter_pool.select { |pp|
+          if (matches = @paramValueSet_pool.select { |pp|
               p["parameter_id"].to_i == pp.uid }).length == 1
             # update the allocating parameter state
 #            if @database_connector.update_parameter(
@@ -257,7 +257,7 @@ module Practis
               error("fault to update the parameter with 'ready' state.")
             else
               matches[0].state = PARAMETER_STATE_ALLOCATING
-              parameters.push(matches[0])
+              paramValueSetList.push(matches[0])
               request_number -= 1
             end
             next
@@ -265,18 +265,16 @@ module Practis
         end
       end
 
-      # generate the parameters from the scheduler
+      # generate the parameter value sets from the scheduler
       @mutexAllocateParameter.synchronize{
         while request_number > 0
           newId = getNewParameterId() ;
-          if (parameter = @variable_set.get_next(newId)).nil?
+          if (paramValueSet = @paramDefSet.get_next(newId)).nil?
             info("all parameter is already allocated!")
             break
           end
-#          condition = parameter.parameter_set.map { |p|
-#            "#{p.name} = '#{p.value}'" }.join(" and ")
           condition = [:and] ;
-          parameter.parameter_set.map { |p|
+          paramValueSet.paramValues.map { |p|
             condition.push([:eq, [:field, p.name], p.value]) ;
           }
 #          debug("condition: #{condition}") ;
@@ -287,20 +285,20 @@ module Practis
 #                                              condition)).length == 0
           if(0 ==
              (count = @database_connector.read_count(:parameter, condition)))
-            arg_hash = ({ parameter_id: parameter.uid,
+            arg_hash = ({ parameter_id: paramValueSet.uid,
                           allocated_node_id: src_id,
                           executing_node_id: src_id,
                           allocation_start: iso_time_format(timeval),
                           execution_start: nil,
                           state: PARAMETER_STATE_ALLOCATING})
-            parameter.parameter_set.each { |p|
+            paramValueSet.paramValues.each { |p|
               arg_hash[(p.name).to_sym] = p.value }
             if @database_connector.insert_record(:parameter, arg_hash).length != 0
               error("fail to insert a new parameter.")
             else
-              parameter.state = PARAMETER_STATE_ALLOCATING
-              parameters.push(parameter)
-              @parameter_pool.push(parameter)
+              paramValueSet.state = PARAMETER_STATE_ALLOCATING
+              paramValueSetList.push(paramValueSet)
+              @paramValueSet_pool.push(paramValueSet)
               request_number -= 1
             end
           else
@@ -311,16 +309,16 @@ module Practis
               |retval|
               retval.each do |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                parameter.state = r["state"]
-                @parameter_pool.push(parameter)
+                paramValueSet.state = r["state"]
+                @paramValueSet_pool.push(paramValueSet)
               end
             }
-            debug("parameter.state = #{parameter.state.inspect}");
+            debug("paramValueSet.state = #{paramValueSet.state.inspect}");
             next  ## [2013/09/08 I.Noda]  ??? should retry if state is not set?
           end
         end
       } # @mutexAllocateParameter.synchronize
-      return parameters
+      return paramValueSetList
     end
 
     ##------------------------------------------------------------
@@ -421,16 +419,16 @@ module Practis
         current_finished = @database_connector.update_parameter_state(
           @parameter_execution_expired_timeout)
       current_finished.each do |finished_id|
-        @parameter_pool.each do |p|
+        @paramValueSet_pool.each do |p|
           if p.uid == finished_id
-            @parameter_pool.delete(p)
+            @paramValueSet_pool.delete(p)
             break
           end
         end
       end
-      @total_parameters = @variable_set.get_total
+      @total_parameters = @paramDefSet.get_total
       debug(cluster_tree.to_s)
-      info("not allocated parameters: #{@variable_set.get_available}, " +
+      info("not allocated parameters: #{@paramDefSet.get_available}, " +
            "ready: #{ready_n}, " +
            "allocating: #{allocating_n}, " +
            "executing: #{executing_n}, " +
@@ -443,8 +441,8 @@ module Practis
       # All parameters are finished, finalize
       if @total_parameters <= @finished_parameters
         # check
-        if @variable_set.get_available <= 0 and @parameter_pool.length <= 0
-          if (retval = allocate_parameters(1, 1)).length == 0
+        if @paramDefSet.get_available <= 0 and @paramValueSet_pool.length <= 0
+          if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")}
             finalize
           else
@@ -555,40 +553,40 @@ module Practis
         finished = retval
       end
       hash = {}
-      total = @variable_set.get_total
+      total = @paramDefSet.get_total
       hash[:total_parameters] = total
       hash[:finished_parameters] = @finished_parameters
-      va = []
-      @variable_set.variable_set.each do |v|
-        va.push({:name => v.name, :values => v.parameters})
+      paramList = []
+      @paramDefSet.paramDefs.each do |paramDef|
+        paramList.push({:name => paramDef.name, :values => paramDef.values})
       end
-      hash[:variables] = va
+      hash[:parameters] = paramList
       pa = []
       hash[:progress] = pa
-      l = @variable_set.variable_set.length
+      l = @paramDefSet.paramDefs.length
       (0..l - 2).each do |i|
         (i + 1..l - 1).each do |j|
           ## <<<< [2013/08/30 I.Noda]
-          ## to fit axis in result tab, exchange variables.
-          #v1 = @variable_set.variable_set[i]
-          #v2 = @variable_set.variable_set[j]
-          v2 = @variable_set.variable_set[i]
-          v1 = @variable_set.variable_set[j]
+          ## to fit axis in result tab, exchange parameters
+          #v1 = @paramDefSet.paramDefs[i]
+          #v2 = @paramDefSet.paramDefs[j]
+          paramDef2 = @paramDefSet.paramDefs[i]
+          paramDef1 = @paramDefSet.paramDefs[j]
           ## >>>> [2013/08/30 I.Noda]
           hash_progress = {}
-          hash_progress[:variable_pair] = [v1.name, v2.name]
-          hash_progress[:total] = total / v1.parameters.length / \
-              v2.parameters.length
+          hash_progress[:parameter_pair] = [paramDef1.name, paramDef2.name]
+          hash_progress[:total] = total / paramDef1.values.length / \
+              paramDef2.values.length
           efa = []
-          v1.parameters.each do |p1|
-            v2.parameters.each do |p2|
+          paramDef1.values.each do |val1|
+            paramDef2.values.each do |val2|
               count = 0
               finished.each do |f|
-                if f[v1.name] == p1 and f[v2.name] == p2
+                if f[paramDef1.name] == val1 and f[paramDef2.name] == val2
                   count += 1
                 end
               end
-              efa.push({:value => [p1, p2], :finish => count})
+              efa.push({:value => [val1, val2], :finish => count})
             end
           end
           hash_progress[:each_finish] = efa
@@ -622,55 +620,55 @@ module Practis
         finished = retval
       end
       hash = {}
-      total = @variable_set.get_total
+      total = @paramDefSet.get_total
       hash[:total_parameters] = total
       hash[:finished_parameters] = @finished_parameters
-      va = []
-      @variable_set.variable_set.each do |v|
-        va.push({:name => v.name, :values => v.parameters})
+      paramList = []
+      @paramDefSet.paramDefs.each do |paramDef|
+        paramList.push({:name => paramDef.name, :values => paramDef.values})
       end
-      hash[:variables] = va
+      hash[:parameters] = paramList
       pa = []
       hash[:progress] = pa
-      l = @variable_set.variable_set.length
+      l = @paramDefSet.paramDefs.length
       (0..l - 2).each do |i|
         (i + 1..l - 1).each do |j|
           ## <<<< [2013/08/30 I.Noda]
-          ## to fit axis in result tab, exchange variables.
-          #v1 = @variable_set.variable_set[i]
-          #v2 = @variable_set.variable_set[j]
-          v2 = @variable_set.variable_set[i]
-          v1 = @variable_set.variable_set[j]
+          ## to fit axis in result tab, exchange parameters.
+          #v1 = @paramDefSet.paramDefs[i]
+          #v2 = @paramDefSet.paramDefs[j]
+          paramDef2 = @paramDefSet.paramDefs[i]
+          paramDef1 = @paramDefSet.paramDefs[j]
           ## >>>> [2013/08/30 I.Noda]
           hash_progress = {}
-          hash_progress[:variable_pair] = [v1.name, v2.name]
-          hash_progress[:total] = total / v1.parameters.length / \
-              v2.parameters.length
+          hash_progress[:parameter_pair] = [paramDef1.name, paramDef2.name]
+          hash_progress[:total] = total / paramDef1.values.length / \
+              paramDef2.values.length
           ## <<< [2013/09/01 I.Noda]
           ## to reduce nested loop
           ## prepare count table
           countTable = {};
-          v1.parameters.each{|p1|
-            v2.parameters.each{|p2|
-              countTable[[p1,p2]] = 0 ;
+          paramDef1.values.each{|val1|
+            paramDef2.values.each{|val2|
+              countTable[[val1,val2]] = 0 ;
             }
           }
           ## count up
           maxCount = 0 ; ## !!! this should be set by config. !!!
           finished.each{|f|
-            p1 = f[v1.name] ;
-            p2 = f[v2.name] ;
-            countTable[[p1,p2]] += 1 ;
-            maxCount = countTable[[p1,p2]] if(maxCount < countTable[[p1,p2]]) ;
+            val1 = f[paramDef1.name] ;
+            val2 = f[paramDef2.name] ;
+            countTable[[val1,val2]] += 1 ;
+            maxCount = countTable[[val1,val2]] if(maxCount < countTable[[val1,val2]]) ;
           }
           ## generate efa table
           efa = []
-          v1.parameters.each do |p1|
-            v2.parameters.each do |p2|
+          paramDef1.values.each do |val1|
+            paramDef2.values.each do |val2|
               count = ((maxCount == 0) ? 
                        0 :
-                       countTable[[p1,p2]].to_f / maxCount.to_f) ;
-              efa.push({:value => [p1, p2], :finish => count})
+                       countTable[[val1,val2]].to_f / maxCount.to_f) ;
+              efa.push({:value => [val1, val2], :finish => count})
             end
           end
           ## >>> [2013/09/01 I.Noda]
@@ -699,35 +697,35 @@ module Practis
       attr :maxTable, true ;
 
       ##----------------------------------------
-      def initialize(varA, varB, stepMax)
-        setup(varA, varB, stepMax);
+      def initialize(paramDefA, paramDefB, stepMax)
+        setup(paramDefA, paramDefB, stepMax);
       end
 
       ##----------------------------------------
-      # setup by variable info.
-      def setup(varA, varB, stepMax = 20)
-        @varA = varA;
-        @varB = varB;
+      # setup by parameter info.d
+      def setup(paramDefA, paramDefB, stepMax = 20)
+        @paramDefA = paramDefA;
+        @paramDefB = paramDefB;
         @stepMax = stepMax ;
-        @setupInfoA = setupInfoForVariable(varA);
-        @setupInfoB = setupInfoForVariable(varB);
+        @setupInfoA = setupInfoForParameter(paramDefA);
+        @setupInfoB = setupInfoForParameter(paramDefB);
         prepareTable() ;
       end
 
       ##----------------------------------------
-      # get setup variable
-      def setupInfoForVariable(var)
+      # get setup parameter
+      def setupInfoForParameter(paramDef)
         sinfo = nil;
-        if(var.parameters.length <= @stepMax) then
+        if(paramDef.values.length <= @stepMax) then
           axisCount = {} ;
-          var.parameters.each{|val| axisCount[val] = 1;}
+          paramDef.values.each{|val| axisCount[val] = 1;}
           sinfo = ({ :type => :direct,
-                     :axis => var.parameters,
-                     :valueAxis => var.parameters,
+                     :axis => paramDef.values,
+                     :valueAxis => paramDef.values,
                      :axisCount => axisCount,
-                     :variable => var }) ;
+                     :paramDef => paramDef }) ;
         else
-          (min,max) = findMinMax(var) ;
+          (min,max) = findMinMax(paramDef) ;
           step = ((max - min).to_f / @stepMax) ;
           axisCount = Array.new(@stepMax,0) ;
           valueAxis = Array.new(@stepMax,0) ;
@@ -735,8 +733,8 @@ module Practis
                      :axis => (0...@stepMax),
                      :valueAxis => valueAxis,
                      :axisCount => axisCount,
-                     :variable => var }) ;
-          var.parameters.each{|val| axisCount[indexFor(val, sinfo)] += 1 ;}
+                     :paramDef => paramDef }) ;
+          paramDef.values.each{|val| axisCount[indexFor(val, sinfo)] += 1 ;}
           (0...@stepMax).each{|idx| valueAxis[idx] = axisValue(idx,sinfo);}
         end
         return sinfo ;
@@ -773,7 +771,7 @@ module Practis
       end
 
       ##----------------------------------------
-      # axis (index) for variable A and B
+      # axis (index) for parameter A and B
       def axisA()
         @setupInfoA[:axis]
       end
@@ -841,7 +839,7 @@ module Practis
       end
 
       ##----------------------------------------
-      # get setup variable
+      # get setup parameter
       def indexFor(value, setupInfo)
         case (setupInfo[:type])
         when :direct ;
@@ -858,9 +856,9 @@ module Practis
 
       ##----------------------------------------
       # find min-max values
-      def findMinMax(var)
+      def findMinMax(paramDef)
         min = nil ; max = nil ;
-        var.parameters.each{|v|
+        paramDef.values.each{|v|
           min = v if(min.nil? || min > v);
           max = v if(max.nil? || max < v);
         }
@@ -883,39 +881,39 @@ module Practis
       # prepare result hash table.
       hash = {}
       # get total information
-      total = @variable_set.get_total
+      total = @paramDefSet.get_total
       hash[:total_parameters] = total
       hash[:finished_parameters] = @finished_parameters
 
       # generate progress reports
       pa = []
       hash[:progress] = pa
-      l = @variable_set.variable_set.length
+      l = @paramDefSet.paramDefs.length
 
       valueAxis = {} ;
       # loop for all parameters combinations
       (0..l - 2).each do |i|
         (i + 1..l - 1).each do |j|
-          varB = @variable_set.variable_set[i]
-          varA = @variable_set.variable_set[j]
+          paramDefB = @paramDefSet.paramDefs[i]
+          paramDefA = @paramDefSet.paramDefs[j]
           # total information for each combination
           hash_progress = {}
-          hash_progress[:variable_pair] = [varA.name, varB.name]
-          hash_progress[:total] = total / varA.parameters.length / \
-              varB.parameters.length
+          hash_progress[:parameter_pair] = [paramDefA.name, paramDefB.name]
+          hash_progress[:total] = total / paramDefA.values.length / \
+             paramDefB.values.length
           # initialize countTable
           stepMaxConf = @config.read(TAG_PROGRESS_OVERVIEW_MAXGRID) ;
           stepMax = (stepMaxConf ?
                      stepMaxConf.to_i :
                      DEFAULT_PROGRESS_OVERVIEW_MAXGRID) ;
-          countTable = ProgressCountTable.new(varA, varB, stepMax) ;
+          countTable = ProgressCountTable.new(paramDefA, paramDefB, stepMax) ;
           # store value axis info
-          valueAxis[varA.name] ||= countTable.valueAxisA() ;
-          valueAxis[varB.name] ||= countTable.valueAxisB() ;
+          valueAxis[paramDefA.name] ||= countTable.valueAxisA() ;
+          valueAxis[paramDefB.name] ||= countTable.valueAxisB() ;
           ## count up
           finished.each{|f|
-            pA = f[varA.name] ;
-            pB = f[varB.name] ;
+            pA = f[paramDefA.name] ;
+            pB = f[paramDefB.name] ;
             countTable.incValue(pA, pB) ;
           }
           ## generate efa table
@@ -932,12 +930,12 @@ module Practis
           pa.push(hash_progress)
         end
       end
-      # variable set information.
-      va = []
-      @variable_set.variable_set.each do |v|
-        va.push({:name => v.name, :values => valueAxis[v.name]})
+      # parameter set information.
+      pa = []
+      @paramDefSet.paramDefs.each do |paramDef|
+        pa.push({:name => paramDef.name, :values => valueAxis[paramDef.name]})
       end
-      hash[:variables] = va
+      hash[:parameters] = pa
 
       begin
         json = JSON.generate(hash)
@@ -957,7 +955,7 @@ module Practis
     #=== generate the result in JSON.
     def get_results
       hash = {}
-      hash[:parameters] = @variable_set.variable_set.map {|v| v.name}
+      hash[:parameters] = @paramDefSet.paramDefs.map {|v| v.name}
       hash[:results] = @result_fields.map { |f| f[:name] }
       hash[:results].push("execution_time")
       result_data = []

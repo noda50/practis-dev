@@ -20,10 +20,10 @@ module Practis
 
       # A file path of a configuration file.
       attr_reader :file
-      # Store parsed variables.
+      # Store parsed paramDefs.
       attr_reader :database_set
 
-      # The path to Variable tag in a inputted parameter configuration file.
+      # The path to ParamDefs(?) tag in a inputted parameter configuration file.
       DATABASE_PATH = "practis/databases/database"
 
       # Generic attributes in a database tag.

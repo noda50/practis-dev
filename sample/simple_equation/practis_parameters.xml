@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <practis>
   <exhaustive>
-    <variables>
-      <variable name="a" data_type="Float">
+    <parameters>
+      <parameter name="a" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
             <start>-2.0</start>
@@ -10,8 +10,8 @@
             <step>1.0</step>
           </condition>
         </conditions>
-      </variable>
-      <variable name="b" data_type="Float">
+      </parameter>
+      <parameter name="b" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
             <start>-2.0</start>
@@ -19,7 +19,7 @@
             <step>1.0</step>
           </condition>
         </conditions>
-      </variable>
-    </variables>
+      </parameter>
+    </parameters>
   </exhaustive>
 </practis>

@@ -323,7 +323,8 @@ module Practis
     hash[:start_time] = Time.now
     json = JSON.parse(args[0], :symbolize_names => true)
     hash[:uid] = json[:uid]
-    hash[:parameter_set] = json[:parameter_set]
+#    hash[:parameter_set] = json[:parameter_set]
+    hash[:parameter_set] = json[:paramValues]
     hash[:addr] = args[1]
     # debug(args[2])
     hash[:result_fields] = JSON.parse(args[2], :symbolize_names => true)
