@@ -263,12 +263,12 @@ module Practis
       #
       def init_doe(file)
         # (2013/09/12) written by matsushima ==================
-        assign_list = {}
+        @assign_list = {}
         CSV.foreach(file) do |r|
           if r[1] == "is_assigned"
-            assign_list[r[0]] = true
+            @assign_list[r[0]] = true
           elsif r[1] == "is_unassigned"
-            assign_list[r[0]] = false
+            @assign_list[r[0]] = false
           end
         end
 
@@ -279,7 +279,7 @@ module Practis
         @paramDefList.each{|paramDef|
           chk_arg(Practis::ParamDef, paramDef)
           @total_indexes.push(paramDef.length)
-          if assign_list[paramDef.name]
+          if @assign_list[paramDef.name]
             parameters.push({ :name => paramDef.name, :paramDefs => paramDef.values})
           else
             @unassigned.push({ :name => paramDef.name, :paramDefs => paramDef.values})
@@ -287,10 +287,10 @@ module Practis
           end
         }
         
-        @total_number = 1
-        @total_indexes.collect {|t| @total_number *= t}
+        # @total_number = 1
+        # @total_indexes.collect {|t| @total_number *= t}
         @allocated_numbers = []
-        @available_numbers = @total_number.times.map { |i| i }
+        # @available_numbers = @total_number.times.map { |i| i }
         @unassigned_total_size = 1
         @unassigned_total.collect{|t| @unassigned_total_size *= t}
 
@@ -302,6 +302,7 @@ module Practis
         @experimentSize = @oa.table[0].size
         
         @total_experiment = get_total
+        @total_number = @total_experiment
         @allocated_numbers = []        
         @available_numbers = @total_experiment.times.map { |i| i }
         @current_total = @available_numbers.size
@@ -323,7 +324,7 @@ module Practis
         v = @available_numbers.shift
         @v_index = v / @unassigned_total_size
         @allocated_numbers.push(v)
-        not_allocate_indexes = value_to_indexes(v % @unassigned_total_size)
+        not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
         @paramDefList.size.times{ |i|
           unassign_flag = true
@@ -335,7 +336,7 @@ module Practis
             end
           }
           if unassign_flag
-            parameter_array.push(paramDefList[i].get_n(not_allocate_indexes[i]))
+            parameter_array.push(@paramDefList[i].get_n(not_allocate_indexes[i]))
           end 
         }
 
@@ -343,7 +344,6 @@ module Practis
           @analysis[:result_id][@analysis[:area][@v_index]] = []
         end
         @analysis[:result_id][@analysis[:area][@v_index]].push(id)
-
         return parameter_array
       end
 
@@ -354,7 +354,6 @@ module Practis
 
       # 
       def get_total
-        # return @experimentSize*@unassigned_total_size
         return @oa.table[0].size*@unassigned_total_size
       end
 
@@ -412,6 +411,27 @@ module Practis
           k -= l * divider
           indexes.push(l)
         end
+        return indexes
+      end
+
+      private
+      def unassigned_value_to_indexes(v)
+        indexes = []
+        k = v
+        divider = @unassigned_total_size
+        # pp @assign_list
+        # p "divider: #{divider}, total indexes: #{@total_indexes}"
+        @total_indexes.each_with_index{ |n, i|
+          if @assign_list[@paramDefList[i].name]
+            indexes.push(0)
+          else
+            # p "name: #{@paramDefList[i].name}, divider: #{divider}, i: #{i}"
+            divider = (divider / n).to_i
+            l = (k / divider).to_i
+            k -= l * divider
+            indexes.push(l)  
+          end
+        }
         return indexes
       end
     end

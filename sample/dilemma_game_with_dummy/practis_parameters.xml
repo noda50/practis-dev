@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<practis>
+  <exhaustive>
+    <parameters>
+      <parameter name="Noise" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>0.04</end>
+            <step>0.04</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="NumOfGameIteration" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>10</start>
+            <end>100</end>
+            <step>90</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="seed" data_type="Integer"> 
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0</start>
+            <end>4</end>
+            <step>1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="Dummy_f1" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>0.512</end>
+            <step>0.512</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="Dummy_i1" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0</start>
+            <end>128</end>
+            <step>128</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="Dummy_f2" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>64.0</end>
+            <step>64.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="Dummy_i2" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>128</start>
+            <end>256</end>
+            <step>128</step>
+          </condition>
+        </conditions>
+      </parameter>
+    </parameters>
+  </exhaustive>
+</practis>

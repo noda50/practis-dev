@@ -247,6 +247,8 @@ module Practis
       p "result list:"
       pp @result_list_queue[0]#result_list
 
+      p "uploaded_result_count: #{uploaded_result_count}, current_total: #{@paramDefSet.scheduler.scheduler.current_total}"
+
       if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")        
