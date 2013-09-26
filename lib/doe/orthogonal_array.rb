@@ -140,9 +140,17 @@ class OrthogonalArray
             row_r = get_row(r)
             row_i.delete_at(id)
             row_r.delete_at(id)
-            if (row_i - row_r).size == 0
-              new_rows.push(i)
-            end
+            # if (row_i - row_r).size == 0
+            #   new_rows.push(i)
+            # end
+            equal_flag = true
+            row_i.size.times{|t|
+              if row_i[t] != row_r[t]
+                equal_flag = false
+                break
+              end
+            }
+            if equal_flag then new_rows.push(i) end
           }
         end
       }
