@@ -4,6 +4,7 @@
 require 'rubygems'
 require 'json'
 require 'bigdecimal'
+require 'matrix'
 
 # require 'thread'
 
@@ -19,10 +20,12 @@ require 'practis/result_parser'
 require 'doe/orthogonal_array'
 require 'doe/variance_analysis'
 require 'doe/f_distribution_table'
+require 'doe/regression'
 
 module Practis
 
   class DoeManager < Practis::Manager
+    include Regression
 
     attr_reader :va_queue
     attr_reader :current_var_set
@@ -539,6 +542,7 @@ module Practis
       }
       return result_list
     end
+    
 
     ##------------------------------------------------------------
     def cast_decimal(var)
