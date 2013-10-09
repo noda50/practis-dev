@@ -5,6 +5,8 @@ require 'rubygems'
 require 'json'
 require 'bigdecimal'
 require 'matrix'
+require 'csv'
+require 'pp'
 
 # require 'thread'
 
@@ -31,10 +33,18 @@ module Practis
     attr_reader :current_var_set
 
     def initialize(config_file, parameter_file, database_file, result_file, doe_ini, myaddr = nil)
-      super(config_file, parameter_file, database_file, result_file, myaddr)
+      @assign_list = {}
+      CSV.foreach(doe_ini) do |r|
+        if r[1] == "is_assigned"
+          @assign_list[r[0]] = true
+        elsif r[1] == "is_unassigned"
+          @assign_list[r[0]] = false
+        end
+      end
+      super(config_file, parameter_file, database_file, result_file, myaddr, @assign_list)
       @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
-      @paramDefSet.scheduler.scheduler.init_doe(doe_ini)
-      @total_parameters = @paramDefSet.get_total
+      @paramDefSet.scheduler.scheduler.init_doe(@assign_list)
+      @total_parameters = @paramDefSet.get_total     
       
       # [2013/09/13 H-Matsushima]
       @mutexAnalysis = Mutex.new
@@ -254,25 +264,42 @@ module Practis
 
       if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
         debug("result length: #{@result_list_queue[0][:results].size}")
-        debug("result: #{@result_list_queue[0]}")        
-        
+        debug("result: #{@result_list_queue[0]}")
+
+
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @paramDefSet.scheduler.scheduler.oa.table,
                                   @paramDefSet.scheduler.scheduler.oa.colums)
         p "variance factor"
         pp va
         
+        upload_msg = {}
+        upload_msg[:f_test_id] = getNewFtestId();
+        upload_msg[:id_combination] = @result_list_queue[0][:id].values.flatten!.to_s
         if va.e_f >= 1
           num_significance = []
           new_param_list = []
           priority = 0.0
           va.effect_Factor.each{|ef|
+            field = {}
             # significant parameter is decided
             if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
               num_significance.push(ef[:name])
               priority += ef[:f_value]
             end
+            upload_msg[("set_of_#{ef[:name]}").to_sym] = "NULL"
+            if ef[:f_value].nan?
+              upload_msg[("f_value_of_#{ef[:name]}").to_sym] = 0.0
+            else
+              upload_msg[("f_value_of_#{ef[:name]}").to_sym] = ef[:f_value]
+            end
+            # upload_msg[("gradient_of_#{ef[:name]}").to_sym] = 0.0
           }
+          if upload_f_test(upload_msg) < 0
+            error("error upload f-test results")
+            p "error upload f-test results"
+          end
+
           if 0 < num_significance.size
             @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
               if num_significance.include?(oc.parameter_name)
@@ -542,7 +569,28 @@ module Practis
       }
       return result_list
     end
-    
+    # 
+    def upload_f_test(msg)
+      p "call upload_f_test"
+      id = msg[:f_test_id].to_i
+      if (retval = 
+          @database_connector.read_record(:f_test, 
+                                          [:eq, [:field, "f_test_id"],
+                                           id])).length != 0
+        error("the f-test result already exist. #{retval}")
+        return -1
+      end
+      p "upload_f_test"
+      pp msg
+
+      # msg.each{|f,v| arg_hash[f.to_sym] = v }
+      if (retval = @database_connector.insert_record(
+          :f_test, msg).length != 0)
+        error("fail to insert new f-test result. #{retval}")
+        return -2
+      end
+      return 0
+    end
 
     ##------------------------------------------------------------
     def cast_decimal(var)
@@ -590,6 +638,14 @@ module Practis
         else nil
       end
     end
+
+    def getNewFtestId()
+      maxid = @database_connector.read_max(:f_test, 'f_test_id', :integer) ;
+      maxid ||= 0 ;
+      info("maxId: #{maxid}");
+      return maxid + 1 ;
+    end
+
     #
     def show_param_combination
       for j in 0...@paramCombinationArray[0].size

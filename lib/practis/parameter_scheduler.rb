@@ -215,63 +215,13 @@ module Practis
 
       def initialize(paramDefs)
         @paramDefList = chk_arg(Array, paramDefs)
-        # (2013/09/12) written by matsushima ==================
-        # assign_list = {}
-        # CSV.foreach("lib/doe/ExperimentalDesign.ini") do |r|
-        #   if r[1] == "is_assigned"
-        #     assign_list[r[0]] = true
-        #   elsif r[1] == "is_unassigned"
-        #     assign_list[r[0]] = false
-        #   end
-        # end
-
-        # parameters = []
-        # @unassigned = []
-        # @total_indexes = []
-        # @unassigned_total = []
-        # @variable_set.each{|v|
-        #   chk_arg(Practis::Variable, v)
-        #   @total_indexes.push(v.length)
-        #   if assign_list[v.name]
-        #     parameters.push({:name => v.name, :variables => v.parameters})
-        #   else
-        #     @unassigned.push({:name => v.name, :variables => v.parameters})
-        #     @unassigned_total.push(v.length)
-        #   end
-        # }
-        
-        # @total_number = 1
-        # @total_indexes.collect {|t| @total_number *= t}
-        # @allocated_numbers = []
-        # @available_numbers = @total_number.times.map { |i| i }
-        # @unassigned_total_size = 1
-        # @unassigned_total.collect{|t| @unassigned_total_size *= t}
-
-        # @oa = OrthogonalArray.new(parameters)
-        # @analysis = {:area => @oa.analysis_area[0],
-        #             :result_id => {},
-        #             :size => @oa.table[0].size*@unassigned_total_size}
-        # @v_index = nil
-        # @experimentSize = @oa.table[0].size
-        
-        # @total_experiment = get_total
-        # @allocated_numbers = []        
-        # @available_numbers = @total_experiment.times.map { |i| i }
-        # @current_total = @available_numbers.size
-        # (2013/09/12) ==========================================
+        # move to method "init_doe"
       end
       #
-      def init_doe(file)
+      def init_doe(assign_list)
         # (2013/09/12) written by matsushima ==================
-        @assign_list = {}
-        CSV.foreach(file) do |r|
-          if r[1] == "is_assigned"
-            @assign_list[r[0]] = true
-          elsif r[1] == "is_unassigned"
-            @assign_list[r[0]] = false
-          end
-        end
-
+        pp assign_list
+        @assign_list = assign_list
         parameters = []
         @unassigned = []
         @total_indexes = []

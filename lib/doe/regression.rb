@@ -49,6 +49,7 @@ module Regression
 	end
 end
 
+=begin 
 p "=== test ==="
 include Regression
 # sample_excercise
@@ -56,49 +57,84 @@ include Regression
 points = []
 prgm = Random.new(0)
 step = 0.1
+order = 1
 
-rmax = 0.0
-
-10.times{
-	axs=[]
-	2.times{
-		axs.push(prgm.rand(step)+rmax)
-	}
-	rmax+=step
-	points.push(Vector.elements(axs))
+2.times{
+  rmax = 0.0
+  axs=[]
+  10.times{
+    axs.push(prgm.rand(step)+rmax)
+    rmax+=step
+  }
+  points.push(axs)
 }
 pp points
 
 # p points[0].*(points[0])
 
-t = Vector[0.05, 0.87, 0.94, 0.92, 0.54, -0.11, -0.78, -0.79, -0.89, -0.04]
+target = Vector[0.05, 0.87, 0.94, 0.92, 0.54, -0.11, -0.78, -0.79, -0.89, -0.04]
 
 phi_vectors = []
-points.each{|p|
-	phi_vectors.push(phi(p,1))
-	# phi_vectors.push(gausian_phi(p))
+points.each{|axs|
+  tmp = []
+  axs.each{|p|
+    tmp.push(phi(p, order))
+  }
+  phi_vectors.push(Matrix.rows(tmp))
+  # phi_vectors.push(gausian_phi(p))
 }
+
+pp phi_vectors
 
 weighted_vec = []
 phi_vectors.each{|pv|
-	weighted_vec.push((pv.t*pv).inv*(pv.t*t))
+  weighted_vec.push((pv.t*pv).inv*(pv.t*target))
 }
 
 CSV.open("./test.csv", "wb"){|csv|
-	(0.0..1.0).step(0.01){|e|
-		tmp_v = 0.0
-		csv_arr =[]
-		weighted_vec.each{|wv|
-			tmp_v += wv.inner_product(phi(e,4))
-			csv_arr.push(e)
-		}
-		csv_arr.push(tmp_v/weighted_vec.size)
-		csv << csv_arr
-	}
+  (0.0..1.0).step(0.01){|x|
+    (0.0..1.0).step(0.01){|y|
+      csv << [x, y,
+              weighted_vec[0].inner_product(phi(x,order))+
+              weighted_vec[1].inner_product(phi(y,order))]
+    }
+  }
 }
 
-# betas = regress([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 [1, 6, 17, 34, 57, 86, 121, 162, 209, 262, 321],
-#                 2)
-# pp betas                 
-# exit(0)
+Gnuplot.open do |gp|
+  Gnuplot::SPlot.new( gp ) do |plot|
+    
+    plot.dgrid3d "20,20"
+    plot.xrange "[0.0:1.0]"
+    plot.yrange "[0.0:1.0]"
+    plot.title  "Regression Example"
+    plot.xlabel "x"
+    plot.ylabel "y"
+    plot.zlabel "z"
+    
+    x = []
+    y = []
+    z = []
+    (0.0..1.0).step(0.01).collect { |vx|
+      (0.0..1.0).step(0.01).collect { |vy|
+        x.push(vx)
+        y.push(vy)
+        z.push(weighted_vec[0].inner_product(phi(vx,order)) +
+               weighted_vec[1].inner_product(phi(vy,order)))
+      }
+    }
+    
+    plot.data = [
+      # Gnuplot::DataSet.new( "sin(x) + sin(y)" ) { |ds|
+      #   ds.with = "lines"
+      #   ds.title = "String function"
+      #   ds.linewidth = 4
+      # },    
+      Gnuplot::DataSet.new( [x,y,z] ) { |ds|
+        ds.with = "lines"
+        ds.title = "Regression"
+      }
+    ]
+  end
+end
+=end

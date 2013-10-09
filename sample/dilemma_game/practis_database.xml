@@ -64,6 +64,11 @@
           <constraint foreign_key="result_id" references="parameter(parameter_id)" />
           <options engine="InnoDB" charset="utf8" />
         </table>
+        <table name="f_test">
+          <field field="f_test_id" type="int(11)" null="NO" key="PRI" default="0" extra="" comment="" />
+          <field field="id_combination" type="varchar(255)" null="NO" key="MUL" default="" extra="" comment="" />
+          <options engine="InnoDB" charset="utf8" />
+        </table>
       </tables>
     </database>
   </databases>

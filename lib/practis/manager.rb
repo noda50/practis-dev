@@ -48,7 +48,7 @@ module Practis
 
     ##------------------------------------------------------------
     def initialize(config_file, parameter_file, database_file, result_file,
-                   myaddr = nil)
+                   myaddr = nil, assign_list=nil)
       super(config_file)
 
       # initialize message handler
@@ -116,8 +116,9 @@ module Practis
 
       # set up the databases.
       @database_connector.setup_database(@paramDefSet.paramDefs,
-                                         rparser.result_set, @config)
-
+                                         rparser.result_set, @config,
+                                         @assign_list)
+      
       # Register current project to DB.
       @project_name = @config.read("project_name")
       if (@project_id = @database_connector.register_project(@project_name)) < 0

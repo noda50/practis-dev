@@ -98,8 +98,9 @@ module Practis
   DB_NODE = "node"
   DB_PARAMETER = "parameter"
   DB_RESULT = "result"
+  DB_F_TEST = "f_test" #[2013/10/04 written by H-Matsushima]
   DATABASE_LIST = [DB_PROJECT, DB_EXECUTION, DB_EXECUTABLE, DB_NODE,
-      DB_PARAMETER, DB_RESULT]
+      DB_PARAMETER, DB_RESULT, DB_F_TEST]
   QUERY_RETRY_TIMES = 5           # times to retry
   QUERY_RETRY_DURATION = 1        # duration till retry
 

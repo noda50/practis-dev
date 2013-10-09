@@ -37,8 +37,8 @@ module Practis
         @database_parser = Practis::Database::DatabaseParser.new(database_file)
         @database_parser.parse
       end
-
-      def setup_database(paramDefs, result_set, config)
+      
+      def setup_database(paramDefs, result_set, config, assign_list=nil)
         # add parameter fields to parameter table
         paramDefs.each do |paramDef|
           if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
@@ -69,6 +69,40 @@ module Practis
             error("fail to add a field. #{r[0]}, #{type_field}")
           end
         end
+        # <<<=== [2013/10/04 written by H-Matsushima]
+        # === add f-test fields to f-test table ===
+        paramDefs.each do |paramDef|
+          if assign_list[paramDef.name]
+            if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
+              error("type field requires any types. #{paramDef}")
+              next
+            end
+            # if @database_parser.add_field(
+            #     config.read("f_test_database_name"),
+            #     config.read("f_test_database_tablename"),
+            #     {field: "set_of_#{paramDef.name}", type: "text", null: "NO", key: "MUL(128)"}
+            #                              ) < 0
+            #   error("fail to add a filed. #{paramDef.name}, #{type_field}")
+            # end
+            if @database_parser.add_field(
+                config.read("#{DB_F_TEST}_database_name"),
+                config.read("#{DB_F_TEST}_database_tablename"),
+                {field: "f_value_of_#{paramDef.name}", type: "Float", null: "NO"}
+                                         ) < 0
+              error("fail to add a filed. #{paramDef.name}, #{type_field}")
+            else
+              p "debug: add field f_value_of_#{paramDef.name}"
+            end
+            # if @database_parser.add_field(
+            #     config.read("f_test_database_name"),
+            #     config.read("f_test_database_tablename"),
+            #     {field: "gradient_of_#{paramDef.name}", type: "Float", null: "NO"}
+            #                              ) < 0
+            #   error("fail to add a filed. #{paramDef.name}, #{type_field}")
+            # end
+          end
+        end
+        # >>>===
         database_check(config)
       end
 
@@ -82,6 +116,7 @@ module Practis
       end
 
       def database_check(config)
+        pp DATABASE_LIST
         DATABASE_LIST.each do |name|
           # create a management database connector
           db = nil
@@ -519,6 +554,7 @@ module Practis
         when :node then @connectors[:node]
         when :parameter then @connectors[:parameter]
         when :result then @connectors[:result]
+        when :f_test then @connectors[:f_test]
         else nil
         end
       end

@@ -146,5 +146,15 @@
     <config name="result_database_password" type="String">sitcarp</config>
     <config name="result_database_name" type="String">dilemma_game</config>
     <config name="result_database_tablename" type="String">result</config>
+
+    <!-- f_test database -->
+    <config name="f_test_database_type" type="String">mysql</config>
+    <config name="f_test_database_hostname" type="String">127.0.0.1</config>
+    <config name="f_test_database_management_username" type="String">practis_manager</config>
+    <config name="f_test_database_management_password" type="String">sitcarp</config>
+    <config name="f_test_database_username" type="String">practis</config>
+    <config name="f_test_database_password" type="String">sitcarp</config>
+    <config name="f_test_database_name" type="String">dilemma_game</config>
+    <config name="f_test_database_tablename" type="String">f_test</config>
   </configuration>
 </practis>
