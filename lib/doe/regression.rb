@@ -22,31 +22,6 @@ module Regression
   	return Vector.elements(gaus_arr)
 	end
 
-	def regress(x, y, degree)
-		x_data = x.map { |xi| (0..degree).map { |pow| (xi**pow).to_f } }
-	 
-		mx = Matrix[*x_data]
-		my = Matrix.column_vector(y)
-	 
-		((mx.t * mx).inv * mx.t * my).transpose.to_a[0]
-	end
-
-	def sample_excercise
-		v_x = Vector[0.02, 0.12, 0.19, 0.27, 0.42, 0.51, 0.64, 0.84, 0.88, 0.99]
-		v_y = Vector[0.01, 0.15, 0.22, 0.30, 0.39, 0.50, 0.61, 0.87, 0.91, 0.98]
-		t = Vector[0.05, 0.87, 0.94, 0.92, 0.54, -0.11, -0.78, -0.79, -0.89, -0.04]
-
-		est_x = Matrix.rows(v_x.map{|e| phi(e,4)}, true)
-		est_y = Matrix.rows(v_y.map{|e| phi(e,4)}, true)
-		w_x = (est_x.t*est_x).inverse*(est_x.t*t)
-		w_y = (est_y.t*est_y).inverse*(est_y.t*t)
-
-		CSV.open("./out.csv", "wb"){|csv|
-			(0.0..1.0).step(0.01){|e|
-				csv << [e, e, w_x.inner_product(phi(e,4))+w_y.inner_product(phi(e,4))]
-			}
-		}
-	end
 end
 
 =begin 

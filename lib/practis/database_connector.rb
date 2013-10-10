@@ -90,8 +90,6 @@ module Practis
                 {field: "f_value_of_#{paramDef.name}", type: "Float", null: "NO"}
                                          ) < 0
               error("fail to add a filed. #{paramDef.name}, #{type_field}")
-            else
-              p "debug: add field f_value_of_#{paramDef.name}"
             end
             # if @database_parser.add_field(
             #     config.read("f_test_database_name"),
@@ -116,7 +114,6 @@ module Practis
       end
 
       def database_check(config)
-        pp DATABASE_LIST
         DATABASE_LIST.each do |name|
           # create a management database connector
           db = nil
@@ -219,6 +216,10 @@ module Practis
         condition = "#{rcon.database}.#{rcon.table} ON #{bcon.database}." +
               "#{bcon.table}.#{arg_hash[:base_field]} = #{rcon.database}." +
               "#{rcon.table}.#{arg_hash[:ref_field]}"
+        # [2013/10/10 written by H-Matsushima]
+        if arg_hash.key?(:condition)
+          condition += " WHERE #{arg_hash[:condition]}"
+        end
         bcon.inner_join_record(condition)
       end
 

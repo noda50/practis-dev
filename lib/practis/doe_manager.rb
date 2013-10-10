@@ -243,13 +243,31 @@ module Practis
       uploaded_result_count = 0
       # [2013/09/20]
       @result_list_queue[0][:area].each{|a| @result_list_queue[0][:results][a].clear}
+      tmp_vec = {}
+      tmp_target =[]
+      @assign_list.each{|k,v| if v then tmp_vec[k] = [] end }
       @result_list_queue[0][:area].each{|a|
         @result_list_queue[0][:id][a].each{|id|
-          if (retval = @database_connector.read_record(:result, "result_id = '#{id}'")).length > 0
+          if (retval = @database_connector.inner_join_record(
+          {base_type: :result, ref_type: :parameter,
+           base_field: :result_id, ref_field: :parameter_id, 
+           :condition=>"result_id = '#{id}'"})).length > 0
             uploaded_result_count += 1
             retval.each{ |r| 
+              pp r
               @result_list_queue[0][:results][a].push(r["value"])
+              tmp_target.push(r["value"])
+              tmp_vec.each_key{ |k| 
+                p k
+                r[k]
+                tmp_vec[k].push(r[k])
+              } 
             }
+          # if (retval = @database_connector.read_record(:result, "result_id = '#{id}'")).length > 0
+          #   uploaded_result_count += 1
+          #   retval.each{ |r| 
+          #     @result_list_queue[0][:results][a].push(r["value"])
+          #   }
           else
             debug("retval: #{retval}")
           end
@@ -265,7 +283,6 @@ module Practis
       if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")
-
 
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @paramDefSet.scheduler.scheduler.oa.table,
@@ -562,10 +579,13 @@ module Practis
     end
     # 
     def generate_result_list(area, priority=0)
-      result_list = { :area => area, :id => {}, :results => {}, :priority => priority }
+      result_list = { :area => area, :id => {}, :results => {}, :weight => {}, :priority => priority }
       result_list[:area].each{|a|
         result_list[:id][a] = []
         result_list[:results][a] = []
+      }
+      @assign_list.each{|k,v|
+        if v then result_list[:weight] = 0.0 end
       }
       return result_list
     end
