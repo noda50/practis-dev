@@ -244,8 +244,9 @@ module Practis
       # [2013/09/20]
       @result_list_queue[0][:area].each{|a| @result_list_queue[0][:results][a].clear}
       tmp_vec = {}
-      tmp_target =[]
-      @assign_list.each{|k,v| if v then tmp_vec[k] = [] end }
+      tmp_target = []
+      tmp_phi = {}
+      @assign_list.each{|k,v| if v then tmp_vec[k] = []; tmp_phi[k] = nil end }
       @result_list_queue[0][:area].each{|a|
         @result_list_queue[0][:id][a].each{|id|
           if (retval = @database_connector.inner_join_record(
@@ -254,12 +255,9 @@ module Practis
            :condition=>"result_id = '#{id}'"})).length > 0
             uploaded_result_count += 1
             retval.each{ |r| 
-              pp r
               @result_list_queue[0][:results][a].push(r["value"])
               tmp_target.push(r["value"])
               tmp_vec.each_key{ |k| 
-                p k
-                r[k]
                 tmp_vec[k].push(r[k])
               } 
             }
@@ -284,6 +282,16 @@ module Practis
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")
 
+      p " === for regress ==="
+      tmp_target = Vector.elements(tmp_target)
+      tmp_vec.each{|k,v|
+        tmp_phi[k] = Matrix.rows(v.map{|e| phi(e,1)}, true)
+        @result_list_queue[0][:weight][k] = (tmp_phi[k].t*tmp_phi[k]).inverse*(tmp_phi[k].t*tmp_target)
+      }
+      
+      
+      p " === end for regress ==="
+
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @paramDefSet.scheduler.scheduler.oa.table,
                                   @paramDefSet.scheduler.scheduler.oa.colums)
@@ -304,17 +312,16 @@ module Practis
               num_significance.push(ef[:name])
               priority += ef[:f_value]
             end
-            upload_msg[("set_of_#{ef[:name]}").to_sym] = "NULL"
+            upload_msg[("range_#{ef[:name]}").to_sym] = tmp_vec[ef[:name]].uniq.to_s
             if ef[:f_value].nan?
               upload_msg[("f_value_of_#{ef[:name]}").to_sym] = 0.0
             else
               upload_msg[("f_value_of_#{ef[:name]}").to_sym] = ef[:f_value]
             end
-            # upload_msg[("gradient_of_#{ef[:name]}").to_sym] = 0.0
+            upload_msg[("gradient_of_#{ef[:name]}").to_sym] = @result_list_queue[0][:weight][ef[:name]][1]
           }
           if upload_f_test(upload_msg) < 0
             error("error upload f-test results")
-            p "error upload f-test results"
           end
 
           if 0 < num_significance.size
@@ -585,7 +592,7 @@ module Practis
         result_list[:results][a] = []
       }
       @assign_list.each{|k,v|
-        if v then result_list[:weight] = 0.0 end
+        if v then result_list[:weight] = {} end
       }
       return result_list
     end

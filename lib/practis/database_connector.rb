@@ -77,13 +77,13 @@ module Practis
               error("type field requires any types. #{paramDef}")
               next
             end
-            # if @database_parser.add_field(
-            #     config.read("f_test_database_name"),
-            #     config.read("f_test_database_tablename"),
-            #     {field: "set_of_#{paramDef.name}", type: "text", null: "NO", key: "MUL(128)"}
-            #                              ) < 0
-            #   error("fail to add a filed. #{paramDef.name}, #{type_field}")
-            # end
+            if @database_parser.add_field(
+                config.read("#{DB_F_TEST}_database_name"),
+                config.read("#{DB_F_TEST}_database_tablename"),
+                {field: "range_#{paramDef.name}", type: "Varchar(128)", null: "NO", key: "MUL"}
+                                         ) < 0
+              error("fail to add a filed. #{paramDef.name}, #{type_field}")
+            end
             if @database_parser.add_field(
                 config.read("#{DB_F_TEST}_database_name"),
                 config.read("#{DB_F_TEST}_database_tablename"),
@@ -91,13 +91,13 @@ module Practis
                                          ) < 0
               error("fail to add a filed. #{paramDef.name}, #{type_field}")
             end
-            # if @database_parser.add_field(
-            #     config.read("f_test_database_name"),
-            #     config.read("f_test_database_tablename"),
-            #     {field: "gradient_of_#{paramDef.name}", type: "Float", null: "NO"}
-            #                              ) < 0
-            #   error("fail to add a filed. #{paramDef.name}, #{type_field}")
-            # end
+            if @database_parser.add_field(
+                config.read("#{DB_F_TEST}_database_name"),
+                config.read("#{DB_F_TEST}_database_tablename"),
+                {field: "gradient_of_#{paramDef.name}", type: "Float", null: "NO"}
+                                         ) < 0
+              error("fail to add a filed. #{paramDef.name}, #{type_field}")
+            end
           end
         end
         # >>>===
