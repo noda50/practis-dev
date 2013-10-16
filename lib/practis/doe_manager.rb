@@ -288,84 +288,137 @@ module Practis
         tmp_phi[k] = Matrix.rows(v.map{|e| phi(e,1)}, true)
         @result_list_queue[0][:weight][k] = (tmp_phi[k].t*tmp_phi[k]).inverse*(tmp_phi[k].t*tmp_target)
       }
-      
-      
       p " === end for regress ==="
 
-        va = VarianceAnalysis.new(@result_list_queue[0],
-                                  @paramDefSet.scheduler.scheduler.oa.table,
-                                  @paramDefSet.scheduler.scheduler.oa.colums)
-        p "variance factor"
-        pp va
+      va = VarianceAnalysis.new(@result_list_queue[0],
+                                @paramDefSet.scheduler.scheduler.oa.table,
+                                @paramDefSet.scheduler.scheduler.oa.colums)
+      p "variance factor"
+      pp va
         
-        upload_msg = {}
-        upload_msg[:f_test_id] = getNewFtestId();
-        upload_msg[:id_combination] = @result_list_queue[0][:id].values.flatten!.to_s
-        if va.e_f >= 1
-          num_significance = []
-          new_param_list = []
-          priority = 0.0
-          va.effect_Factor.each{|ef|
-            field = {}
-            # significant parameter is decided
-            if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
-              num_significance.push(ef[:name])
-              priority += ef[:f_value]
-            end
-            upload_msg[("range_#{ef[:name]}").to_sym] = tmp_vec[ef[:name]].uniq.to_s
-            if ef[:f_value].nan?
-              upload_msg[("f_value_of_#{ef[:name]}").to_sym] = 0.0
-            else
-              upload_msg[("f_value_of_#{ef[:name]}").to_sym] = ef[:f_value]
-            end
-            upload_msg[("gradient_of_#{ef[:name]}").to_sym] = @result_list_queue[0][:weight][ef[:name]][1]
-          }
-          if upload_f_test(upload_msg) < 0
-            error("error upload f-test results")
+      upload_msg = {}
+      upload_msg[:f_test_id] = getNewFtestId();
+      upload_msg[:id_combination] = @result_list_queue[0][:id].values.flatten!.to_s
+      if va.e_f >= 1
+        num_significance = []
+        new_param_list = []
+        priority = 0.0
+        va.effect_Factor.each{|ef|
+          field = {}
+          # significant parameter is decided
+          if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
+            num_significance.push(ef[:name])
+            priority += ef[:f_value]
           end
+          upload_msg[("range_#{ef[:name]}").to_sym] = tmp_vec[ef[:name]].uniq.to_s
+          if ef[:f_value].nan?
+            upload_msg[("f_value_of_#{ef[:name]}").to_sym] = 0.0
+          else
+            upload_msg[("f_value_of_#{ef[:name]}").to_sym] = ef[:f_value]
+          end
+          upload_msg[("gradient_of_#{ef[:name]}").to_sym] = @result_list_queue[0][:weight][ef[:name]][1]
+        }
+        if upload_f_test(upload_msg) < 0
+          error("error upload f-test results")
+        end
 
-          if 0 < num_significance.size
-            @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
-              if num_significance.include?(oc.parameter_name)
-                var = []
-                @result_list_queue[0][:area].each{|r|
-                  var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
-                }
-                tmp_var,tmp_area = generate_new_inside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
-                # tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-                # tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-
-                if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
-                  new_param_list.push(tmp_var)
-                elsif !tmp_area.empty?
-                  # ignored area is added for analysis to next_area_list
-                  p "== exist area =="
-                  pp tmp_area
-                  tmp_area.each{|a_list|
-                    @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
-                  }
-                end
-              end
-            }
-            priority /= num_significance.size
-            if 0 < new_param_list.size
-              # generate new_param_list & extend orthogonal array
-              next_area_list = generate_next_search_area(@result_list_queue[0][:area],
-                                                          @paramDefSet.scheduler.scheduler.oa,
-                                                          new_param_list)
-              debug("next area list: ")
-              pp next_area_list
-              next_area_list.each{|a_list|
-                @result_list_queue.push(generate_result_list(a_list, priority))
+        if 0 < num_significance.size
+          @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
+            if num_significance.include?(oc.parameter_name)
+              var = []
+              @result_list_queue[0][:area].each{|r|
+                var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
               }
-              if @alloc_counter < @result_list_queue.size-2
-                tmp_queue = @result_list_queue.slice!(@alloc_counter+1...@result_list_queue.size)
-                tmp_queue.sort_by!{|v| -v[:priority]}
-                @result_list_queue += tmp_queue
+              tmp_var,tmp_area = generate_new_inside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
+              # tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+              # tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+
+              if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+                new_param_list.push(tmp_var)
+              elsif !tmp_area.empty?
+                # ignored area is added for analysis to next_area_list
+                p "== exist area =="
+                pp tmp_area
+                tmp_area.each{|a_list|
+                  @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+                }
               end
+            else # no significance parameter
+              var = []
+              @result_list_queue[0][:area].each{|r|
+                var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
+              }
+              tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+              if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+                new_param_list.push(tmp_var)
+                p "tmp_var"
+                pp tmp_var
+              elsif !tmp_area.empty?
+                # ignored area is added for analysis to next_area_list
+                p "== exist area =="
+                pp tmp_area
+                tmp_area.each{|a_list|
+                  @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+                }
+              end
+            end
+          }
+          priority /= num_significance.size
+          if 0 < new_param_list.size
+            # generate new_param_list & extend orthogonal array
+            next_area_list = generate_next_search_area(@result_list_queue[0][:area],
+                                                        @paramDefSet.scheduler.scheduler.oa,
+                                                        new_param_list)
+            debug("next area list: ")
+            pp next_area_list
+            next_area_list.each{|a_list|
+              @result_list_queue.push(generate_result_list(a_list, priority))
+            }
+            if @alloc_counter < @result_list_queue.size-2
+              tmp_queue = @result_list_queue.slice!(@alloc_counter+1...@result_list_queue.size)
+              tmp_queue.sort_by!{|v| -v[:priority]}
+              @result_list_queue += tmp_queue
+            end
+          end
+        else # no significance parameters
+          @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
+            var = []
+            @result_list_queue[0][:area].each{|r|
+              var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
+            }
+            tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+            
+            if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+              new_param_list.push(tmp_var)
+            elsif !tmp_area.empty?
+              # ignored area is added for analysis to next_area_list
+              p "== exist area =="
+              pp tmp_area
+              tmp_area.each{|a_list|
+                @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+              }
+            end
+          }
+          priority = 1.0
+          if 0 < new_param_list.size
+            # generate new_param_list & extend orthogonal array
+            next_area_list = generate_next_search_area(@result_list_queue[0][:area],
+                                                        @paramDefSet.scheduler.scheduler.oa,
+                                                        new_param_list)
+            debug("next area list: #{next_area_list}")
+            p "next area list:"
+            pp next_area_list
+            next_area_list.each{|a_list|
+              @result_list_queue.push(generate_result_list(a_list, priority))
+            }
+            if @alloc_counter < @result_list_queue.size-2
+              tmp_queue = @result_list_queue.slice!(@alloc_counter+1...@result_list_queue.size)
+              tmp_queue.sort_by!{|v| -v[:priority]}
+              @result_list_queue += tmp_queue
             end
           end
         end
+      end
 
         @result_list_queue.shift
         @alloc_counter -= 1
@@ -462,15 +515,16 @@ module Practis
                 :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
       pp new_var
+      pp new_area
       p "end generate new parameter ====================================="
       puts
       return new_var,new_area
     end
-    # TODO: new parameter is determined by f-value
+    # TODO: new value of parameter is determined by f-value
     def generate_new_outsidep_parameter(var, para_name, area)
       p "generate new outside(+) parameter ====================================="
       p "var: #{var}"
-      oa = @variable_set.scheduler.scheduler.oa
+      oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
       min=nil
@@ -503,7 +557,7 @@ module Practis
 
       # var.name
       new_var ={:case => "outside(+)", 
-                :param => {:name => para_name, :variables => new_array}}
+                :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
       pp new_var
       # pp @variable_set.scheduler.scheduler.oa.get_table
@@ -511,11 +565,11 @@ module Practis
       puts
       return new_var,new_area
     end
-    # TODO: new parameter is determined by f-value
+    # TODO: new value of parameter is determined by f-value
     def generate_new_outsidem_parameter(var, para_name, area)
       p "generate new outside(-) parameter ====================================="
       p "var: #{var}"
-      oa = @variable_set.scheduler.scheduler.oa
+      oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
       min=nil
@@ -548,7 +602,7 @@ module Practis
 
       # var.name
       new_var ={:case => "outside(-)", 
-                :param => {:name => para_name, :variables => new_array}}
+                :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
       pp new_var
       # pp @variable_set.scheduler.scheduler.oa.get_table
@@ -556,28 +610,187 @@ module Practis
       puts
       return new_var,new_area
     end
+    # TODO: new value of parameter is determined by f-value
+    def generate_new_bothside_parameter(var, para_name, area)
+      p "generate new both side parameter ====================================="
+      p "var: #{var}"
+      oa = @paramDefSet.scheduler.scheduler.oa
+      var_min = var.min
+      var_max = var.max
+      min=nil
+      max=nil
+      
+      exist_area = []
+      new_area = []
+      new_array = nil
+      oa.colums.each{|c|
+        if para_name == c.parameter_name
+          if c.parameters.min <= var_min && var_max <= c.parameters.max
+            min=c.parameters.min
+            max=c.parameters.max
+          else
+            if var_min < c.parameters.min
+            error("var_min: #{var_min}")
+            # TODO:
+            min = var_min
+            end
+            if c.parameters.max < var_max
+            error("var_max: #{var_max}")
+            # TODO:
+            max = var_max
+            end
+          end
+          var_diff = cast_decimal((max - min).abs / 2.0)
+          if var_min.class == Fixnum
+            new_array = [(min-var_diff).to_i, (max+var_diff).to_i]
+          elsif var_min.class == Float
+            new_array = [(min-var_diff).round(5), (max+var_diff).round(5)]
+          end
+          p "generate both side parameter! ==> new array: #{pp new_array}"
+          p "parameters: #{c.parameters}"
+
+          if 2 < c.parameters.size
+            if c.parameters.find{|v| v<var_min && var_max<v }.nil?
+              break
+            else
+              if c.parameters.include?(new_array[0]) && c.parameters.include?(new_array[1])
+                min_bit = c.get_bit_string(new_array.min)
+                max_bit = c.get_bit_string(new_array.max)
+              else
+                # min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
+                # max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
+                min_bit = c.get_bit_string(min)
+                max_bit = c.get_bit_string(max)
+              end
+
+              oa.table[c.id].each_with_index{|b, i|
+                if  b == min_bit || b == max_bit
+                  area.each{|row|
+                    flag = true
+                    oa.table.each_with_index{|o, j|
+                      if j != c.id
+                        if o[i] != o[row]
+                          flag = false
+                          break
+                        end
+                      end
+                    }
+                    if flag then exist_area.push(i) end
+                  }
+                end
+              }
+              new_area.push(exist_area)
+              new_area_a = []
+              new_area_b = []
+              exist_area.each{|row|
+                tmp_bit = oa.get_bit_string(c.id, row)
+                if tmp_bit[tmp_bit.size - 1] == "0"
+                  new_area_a.push(row)
+                elsif tmp_bit[tmp_bit.size - 1] == "1"
+                  new_area_b.push(row)
+                end
+              }
+              area.each{|row|
+                tmp_bit = oa.get_bit_string(c.id, row)
+                if tmp_bit[tmp_bit.size - 1] == "0"
+                  new_area_b.push(row)
+                elsif tmp_bit[tmp_bit.size - 1] == "1"
+                  new_area_a.push(row)
+                end
+              }
+              new_area.push(new_area_a)
+              new_area.push(new_area_b)
+              break
+            end
+          end
+
+          # break
+        end
+      }
+      # var.name
+      new_var ={:case => "both side", 
+                :param => {:name => para_name, :paramDefs => new_array}}
+      print " ==> "
+      pp new_var
+      p "end generate both side parameter ====================================="
+      puts
+      return new_var,new_area
+    end
 
     # return array of new searching parameters (area) 
     def generate_next_search_area(area, oa, new_param_list)
       new_area = []
+      new_inside_area = []
+      new_outside_area = []
       p "generate next search ====================================="
       p "old area: #{area} --> "
       p "new_param_list:"
       pp new_param_list
-      
-      extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
-      new_area += oa.generate_new_analysis_area(area, new_param_list[0], extclm)
-      
-      if 2 <= new_param_list.size
-        for i in 1...new_param_list.size
-          extclm = oa.extend_table(area, new_param_list[i][:case], new_param_list[i][:param])
-          tmp_area = []
-          new_area.each { |na| 
-            tmp_area += oa.generate_new_analysis_area(na, new_param_list[i], extclm)
-          }
-          new_area = tmp_area
+
+      inside_list = []
+      outside_list = []
+      new_param_list.each{ |np| 
+        if np[:case] == "inside" 
+          inside_list.push(np)
+        else
+          outside_list.push(np)
         end
+      }
+
+      if !inside_list.empty?
+        extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
+        new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
+        pp new_inside_area
+        if 2 <= inside_list.size
+          for i in 1...inside_list.size
+            extclm = oa.extend_table(area, inside_list[i][:case], inside_list[i][:param])
+            tmp_area = []
+            new_inside_area.each { |na|
+              tmp_area += oa.generate_new_analysis_area(na, inside_list[i], extclm)
+            }
+            new_inside_area = tmp_area
+          end
+        end
+        debug("inside new area: #{new_inside_area}")
+        p "inside new area"
+        pp new_inside_area
       end
+
+      if !outside_list.empty?
+        extclm = oa.extend_table(area, outside_list[0][:case], outside_list[0][:param])
+        new_outside_area += oa.generate_new_analysis_area(area, outside_list[0], extclm)
+        pp new_outside_area
+        if 2 <= outside_list.size
+          for i in 1...outside_list.size
+            extclm = oa.extend_table(area, outside_list[i][:case], outside_list[i][:param])
+            tmp_area = []
+            new_outside_area.each { |na|
+              tmp_area += oa.generate_new_analysis_area(na, outside_list[i], extclm)
+            }
+            new_outside_area += tmp_area
+            new_outside_area += oa.generate_new_analysis_area(area, outside_list[i], extclm)
+          end
+        end
+        debug("outside new area: #{new_outside_area}")
+        p "outside new area"
+        pp new_outside_area
+      end
+
+      new_area = new_inside_area + new_outside_area
+
+      # extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
+      # new_area += oa.generate_new_analysis_area(area, new_param_list[0], extclm)
+      # pp new_area
+      # if 2 <= new_param_list.size
+      #   for i in 1...new_param_list.size
+      #     extclm = oa.extend_table(area, new_param_list[i][:case], new_param_list[i][:param])
+      #     tmp_area = []
+      #     new_area.each { |na|
+      #       tmp_area += oa.generate_new_analysis_area(na, new_param_list[i], extclm)
+      #     }
+      #     new_area = tmp_area
+      #   end
+      # end
       debug("#{new_area}")
       pp new_area
       p "end generate next search ====================================="

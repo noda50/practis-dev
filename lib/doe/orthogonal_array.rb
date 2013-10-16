@@ -128,8 +128,8 @@ class OrthogonalArray
         break
       end
     }
-    p "new bit: #{new_param[:param][:name]}"
-    pp new_bit
+    # p "new bit: #{new_param[:param][:name]}"
+    # pp new_bit
 
     @table[id].each_with_index{|v, i|
       new_bit.each{|b|
@@ -241,22 +241,12 @@ class OrthogonalArray
       # between (old_upper, new_upper) in area
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
     when "both side" # TODO
-      # get max, min of parameter
-      max_tmp = exteded_column.parameters.max
-      min_tmp = exteded_column.parameters.min
-      max_value_rows = []
-      min_value_rows = []
-      for i in 0...@table[exteded_column.id].size
-        if @table[exteded_column.id][i] == exteded_column.corresponds.key(max_tmp)
-          max_value_rows.push(i)
-        elsif @table[exteded_column.id][i] == exteded_column.corresponds.key(min_tmp)
-          min_value_rows.push(i)
-        end
-      end
-      # (new_lower, old_lower(min)
-      generated_area.push(new_lower_value_rows + min_value_rows)
-      # (old_upper(max), new_upper)
-      generated_area.push(max_value_rows + new_upper_value_rows)
+      # (new_lower, new_upper)
+      # generated_area.push(new_rows)
+      # between (old_lower, new_lower) in area
+      generated_area.push(old_lower_value_rows + new_lower_value_rows)
+      # between (old_upper, new_upper) in area
+      generated_area.push(old_upper_value_rows + new_upper_value_rows)
     else
       p "create NO area for analysis"
     end
