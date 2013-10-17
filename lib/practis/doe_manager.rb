@@ -243,10 +243,10 @@ module Practis
       uploaded_result_count = 0
       # [2013/09/20]
       @result_list_queue[0][:area].each{|a| @result_list_queue[0][:results][a].clear}
-      tmp_vec = {}
-      tmp_target = []
+      var_vec = {}
+      reg_target = []
       tmp_phi = {}
-      @assign_list.each{|k,v| if v then tmp_vec[k] = []; tmp_phi[k] = nil end }
+      @assign_list.each{|k,v| if v then var_vec[k] = []; tmp_phi[k] = nil end }
       @result_list_queue[0][:area].each{|a|
         @result_list_queue[0][:id][a].each{|id|
           if (retval = @database_connector.inner_join_record(
@@ -256,9 +256,9 @@ module Practis
             uploaded_result_count += 1
             retval.each{ |r| 
               @result_list_queue[0][:results][a].push(r["value"])
-              tmp_target.push(r["value"])
-              tmp_vec.each_key{ |k| 
-                tmp_vec[k].push(r[k])
+              reg_target.push(r["value"])
+              var_vec.each_key{ |k| 
+                var_vec[k].push(r[k])
               } 
             }
           # if (retval = @database_connector.read_record(:result, "result_id = '#{id}'")).length > 0
@@ -283,10 +283,10 @@ module Practis
         debug("result: #{@result_list_queue[0]}")
 
       p " === for regress ==="
-      tmp_target = Vector.elements(tmp_target)
-      tmp_vec.each{|k,v|
+      reg_target = Vector.elements(reg_target)
+      var_vec.each{|k,v|
         tmp_phi[k] = Matrix.rows(v.map{|e| phi(e,1)}, true)
-        @result_list_queue[0][:weight][k] = (tmp_phi[k].t*tmp_phi[k]).inverse*(tmp_phi[k].t*tmp_target)
+        @result_list_queue[0][:weight][k] = (tmp_phi[k].t*tmp_phi[k]).inverse*(tmp_phi[k].t*reg_target)
       }
       p " === end for regress ==="
 
@@ -310,7 +310,7 @@ module Practis
             num_significance.push(ef[:name])
             priority += ef[:f_value]
           end
-          upload_msg[("range_#{ef[:name]}").to_sym] = tmp_vec[ef[:name]].uniq.to_s
+          upload_msg[("range_#{ef[:name]}").to_sym] = var_vec[ef[:name]].uniq.to_s
           if ef[:f_value].nan?
             upload_msg[("f_value_of_#{ef[:name]}").to_sym] = 0.0
           else
@@ -382,21 +382,23 @@ module Practis
           end
         else # no significance parameters
           @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
-            var = []
-            @result_list_queue[0][:area].each{|r|
-              var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
-            }
-            tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-            
-            if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
-              new_param_list.push(tmp_var)
-            elsif !tmp_area.empty?
-              # ignored area is added for analysis to next_area_list
-              p "== exist area =="
-              pp tmp_area
-              tmp_area.each{|a_list|
-                @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+            if var_vec[oc.parameter_name].include?(oc.parameters.max) && var_vec[oc.parameter_name].include?(oc.parameters.min)
+              var = []
+              @result_list_queue[0][:area].each{|r|
+                var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
               }
+              tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+              
+              if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+                new_param_list.push(tmp_var)
+              elsif !tmp_area.empty?
+                # ignored area is added for analysis to next_area_list
+                p "== exist area =="
+                pp tmp_area
+                tmp_area.each{|a_list|
+                  @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+                }
+              end
             end
           }
           priority = 1.0
