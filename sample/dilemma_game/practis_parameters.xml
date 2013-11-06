@@ -5,18 +5,18 @@
       <parameter name="Noise" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
-            <start>0.0</start>
-            <end>0.04</end>
-            <step>0.04</step>
+            <start>0.02</start>
+            <end>0.025</end>
+            <step>0.005</step>
           </condition>
         </conditions>
       </parameter>
       <parameter name="NumOfGameIteration" data_type="Integer">
         <conditions>
           <condition type="include" range_type="range">
-            <start>10</start>
-            <end>100</end>
-            <step>90</step>
+            <start>50</start>
+            <end>60</end>
+            <step>10</step>
           </condition>
         </conditions>
       </parameter>

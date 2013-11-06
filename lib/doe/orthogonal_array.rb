@@ -241,12 +241,13 @@ class OrthogonalArray
       # between (old_upper, new_upper) in area
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
     when "both side" # TODO
-      # (new_lower, new_upper)
-      generated_area.push(new_rows)
+      
       # between (old_lower, new_lower) in area
       generated_area.push(old_lower_value_rows + new_lower_value_rows)
       # between (old_upper, new_upper) in area
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
+      # (new_lower, new_upper)
+      generated_area.push(new_rows)
     else
       p "create NO area for analysis"
     end

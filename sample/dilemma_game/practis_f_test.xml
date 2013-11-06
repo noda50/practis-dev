@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  This is a sample result schema file.
+-->
+<practis>
+  <analysis>
+    <f_test name="f_value" data_type="Float" null="NO"></f_test>
+    <regression name="gradient" data_type="Float" null="NO"></regression>
+  </analysis>
+</practis>

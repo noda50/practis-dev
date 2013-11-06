@@ -38,7 +38,7 @@ module Practis
       CSV.foreach(doe_ini) do |r|
         if r[1] == "is_assigned"
           @assign_list[r[0]] = true
-          @limit_var[r[0]] ={:lim_low => r[2], :lim_up => r[3]}
+          @limit_var[r[0]] ={:lim_low => r[2].to_f, :lim_up => r[3].to_f}
         elsif r[1] == "is_unassigned"
           @assign_list[r[0]] = false
         end
@@ -286,6 +286,8 @@ module Practis
 
         p " === for regress ==="
         reg_target = Vector.elements(reg_target)
+        pp var_vec
+        pp reg_target
         var_vec.each{|k,v|
           tmp_phi[k] = Matrix.rows(v.map{|e| phi(e,1)}, true)
           @result_list_queue[0][:weight][k] = (tmp_phi[k].t*tmp_phi[k]).inverse*(tmp_phi[k].t*reg_target)
@@ -294,22 +296,26 @@ module Practis
 
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @paramDefSet.scheduler.scheduler.oa.table,
-                                  @paramDefSet.scheduler.scheduler.oa.colums)
-        p "variance factor"
-        pp va
-        
+                                  @paramDefSet.scheduler.scheduler.oa.colums)        
         upload_msg = {}
         upload_msg[:f_test_id] = getNewFtestId();
         upload_msg[:id_combination] = @result_list_queue[0][:id].values.flatten!.to_s
+
+        p "variance factor"
+        pp va
+        p "end variance analysis ====================================="
+        puts
+
+        
         if va.e_f >= 1
-          num_significance = []
+          significances = []
           new_param_list = []
           priority = 0.0
           va.effect_Factor.each{|ef|
             field = {}
             # significant parameter is decided
             if @f_disttable.get_Fvalue(ef[:free], va.e_f, ef[:f_value])
-              num_significance.push(ef[:name])
+              significances.push(ef[:name])
               priority += ef[:f_value]
             end
             upload_msg[("range_#{ef[:name]}").to_sym] = var_vec[ef[:name]].uniq.to_s
@@ -320,13 +326,14 @@ module Practis
             end
             upload_msg[("gradient_of_#{ef[:name]}").to_sym] = @result_list_queue[0][:weight][ef[:name]][1]
           }
+
           if upload_f_test(upload_msg) < 0
             error("error upload f-test results")
           end
 
-          if 0 < num_significance.size
+          if 0 < significances.size
             @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
-              if num_significance.include?(oc.parameter_name)
+              if significances.include?(oc.parameter_name) # && 
                 var = []
                 @result_list_queue[0][:area].each{|r|
                   var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
@@ -345,27 +352,9 @@ module Practis
                     @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
                   }
                 end
-              # else # no significance parameter
-              #   var = []
-              #   @result_list_queue[0][:area].each{|r|
-              #     var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
-              #   }
-              #   tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-              #   if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
-              #     new_param_list.push(tmp_var)
-              #     p "tmp_var"
-              #     pp tmp_var
-              #   elsif !tmp_area.empty?
-              #     # ignored area is added for analysis to next_area_list
-              #     p "== exist area =="
-              #     pp tmp_area
-              #     tmp_area.each{|a_list|
-              #       @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
-              #     }
-              #   end
               end
             }
-            priority /= num_significance.size
+            priority /= significances.size
             if 0 < new_param_list.size
               # generate new_param_list & extend orthogonal array
               next_area_list = generate_next_search_area(@result_list_queue[0][:area],
@@ -382,39 +371,38 @@ module Practis
                 @result_list_queue += tmp_queue
               end
             end
-          else # no significance parameters
-            bothside_flag = true
+          end
+
+          # ===== (begin) both side =======
+          bothside_flag = true
+          @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
+            if !var_vec[oc.parameter_name].include?(oc.parameters.max) || !var_vec[oc.parameter_name].include?(oc.parameters.min)
+              bothside_flag = false
+              break
+            end
+          }
+          if bothside_flag
             @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
-              if !var_vec[oc.parameter_name].include?(oc.parameters.max) || !var_vec[oc.parameter_name].include?(oc.parameters.min)
-                bothside_flag = false
-                break
+              var = []
+              @result_list_queue[0][:area].each{|r|
+                var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
+              }
+              if @limit_var[oc.parameter_name][:lim_low] < var.min && var.max < @limit_var[oc.parameter_name][:lim_up]
+                tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+
+                if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+                  new_param_list.push(tmp_var)
+                elsif !tmp_area.empty?
+                  # ignored area is added for analysis to next_area_list
+                  p "== exist area =="
+                  pp tmp_area
+                  tmp_area.each{|a_list|
+                    @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+                  }
+                end
               end
             }
-
-            if bothside_flag
-              @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
-                var = []
-                @result_list_queue[0][:area].each{|r|
-                  var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
-                }
-                if @limit_var[oc.parameter_name][:lim_low] < var.min && var.max < @limit_var[oc.parameter_name][:lim_up]
-                  tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-
-                  if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
-                    new_param_list.push(tmp_var)
-                  elsif !tmp_area.empty?
-                    # ignored area is added for analysis to next_area_list
-                    p "== exist area =="
-                    pp tmp_area
-                    tmp_area.each{|a_list|
-                      @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
-                    }
-                  end
-                end
-              }
-            end
-
-            priority = 1.0
+            priority = 1.0 #TODO: 
             if 0 < new_param_list.size
               # generate new_param_list & extend orthogonal array
               next_area_list = generate_next_search_area(@result_list_queue[0][:area],
@@ -433,6 +421,7 @@ module Practis
               end
             end
           end
+          # ===== (end) both side =======
         end
 
         @result_list_queue.shift
@@ -440,9 +429,8 @@ module Practis
         if @result_list_queue.size <= 0
           @to_be_varriance_analysis = false
         end
+        # ============================
       end
-      p "end variance analysis ====================================="
-      puts
     end
     # search only "inside" significant parameter(TODO: new parameter is determined by f-value)
     def generate_new_inside_parameter(var, para_name, area)
@@ -659,12 +647,12 @@ module Practis
           new_upper,new_lower = nil,nil
           if var_min.class == Fixnum
             # new_upper,new_lower = (min-var_diff).to_i, (max+var_diff).to_i
-            new_lower = @limit_var[para_name][:lim_low] > (min-2).to_i ? @limit_var[para_name][:lim_low] : (min-2).to_i
-            new_upper = @limit_var[para_name][:lim_up] < (min+2).to_i ? @limit_var[para_name][:lim_up] : (min-2).to_i
+            new_lower = @limit_var[para_name][:lim_low] > (min-3).to_i ? @limit_var[para_name][:lim_low] : (min-3).to_i
+            new_upper = @limit_var[para_name][:lim_up] < (max+3).to_i ? @limit_var[para_name][:lim_up] : (max+3).to_i
           elsif var_min.class == Float
             # new_upper,new_lower =(min-var_diff).round(5), (max+var_diff).round(5)
-            new_lower = @limit_var[para_name][:lim_low] > (min-0.001).round(5) ? @limit_var[para_name][:lim_low] : (min-0.001).round(5)
-            new_upper = @limit_var[para_name][:lim_up] < (max+0.001).round(5) ? @limit_var[para_name][:lim_up] : (max+0.001).round(5)
+            new_lower = @limit_var[para_name][:lim_low] > (min-0.003).round(5) ? @limit_var[para_name][:lim_low] : (min-0.003).round(5)
+            new_upper = @limit_var[para_name][:lim_up] < (max+0.003).round(5) ? @limit_var[para_name][:lim_up] : (max+0.003).round(5)
           end
           new_array = [new_lower,new_upper]
           p "generate both side parameter! ==> new array: #{pp new_array}"
@@ -799,19 +787,6 @@ module Practis
 
       new_area = new_inside_area + new_outside_area
 
-      # extclm = oa.extend_table(area, new_param_list[0][:case], new_param_list[0][:param])
-      # new_area += oa.generate_new_analysis_area(area, new_param_list[0], extclm)
-      # pp new_area
-      # if 2 <= new_param_list.size
-      #   for i in 1...new_param_list.size
-      #     extclm = oa.extend_table(area, new_param_list[i][:case], new_param_list[i][:param])
-      #     tmp_area = []
-      #     new_area.each { |na|
-      #       tmp_area += oa.generate_new_analysis_area(na, new_param_list[i], extclm)
-      #     }
-      #     new_area = tmp_area
-      #   end
-      # end
       debug("#{new_area}")
       pp new_area
       p "end generate next search ====================================="
@@ -820,13 +795,27 @@ module Practis
     end
     # 
     def generate_result_list(area, priority=0)
-      result_list = { :area => area, :id => {}, :results => {}, :weight => {}, :priority => priority }
+      result_list = { :area => area, :id => {}, :results => {}, :weight => {}, 
+                      :priority => priority, :lerp => false}
+      oa = @paramDefSet.scheduler.scheduler.oa
       result_list[:area].each{|a|
         result_list[:id][a] = []
         result_list[:results][a] = []
       }
       @assign_list.each{|k,v|
         if v then result_list[:weight] = {} end
+      }
+      
+      oa.colums.each{|col|
+        has_max,has_min = false,false
+        result_list[:area].each{|a|
+          if col.parameters.max == oa.get_parameter(a, col.id)
+            has_max = true
+          elsif col.parameters.min == oa.get_parameter(a, col.id)
+            has_min = true
+          end
+        }
+        if has_min && has_max then result_list[:lerp] = true end
       }
       return result_list
     end
