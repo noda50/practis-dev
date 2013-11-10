@@ -102,6 +102,13 @@ module Practis
       # item tag
       ITEM_TAG = "item"
 
+      # [2013/11/11 I.Noda]
+      # id tag
+      ID_TAG = "id"
+      # [2013/11/11 I.Noda]
+      # ref tag
+      REF_TAG = "ref"
+
       GENERIC_ATTRIBUTES = [NAME_TAG, TYPE_TAG]
 
       #=== Parse method.
@@ -148,6 +155,7 @@ module Practis
       #=== Parse config tag elements and store the value as hash.
       #e :: config tag elements.
       def parse_configs(e)
+        @idNodeTable = {} ; ## [2013/11/11 I.Noda] id to XML node table
         e.elements.each(CONFIG_TAG) do |config|
           h = parse_config(config)
           @configurations[h[NAME_TAG]] = h[VALUE_TAG] unless h.nil?
@@ -158,23 +166,60 @@ module Practis
       #returned_value :: config element as a hash.
       def parse_config(e)
         h = {}
+
+        # [2013/11/11 I.Noda] for xlink:href facility
+        check_reference(e,h) ;
+
         attr = e.attributes
+        # [2013/11/11 I.Noda] for xlink:href facility
+        @idNodeTable[attr[ID_TAG]] = e if(attr.key?(ID_TAG)) ;
+
         GENERIC_ATTRIBUTES.each do |tag|
           if attr.key?(tag)
             h[tag] = attr[tag]
           else
-            error("generic attribute does not exist: #{tag}")
-            nil
+            if(h[tag].nil?) then ## [2013/11/10 I.Noda]
+              error("generic attribute does not exist: #{tag}")
+              nil
+            end
           end
         end
+
         if e.elements.size > 0
           items = []
-          e.elements.each(ITEM_TAG) { |item| items << item.text }
+          e.elements.each(ITEM_TAG) { |item| items << item.texts.join }
           h[VALUE_TAG] = items
         else
-          h[VALUE_TAG] = e.text
+          ## [2013/11/10 I.Noda]
+          if(e.has_text?())
+            h[VALUE_TAG] = e.texts.join
+          else
+            h[VALUE_TAG] ||= ''
+          end
         end
         return h
+      end
+
+      #e :: config tag element.
+      #h :: has for values in the element
+      #returned_value :: config element as a hash.
+      def check_reference(e,h)
+        attr = e.attributes ;
+        if(attr.key?(REF_TAG)) then
+          if(attr[REF_TAG] =~ /^\#(.*)$/) then
+            refId = $1 ;
+            refNode = @idNodeTable[refId] ;
+            if(refNode.nil?) then
+              error("no target ID for #{REF_TAG}: #{attr[REF_TAG]}") 
+            else
+              refH = parse_config(refNode) ;
+              h.update(refH) ;
+            end
+          else
+            error("illegal #{REF_TAG} value (no '\#') : #{attr[REF_TAG]}") ;
+            refNode = nil ;
+          end
+        end
       end
     end
 
