@@ -57,6 +57,14 @@ module Practis
       @f_disttable = F_DistributionTable.new(0.01)
       msgs = init_orthogonal2db(@paramDefSet.scheduler.scheduler.oa)
       upload_orthogonal_table_db(msgs)
+      new_var ={:case => "inside", 
+                :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
+      @paramDefSet.scheduler.scheduler.oa.extend_table([0,1,2,3,4,5,6,7], new_var[:case], new_var[:param])
+      # pp @paramDefSet.scheduler.scheduler.oa.table
+      update_msgs = cast_msg4orthogonalDB([0,1,2,3,4,5,6,7], @paramDefSet.scheduler.scheduler.oa)
+      update_orthogonal_table_db(update_msgs)
+      msgs = cast_msg4orthogonalDB([8,9,10,11,12,13,14,15], @paramDefSet.scheduler.scheduler.oa)
+      upload_orthogonal_table_db(msgs)
       exit(0)
     end
 
@@ -825,7 +833,6 @@ module Practis
     # upload additional tables
     def upload_orthogonal_table_db(msgs=nil)
       return -2 if msgs.nil?
-      pp msgs
       
       msgs.each{|msg|
         id = msg[:id].to_i
@@ -842,15 +849,29 @@ module Practis
       return 0
     end
     # update exisiting table
-    def update_orthogonal_table_db(msgs)
-      id = msg[:id].to_i
-      if (retval = 
-          @database_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length != 0
-        # update
-        retval.each{|ret|
-
-        }
-      end
+    def update_orthogonal_table_db(msgs=nil)
+      msgs.each{|msg|
+        id = msg[:id].to_i
+        
+        if (retval = 
+            @database_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length != 0
+          # update
+          flag = false
+          upld = {}
+          retval.each{|ret|
+            ret.each{|k, v|    
+              if msg[k.to_sym] != v
+                upld[k.to_sym] = msg[k.to_sym]
+                flag = true
+              end
+            }
+          }
+          if flag
+            nret = @database_connector.update_record(:orthogonal, upld, [:eq, [:field, "id"], id])
+            pp nret
+          end          
+        end
+      }
     end
     # 
     def upload_f_test(msg)
@@ -896,6 +917,18 @@ module Practis
         msg = {:id => row, :run => 0}
         oa.colums.each{|col|
           msg["#{col.parameter_name}".to_sym] = oa.get_bit_string(col.id,row)
+        }
+        msgs.push(msg)
+      }
+      return msgs
+    end
+
+    def cast_msg4orthogonalDB(area, oa)
+      msgs = []
+      area.each{|a|
+        msg = {:id => a, :run => 0}
+        oa.colums.each{|col|
+          msg["#{col.parameter_name}".to_sym] = oa.get_bit_string(col.id, a)
         }
         msgs.push(msg)
       }

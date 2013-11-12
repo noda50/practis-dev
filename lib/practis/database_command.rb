@@ -232,7 +232,7 @@ module Practis
             if arg_hash.has_key?(f[:field].to_sym)
               s.push("#{f[:field]} = " +
                      (arg_hash[f[:field].to_sym].nil? ? "NULL" :
-                      " '#{arg_hash[f[:field].to_sym]}'"))
+                      "'#{arg_hash[f[:field].to_sym]}'"))
             else
               s
             end
