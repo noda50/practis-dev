@@ -55,7 +55,9 @@ module Practis
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
-      # @doe_file = open("doe.log", "w")
+      msgs = init_orthogonal2db(@paramDefSet.scheduler.scheduler.oa)
+      upload_orthogonal_table_db(msgs)
+      exit(0)
     end
 
     # === methods of manager.rb ===
@@ -819,6 +821,37 @@ module Practis
       }
       return result_list
     end
+
+    # upload additional tables
+    def upload_orthogonal_table_db(msgs=nil)
+      return -2 if msgs.nil?
+      pp msgs
+      
+      msgs.each{|msg|
+        id = msg[:id].to_i
+        if (retval =  
+            @database_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length == 0
+          if (retval = @database_connector.insert_record(
+            :orthogonal, msg).length != 0)
+            error("fail to insert new orthogonal table. #{retval}")
+            return -2
+          end
+        end  
+      }
+      
+      return 0
+    end
+    # update exisiting table
+    def update_orthogonal_table_db(msgs)
+      id = msg[:id].to_i
+      if (retval = 
+          @database_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length != 0
+        # update
+        retval.each{|ret|
+
+        }
+      end
+    end
     # 
     def upload_f_test(msg)
       p "call upload_f_test"
@@ -854,7 +887,19 @@ module Practis
     # TODO: 
     private
     def check_duplicate_parameters
-      
+    end
+
+    private
+    def init_orthogonal2db(oa)
+      msgs = []
+      oa.l_size.times {|row|
+        msg = {:id => row, :run => 0}
+        oa.colums.each{|col|
+          msg["#{col.parameter_name}".to_sym] = oa.get_bit_string(col.id,row)
+        }
+        msgs.push(msg)
+      }
+      return msgs
     end
 
     #

@@ -564,6 +564,7 @@ module Practis
         when :node then @connectors[:node]
         when :parameter then @connectors[:parameter]
         when :result then @connectors[:result]
+        when :orthogonal then @connectors[:orthogonal]
         when :f_test then @connectors[:f_test]
         else nil
         end
