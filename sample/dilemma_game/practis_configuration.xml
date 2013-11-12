@@ -149,6 +149,16 @@
     <config name="result_database_name" ref="#DB_name"/>
     <config name="result_database_tablename" type="String">result</config>
 
+    <!-- orthogonal table database -->
+    <config name="orthogonal_database_type" ref="#DB_type"/>
+    <config name="orthogonal_database_hostname" ref="#DB_host"/>
+    <config name="orthogonal_database_management_username" ref="#DB_admin"/>
+    <config name="orthogonal_database_management_password" ref="#DB_admin_pass"/>
+    <config name="orthogonal_database_username" ref="#DB_user"/>
+    <config name="orthogonal_database_password" ref="#DB_pass"/>
+    <config name="orthogonal_database_name" ref="#DB_name"/>
+    <config name="orthogonal_database_tablename" type="String">orthogonal</config>
+
     <!-- f_test database -->
     <config name="f_test_database_type" ref="#DB_type"/>
     <config name="f_test_database_hostname" ref="#DB_host"/>

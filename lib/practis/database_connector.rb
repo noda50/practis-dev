@@ -77,6 +77,15 @@ module Practis
               error("type field requires any types. #{paramDef}")
               next
             end
+            # add Orthogonal Table
+            if @database_parser.add_field(
+                config.read("#{DB_ORTHOGONAL}_database_name"),
+                config.read("#{DB_ORTHOGONAL}_database_tablename"),
+                {field: "#{paramDef.name}", type: "Varchar(64)", null: "NO", key: "MUL"}
+                                         ) < 0
+              error("fail to add a filed. #{paramDef.name}, #{type_field}")
+            end
+            # add f_test Table
             if @database_parser.add_field(
                 config.read("#{DB_F_TEST}_database_name"),
                 config.read("#{DB_F_TEST}_database_tablename"),

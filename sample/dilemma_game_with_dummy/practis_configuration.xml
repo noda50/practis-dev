@@ -11,7 +11,7 @@
     <config name="execution_name" type="String">dilemma_game_with_dummy</config>
 
     <!-- Specify debug level from FATAL, ERROR, WARN, INFO and DEBUG -->
-    <config name="debug_level" type="String">DEBUG</config>
+    <config name="debug_level" type="String">FATAL</config>
 
     <!-- Logger output option -->
     <config name="debug_output" type="String">STDERR</config>
@@ -48,14 +48,6 @@
       The executable is executed by the executors on shell with
       "executable executable_args1 executable_args2 ..." command.
     -->
-    <!--config name="executable" type="String">ruby</config>
-    <config name="executable_arg1" type="String">-I</config>
-    <config name="executable_arg2" type="String">lib</config>
-    <config name="executable_arg3" type="String">-I</config>
-    <config name="executable_arg4" type="String">work/bin</config>
-    <config name="executable_arg5" type="String">work/bin/simple_equation.rb</config-->
-
-    <!--config name="executable_command" type="String">ruby -I lib -I work/bin work/bin/simple_equation.rb</config-->
     
     <config name="executable_command" type="String">ruby -I lib -I work/bin/lib work/bin/dilemma_game.rb</config>
 
@@ -68,18 +60,12 @@
       <item>sample/dilemma_game_with_dummy/dilemma_game.rb</item>
       <item>sample/dilemma_game_with_dummy/lib</item>
     </config>
-    <!--
-         <config name="executable_transfer1" type="String">sample/simple_equation/simple_equation.rb</config>
-         <config name="executable_transfer2" type="String">sample/simple_equation/equation.rb</config>
-    -->
-    
-    
-    
 
     <!-- Followings are the configurations of the practis database.
          The schemas of the database are defined in database configuration file.
          You have to set the same database name with it.
     -->
+
     <!-- Project name -->
     <config name="project_name" type="String">sample</config>
     <config name="execution_name" type="String">dilemma_game_with_dummy</config>
@@ -87,64 +73,99 @@
     <!-- Database commons -->
     <config name="database_query_retry" type="Integer">-1</config>
 
+    <!-- Database defauilts -->
+    <config name="default_database_type" type="String"
+        id="DB_type">mysql</config>
+    <config name="default_database_hostname" type="String"
+        id="DB_host">127.0.0.1</config>
+    <config name="default_database_management_username" type="String"
+        id="DB_admin">practis_manager</config>
+    <config name="default_database_management_password" type="String"
+        id="DB_admin_pass">sitcarp</config>
+    <config name="default_database_username" type="String"
+        id="DB_user">practis</config>
+    <config name="default_database_password" type="String"
+        id="DB_pass">sitcarp</config>
+    <config name="default_database_name" type="String"
+        id="DB_name">dilemma_game_with_dummy</config>
+
     <!-- Project database -->
-    <config name="project_database_type" type="String">mysql</config>
-    <config name="project_database_hostname" type="String">127.0.0.1</config>
-    <config name="project_database_management_username" type="String">practis_manager</config>
-    <config name="project_database_management_password" type="String">sitcarp</config>
-    <config name="project_database_username" type="String">practis</config>
-    <config name="project_database_password" type="String">sitcarp</config>
-    <config name="project_database_name" type="String">dilemma_game_with_dummy</config>
+    <config name="project_database_type" ref="#DB_type"/>
+    <config name="project_database_hostname" ref="#DB_host"/>
+    <config name="project_database_management_username" ref="#DB_admin"/>
+    <config name="project_database_management_password" ref="#DB_admin_pass"/>
+    <config name="project_database_username" ref="#DB_user"/>
+    <config name="project_database_password" ref="#DB_pass"/>
+    <config name="project_database_name" ref="#DB_name"/>
     <config name="project_database_tablename" type="String">project</config>
 
     <!-- Execution database -->
-    <config name="execution_database_type" type="String">mysql</config>
-    <config name="execution_database_hostname" type="String">127.0.0.1</config>
-    <config name="execution_database_management_username" type="String">practis_manager</config>
-    <config name="execution_database_management_password" type="String">sitcarp</config>
-    <config name="execution_database_username" type="String">practis</config>
-    <config name="execution_database_password" type="String">sitcarp</config>
-    <config name="execution_database_name" type="String">dilemma_game_with_dummy</config>
+    <config name="execution_database_type" ref="#DB_type"/>
+    <config name="execution_database_hostname" ref="#DB_host"/>
+    <config name="execution_database_management_username" ref="#DB_admin"/>
+    <config name="execution_database_management_password" ref="#DB_admin_pass"/>
+    <config name="execution_database_username" ref="#DB_user"/>
+    <config name="execution_database_password" ref="#DB_pass"/>
+    <config name="execution_database_name" ref="#DB_name"/>
     <config name="execution_database_tablename" type="String">execution</config>
 
     <!-- Executable database -->
-    <config name="executable_database_type" type="String">mysql</config>
-    <config name="executable_database_hostname" type="String">127.0.0.1</config>
-    <config name="executable_database_management_username" type="String">practis_manager</config>
-    <config name="executable_database_management_password" type="String">sitcarp</config>
-    <config name="executable_database_username" type="String">practis</config>
-    <config name="executable_database_password" type="String">sitcarp</config>
-    <config name="executable_database_name" type="String">dilemma_game_with_dummy</config>
+    <config name="executable_database_type" ref="#DB_type"/>
+    <config name="executable_database_hostname" ref="#DB_host"/>
+    <config name="executable_database_management_username" ref="#DB_admin"/>
+    <config name="executable_database_management_password" ref="#DB_admin_pass"/>
+    <config name="executable_database_username" ref="#DB_user"/>
+    <config name="executable_database_password" ref="#DB_pass"/>
+    <config name="executable_database_name" ref="#DB_name"/>
     <config name="executable_database_tablename" type="String">executable</config>
 
     <!-- Node database -->
-    <config name="node_database_type" type="String">mysql</config>
-    <config name="node_database_hostname" type="String">127.0.0.1</config>
-    <config name="node_database_management_username" type="String">practis_manager</config>
-    <config name="node_database_management_password" type="String">sitcarp</config>
-    <config name="node_database_username" type="String">practis</config>
-    <config name="node_database_password" type="String">sitcarp</config>
-    <config name="node_database_name" type="String">dilemma_game_with_dummy</config>
+    <config name="node_database_type" ref="#DB_type"/>
+    <config name="node_database_hostname" ref="#DB_host"/>
+    <config name="node_database_management_username" ref="#DB_admin"/>
+    <config name="node_database_management_password" ref="#DB_admin_pass"/>
+    <config name="node_database_username" ref="#DB_user"/>
+    <config name="node_database_password" ref="#DB_pass"/>
+    <config name="node_database_name" ref="#DB_name"/>
     <config name="node_database_tablename" type="String">node</config>
 
     <!-- Parameter database -->
-    <config name="parameter_database_type" type="String">mysql</config>
-    <config name="parameter_database_hostname" type="String">127.0.0.1</config>
-    <config name="parameter_database_management_username" type="String">practis_manager</config>
-    <config name="parameter_database_management_password" type="String">sitcarp</config>
-    <config name="parameter_database_username" type="String">practis</config>
-    <config name="parameter_database_password" type="String">sitcarp</config>
-    <config name="parameter_database_name" type="String">dilemma_game_with_dummy</config>
+    <config name="parameter_database_type" ref="#DB_type"/>
+    <config name="parameter_database_hostname" ref="#DB_host"/>
+    <config name="parameter_database_management_username" ref="#DB_admin"/>
+    <config name="parameter_database_management_password" ref="#DB_admin_pass"/>
+    <config name="parameter_database_username" ref="#DB_user"/>
+    <config name="parameter_database_password" ref="#DB_pass"/>
+    <config name="parameter_database_name" ref="#DB_name"/>
     <config name="parameter_database_tablename" type="String">parameter</config>
 
     <!-- Result database -->
-    <config name="result_database_type" type="String">mysql</config>
-    <config name="result_database_hostname" type="String">127.0.0.1</config>
-    <config name="result_database_management_username" type="String">practis_manager</config>
-    <config name="result_database_management_password" type="String">sitcarp</config>
-    <config name="result_database_username" type="String">practis</config>
-    <config name="result_database_password" type="String">sitcarp</config>
-    <config name="result_database_name" type="String">dilemma_game_with_dummy</config>
+    <config name="result_database_type" ref="#DB_type"/>
+    <config name="result_database_hostname" ref="#DB_host"/>
+    <config name="result_database_management_username" ref="#DB_admin"/>
+    <config name="result_database_management_password" ref="#DB_admin_pass"/>
+    <config name="result_database_username" ref="#DB_user"/>
+    <config name="result_database_password" ref="#DB_pass"/>
+    <config name="result_database_name" ref="#DB_name"/>
     <config name="result_database_tablename" type="String">result</config>
+
+    <!-- f_test database -->
+    <!-- <config name="f_test_database_type" ref="#DB_type"/>
+    <config name="f_test_database_hostname" ref="#DB_host"/>
+    <config name="f_test_database_management_username" ref="#DB_admin"/>
+    <config name="f_test_database_management_password" ref="#DB_admin_pass"/>
+    <config name="f_test_database_username" ref="#DB_user"/>
+    <config name="f_test_database_password" ref="#DB_pass"/>
+    <config name="f_test_database_name" ref="#DB_name"/>
+    <config name="f_test_database_tablename" type="String">f_test</config> -->
+    <!-- orthogonal table database -->
+    <config name="orthogonal_database_type" ref="#DB_type"/>
+    <config name="orthogonal_database_hostname" ref="#DB_host"/>
+    <config name="orthogonal_database_management_username" ref="#DB_admin"/>
+    <config name="orthogonal_database_management_password" ref="#DB_admin_pass"/>
+    <config name="orthogonal_database_username" ref="#DB_user"/>
+    <config name="orthogonal_database_password" ref="#DB_pass"/>
+    <config name="orthogonal_database_name" ref="#DB_name"/>
+    <config name="orthogonal_database_tablename" type="String">orthogonal</config>
   </configuration>
 </practis>
