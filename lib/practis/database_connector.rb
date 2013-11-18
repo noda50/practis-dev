@@ -227,9 +227,9 @@ module Practis
               "#{rcon.table}.#{arg_hash[:ref_field]}"
         # [2013/10/10 written by H-Matsushima]
         if arg_hash.key?(:condition)
-          condition += " WHERE #{arg_hash[:condition]}"
+          # condition += " WHERE #{arg_hash[:condition]}"
         end
-        bcon.inner_join_record(condition)
+        bcon.inner_join_record(condition, arg_hash[:condition])
       end
 
       def read_time(type = nil)
@@ -781,13 +781,16 @@ module Practis
         # <<< [2013/09/05 I.noda]
       end
 
-      def inner_join_record(condition = nil)
+      def inner_join_record(condition = nil, where = nil)
         # <<< [2013/09/05 I.noda]
         #retq = query(@command_generator.get_command(
         #  @database, @table, {type: "rinnerjoin"}, condition))
         #retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
+        conditions = [condition, where]
+        # condition += "#{@command_generator.condition_to_sql(@database, @table, where)}"
+        # pp condition
         query(@command_generator.get_command(@database, @table, 
-                                             {type: "rinnerjoin"}, condition)){
+                                             {type: "rinnerjoin"}, conditions)){
           |retq|
           return retq.nil? ? [] : retq.inject([]) { |r, q| r << q }
         }

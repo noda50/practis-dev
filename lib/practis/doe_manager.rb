@@ -59,13 +59,24 @@ module Practis
       upload_orthogonal_table_db(msgs)
       new_var ={:case => "inside", 
                 :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
-      @paramDefSet.scheduler.scheduler.oa.extend_table([0,1,2,3,4,5,6,7], new_var[:case], new_var[:param])
-      # pp @paramDefSet.scheduler.scheduler.oa.table
-      update_msgs = cast_msg4orthogonalDB([0,1,2,3,4,5,6,7], @paramDefSet.scheduler.scheduler.oa)
-      update_orthogonal_table_db(update_msgs)
-      msgs = cast_msg4orthogonalDB([8,9,10,11,12,13,14,15], @paramDefSet.scheduler.scheduler.oa)
-      upload_orthogonal_table_db(msgs)
-      exit(0)
+      # @paramDefSet.scheduler.scheduler.oa.extend_table([0,1,2,3,4,5,6,7], new_var[:case], new_var[:param])
+      
+      # update_msgs = cast_msg4orthogonalDB([0,1,2,3,4,5,6,7], @paramDefSet.scheduler.scheduler.oa)
+      # update_orthogonal_table_db(update_msgs)
+      # msgs = cast_msg4orthogonalDB([8,9,10,11,12,13,14,15], @paramDefSet.scheduler.scheduler.oa)
+      # upload_orthogonal_table_db(msgs)
+
+      # condition = [:or]
+      # (1..5).each{|id|
+      #   condition.push([:eq, [:field, "result_id"], "#{id}"])
+      # }
+      
+      # retval = @database_connector.inner_join_record(
+      #         { base_type: :result, ref_type: :parameter,
+      #           base_field: :result_id, ref_field: :parameter_id, 
+      #           :condition => condition})
+      # pp retval
+      # exit(0)
     end
 
     # === methods of manager.rb ===
@@ -260,28 +271,46 @@ module Practis
       tmp_phi = {}
       @assign_list.each{|k,v| if v then var_vec[k] = []; tmp_phi[k] = nil end }
       @result_list_queue[0][:area].each{|a|
-        @result_list_queue[0][:id][a].each{|id|
-          if (retval = @database_connector.inner_join_record(
-          {base_type: :result, ref_type: :parameter,
-           base_field: :result_id, ref_field: :parameter_id, 
-           :condition=>"result_id = '#{id}'"})).length > 0
-            uploaded_result_count += 1
-            retval.each{ |r| 
-              @result_list_queue[0][:results][a].push(r["value"])
-              reg_target.push(r["value"])
-              var_vec.each_key{ |k| 
-                var_vec[k].push(r[k])
-              } 
+        condition = [:or]
+        @result_list_queue[0][:id][a].each{|id| 
+          condition.push([:eq, [:field, "result_id"], "#{id}"]) 
+        }
+
+        retval = @database_connector.inner_join_record(
+                { base_type: :result, ref_type: :parameter,
+                  base_field: :result_id, ref_field: :parameter_id, 
+                  condition: condition})
+        # retval = @database_connector.read_record(:result, condition)
+        if retval.length > 0
+          uploaded_result_count += retval.length
+          retval.each{ |r| 
+            @result_list_queue[0][:results][a].push(r["value"])
+            reg_target.push(r["value"])
+            var_vec.each_key{ |k|
+              p "test , { #{k} => #{r[k]} }"
+              var_vec[k].push(r[k])
             }
-          # if (retval = @database_connector.read_record(:result, "result_id = '#{id}'")).length > 0
+          }
+        else
+          debug("retval: #{retval}")
+        end
+          # if (retval = @database_connector.inner_join_record(
+          #       { base_type: :result, ref_type: :parameter,
+          #         base_field: :result_id, ref_field: :parameter_id, 
+          #         :condition=>"result_id = '#{id}'"})
+          #     ).length > 0
           #   uploaded_result_count += 1
           #   retval.each{ |r| 
           #     @result_list_queue[0][:results][a].push(r["value"])
+          #     reg_target.push(r["value"])
+          #     var_vec.each_key{ |k| 
+          #       var_vec[k].push(r[k])
+          #     } 
           #   }
-          else
-            debug("retval: #{retval}")
-          end
-        }
+          # else
+          #   debug("retval: #{retval}")
+          # end
+        # }
       }
       p "variance analysis ====================================="
       p "alloc_counter: #{@alloc_counter}, queue size: #{@result_list_queue.size}"

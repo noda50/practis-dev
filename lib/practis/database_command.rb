@@ -217,7 +217,11 @@ module Practis
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"
-          query << "SELECT * FROM #{database}.#{table} INNER JOIN #{condition};"
+          # query << "SELECT * FROM #{database}.#{table} INNER JOIN #{condition};"
+          query << "SELECT * FROM #{database}.#{table} INNER JOIN #{condition[0]}"
+          if(!condition[1].nil?)
+            query << " #{condition_to_sql(database, table, condition[1])}"
+          end
         when "rnow"
           query << "SELECT DATE_FORMAT(NOW(), GET_FORMAT(DATETIME, 'ISO'));"
         when "rtable"
