@@ -65,37 +65,26 @@ module Practis
       # update_orthogonal_table_db(update_msgs)
       # msgs = cast_msg4orthogonalDB([8,9,10,11,12,13,14,15], @paramDefSet.scheduler.scheduler.oa)
       # upload_orthogonal_table_db(msgs)
-
-      # condition = [:or]
-      # (1..5).each{|id|
-      #   condition.push([:eq, [:field, "result_id"], "#{id}"])
-      # }
-      
-      # retval = @database_connector.inner_join_record(
-      #         { base_type: :result, ref_type: :parameter,
-      #           base_field: :result_id, ref_field: :parameter_id, 
-      #           :condition => condition})
-      # pp retval
       # exit(0)
     end
 
-    # === methods of manager.rb ===
-    # create_executable_command
-    # allocate_node(node_type, address, id=nil, parallel=nil)
-    # allocate_paramValueSets(request_number, src_id) # <- override
-
-    # update_started_parameter_state(parameter_id, executor_id)
-    # update_node_state(node_id, queueing, executing)
-    # upload_result(msg)
-    # update # <- override
-
-    # decrease_keepalive(node)
-    # finalize
-    
-    # get_cluster_json
-    # get_parameter_progress
-    # get_results
-    # ===========================
+    ## === methods of manager.rb ===
+    ## create_executable_command
+    ## allocate_node(node_type, address, id=nil, parallel=nil)
+    ## allocate_paramValueSets(request_number, src_id) # <- override
+    ##
+    ## update_started_parameter_state(parameter_id, executor_id)
+    ## update_node_state(node_id, queueing, executing)
+    ## upload_result(msg)
+    ## update # <- override
+    ##
+    ## decrease_keepalive(node)
+    ## finalize
+    ##
+    ## get_cluster_json
+    ## get_parameter_progress
+    ## get_results
+    ## ===========================
 
     ##------------------------------------------------------------
     # override method
@@ -275,63 +264,44 @@ module Practis
         @result_list_queue[0][:id][a].each{|id| 
           condition.push([:eq, [:field, "result_id"], "#{id}"]) 
         }
-
         retval = @database_connector.inner_join_record(
                 { base_type: :result, ref_type: :parameter,
                   base_field: :result_id, ref_field: :parameter_id, 
                   condition: condition})
-        # retval = @database_connector.read_record(:result, condition)
         if retval.length > 0
           uploaded_result_count += retval.length
           retval.each{ |r| 
             @result_list_queue[0][:results][a].push(r["value"])
             reg_target.push(r["value"])
             var_vec.each_key{ |k|
-              p "test , { #{k} => #{r[k]} }"
+              debug("test , { #{k} => #{r[k]} }")
               var_vec[k].push(r[k])
             }
           }
         else
           debug("retval: #{retval}")
         end
-          # if (retval = @database_connector.inner_join_record(
-          #       { base_type: :result, ref_type: :parameter,
-          #         base_field: :result_id, ref_field: :parameter_id, 
-          #         :condition=>"result_id = '#{id}'"})
-          #     ).length > 0
-          #   uploaded_result_count += 1
-          #   retval.each{ |r| 
-          #     @result_list_queue[0][:results][a].push(r["value"])
-          #     reg_target.push(r["value"])
-          #     var_vec.each_key{ |k| 
-          #       var_vec[k].push(r[k])
-          #     } 
-          #   }
-          # else
-          #   debug("retval: #{retval}")
-          # end
-        # }
       }
-      p "variance analysis ====================================="
-      p "alloc_counter: #{@alloc_counter}, queue size: #{@result_list_queue.size}"
-      p "result list:"
-      pp @result_list_queue[0]#result_list
+      debug("variance analysis =====================================")
+      debug("alloc_counter: #{@alloc_counter}, queue size: #{@result_list_queue.size}")
+      debug("result list:")
+      debug("#{pp @result_list_queue[0]}")#result_list
 
-      p "uploaded_result_count: #{uploaded_result_count}, current_total: #{@paramDefSet.scheduler.scheduler.current_total}"
+      debug("uploaded_result_count: #{uploaded_result_count}, current_total: #{@paramDefSet.scheduler.scheduler.current_total}")
 
       if uploaded_result_count >= @paramDefSet.scheduler.scheduler.current_total
         debug("result length: #{@result_list_queue[0][:results].size}")
         debug("result: #{@result_list_queue[0]}")
 
-        p " === for regress ==="
+        debug(" === for regress ===")
         reg_target = Vector.elements(reg_target)
-        pp var_vec
-        pp reg_target
+        debug("#{pp var_vec}")
+        debug("#{pp reg_target}")
         var_vec.each{|k,v|
           tmp_phi[k] = Matrix.rows(v.map{|e| phi(e,1)}, true)
           @result_list_queue[0][:weight][k] = (tmp_phi[k].t*tmp_phi[k]).inverse*(tmp_phi[k].t*reg_target)
         }
-        p " === end for regress ==="
+        debug(" === end for regress ===")
 
         va = VarianceAnalysis.new(@result_list_queue[0],
                                   @paramDefSet.scheduler.scheduler.oa.table,
@@ -340,11 +310,9 @@ module Practis
         upload_msg[:f_test_id] = getNewFtestId();
         upload_msg[:id_combination] = @result_list_queue[0][:id].values.flatten!.to_s
 
-        p "variance factor"
-        pp va
-        p "end variance analysis ====================================="
-        puts
-
+        debug("variance factor")
+        debug("#{pp va}")
+        debug("end variance analysis =====================================")
         
         if va.e_f >= 1
           significances = []
@@ -385,8 +353,8 @@ module Practis
                   new_param_list.push(tmp_var)
                 elsif !tmp_area.empty?
                   # ignored area is added for analysis to next_area_list
-                  p "== exist area =="
-                  pp tmp_area
+                  debug("== exist area ==")
+                  debug("#{pp tmp_area}")
                   tmp_area.each{|a_list|
                     @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
                   }
@@ -400,7 +368,7 @@ module Practis
                                                           @paramDefSet.scheduler.scheduler.oa,
                                                           new_param_list)
               debug("next area list: ")
-              pp next_area_list
+              debug("#{pp next_area_list}")
               next_area_list.each{|a_list|
                 @result_list_queue.push(generate_result_list(a_list, priority))
               }
@@ -433,8 +401,8 @@ module Practis
                   new_param_list.push(tmp_var)
                 elsif !tmp_area.empty?
                   # ignored area is added for analysis to next_area_list
-                  p "== exist area =="
-                  pp tmp_area
+                  debug("== exist area ==")
+                  debug("#{pp tmp_area}")
                   tmp_area.each{|a_list|
                     @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
                   }
@@ -448,8 +416,8 @@ module Practis
                                                           @paramDefSet.scheduler.scheduler.oa,
                                                           new_param_list)
               debug("next area list: #{next_area_list}")
-              p "next area list:"
-              pp next_area_list
+              debug("next area list:")
+              debug("#{pp next_area_list}")
               next_area_list.each{|a_list|
                 @result_list_queue.push(generate_result_list(a_list, priority))
               }
@@ -459,8 +427,8 @@ module Practis
                 @result_list_queue += tmp_queue
               end
             end
+            # ===== (end) both_side =======
           end
-          # ===== (end) both side =======
         end
 
         @result_list_queue.shift
@@ -473,8 +441,8 @@ module Practis
     end
     # search only "inside" significant parameter(TODO: new parameter is determined by f-value)
     def generate_new_inside_parameter(var, para_name, area)
-      p "generate new parameter ====================================="
-      p "var: #{var}"
+      debug("generate new parameter =====================================")
+      debug("var: #{var}")
       oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
@@ -492,8 +460,8 @@ module Practis
             new_array = [(var_min+var_diff).round(5), (var_max-var_diff).round(5)]
           end
 
-          p "divided parameter! ==> new array: #{pp new_array}"
-          p "parameters: #{c.parameters}"
+          debug("divided parameter! ==> new array: #{pp new_array}")
+          debug("parameters: #{c.parameters}")
 
           if 2 < c.parameters.size
             if c.parameters.find{|v| var_min<v && v<var_max}.nil?
@@ -553,19 +521,18 @@ module Practis
       }
 
       # var.name
-      new_var ={:case => "inside", 
-                :param => {:name => para_name, :paramDefs => new_array}}
+      new_var = { :case => "inside", 
+                  :param => {:name => para_name, :paramDefs => new_array}}
       print " ==> "
-      pp new_var
-      pp new_area
-      p "end generate new parameter ====================================="
-      puts
+      debug("#{pp new_var}")
+      debug("#{pp new_area}")
+      debug("end generate new parameter =====================================")
       return new_var,new_area
     end
     # TODO: new value of parameter is determined by f-value
     def generate_new_outsidep_parameter(var, para_name, area)
-      p "generate new outside(+) parameter ====================================="
-      p "var: #{var}"
+      debug("generate new outside(+) parameter =====================================")
+      debug("var: #{var}")
       oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
@@ -587,11 +554,11 @@ module Practis
               new_array = [var_max+2, var_max+4]
             elsif var_min.class == Float
               # new_array = [(var_max+var_diff).round(5), (var_max+2*var_diff).round(5)]
-              new_array = [(var_max+0.0025).round(5), (var_max+0.005).round(5)]
+              new_array = [(var_max+0.004).round(5), (var_max+0.004).round(5)]
             end
 
-            p "generate outside(+) parameter! ==> new array: #{pp new_array}"
-            p "parameters: #{c.parameters}"
+            debug("generate outside(+) parameter! ==> new array: #{pp new_array}")
+            debug("parameters: #{c.parameters}")
           end
           break
         end
@@ -600,17 +567,15 @@ module Practis
       # var.name
       new_var ={:case => "outside(+)", 
                 :param => {:name => para_name, :paramDefs => new_array}}
-      print " ==> "
-      pp new_var
+      debug("#{pp new_var}")
       # pp @variable_set.scheduler.scheduler.oa.get_table
-      p "end generate outside(+) parameter ====================================="
-      puts
+      debug("end generate outside(+) parameter =====================================")
       return new_var,new_area
     end
     # TODO: new value of parameter is determined by f-value
     def generate_new_outsidem_parameter(var, para_name, area)
-      p "generate new outside(-) parameter ====================================="
-      p "var: #{var}"
+      debug("generate new outside(-) parameter =====================================")
+      debug("var: #{var}")
       oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
@@ -632,11 +597,11 @@ module Practis
               new_array = [var_min-4, var_min-2]
             elsif var_min.class == Float
               # new_array = [(var_min-var_diff).round(5), (var_min-2*var_diff).round(5)]
-              new_array = [(var_min-0.005).round(5), (var_min-0.0025).round(5)]
+              new_array = [(var_min-0.004).round(5), (var_min-0.004).round(5)]
             end
 
-            p "generate outside(-) parameter! ==> new array: #{pp new_array}"
-            p "parameters: #{c.parameters}"
+            debug("generate outside(-) parameter! ==> new array: #{pp new_array}")
+            debug("parameters: #{c.parameters}")
           end
           break
         end
@@ -645,17 +610,15 @@ module Practis
       # var.name
       new_var ={:case => "outside(-)", 
                 :param => {:name => para_name, :paramDefs => new_array}}
-      print " ==> "
-      pp new_var
+      debug("#{pp new_var}")
       # pp @variable_set.scheduler.scheduler.oa.get_table
-      p "end generate outside(-) parameter ====================================="
-      puts
+      debug("end generate outside(-) parameter =====================================")
       return new_var,new_area
     end
     # TODO: new value of parameter is determined by f-value
     def generate_new_bothside_parameter(var, para_name, area)
-      p "generate new both side parameter ====================================="
-      p "var: #{var}"
+      debug("generate new both side parameter =====================================")
+      debug("var: #{var}")
       oa = @paramDefSet.scheduler.scheduler.oa
       var_min = var.min
       var_max = var.max
@@ -686,16 +649,16 @@ module Practis
           new_upper,new_lower = nil,nil
           if var_min.class == Fixnum
             # new_upper,new_lower = (min-var_diff).to_i, (max+var_diff).to_i
-            new_lower = @limit_var[para_name][:lim_low] > (min-3).to_i ? @limit_var[para_name][:lim_low] : (min-3).to_i
-            new_upper = @limit_var[para_name][:lim_up] < (max+3).to_i ? @limit_var[para_name][:lim_up] : (max+3).to_i
+            new_lower = @limit_var[para_name][:lim_low] > (min-2).to_i ? @limit_var[para_name][:lim_low] : (min-2).to_i
+            new_upper = @limit_var[para_name][:lim_up] < (max+2).to_i ? @limit_var[para_name][:lim_up] : (max+2).to_i
           elsif var_min.class == Float
             # new_upper,new_lower =(min-var_diff).round(5), (max+var_diff).round(5)
-            new_lower = @limit_var[para_name][:lim_low] > (min-0.003).round(5) ? @limit_var[para_name][:lim_low] : (min-0.003).round(5)
-            new_upper = @limit_var[para_name][:lim_up] < (max+0.003).round(5) ? @limit_var[para_name][:lim_up] : (max+0.003).round(5)
+            new_lower = @limit_var[para_name][:lim_low] > (min-0.004).round(5) ? @limit_var[para_name][:lim_low] : (min-0.004).round(5)
+            new_upper = @limit_var[para_name][:lim_up] < (max+0.004).round(5) ? @limit_var[para_name][:lim_up] : (max+0.004).round(5)
           end
           new_array = [new_lower,new_upper]
-          p "generate both side parameter! ==> new array: #{pp new_array}"
-          p "parameters: #{c.parameters}"
+          debug("generate both side parameter! ==> new array: #{pp new_array}")
+          debug("parameters: #{c.parameters}")
 
           if 2 < c.parameters.size
             if c.parameters.find{|v| v<var_min && var_max<v }.nil?
@@ -758,9 +721,8 @@ module Practis
       # var.name
       new_var ={:case => "both side", 
                 :param => {:name => para_name, :paramDefs => new_array}}
-      print " ==> "
-      pp new_var
-      p "end generate both side parameter ====================================="
+      debug("#{pp new_var}")
+      debug("end generate both side parameter =====================================")
       puts
       return new_var,new_area
     end
@@ -770,10 +732,10 @@ module Practis
       new_area = []
       new_inside_area = []
       new_outside_area = []
-      p "generate next search ====================================="
-      p "old area: #{area} --> "
-      p "new_param_list:"
-      pp new_param_list
+      debug("generate next search =====================================")
+      debug("old area: #{area} --> ")
+      debug("new_param_list:")
+      debug("#{pp new_param_list}")
 
       inside_list = []
       outside_list = []
@@ -788,7 +750,7 @@ module Practis
       if !inside_list.empty?
         extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
         new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
-        pp new_inside_area
+        debug("#{pp new_inside_area}")
         if 2 <= inside_list.size
           for i in 1...inside_list.size
             extclm = oa.extend_table(area, inside_list[i][:case], inside_list[i][:param])
@@ -800,14 +762,14 @@ module Practis
           end
         end
         debug("inside new area: #{new_inside_area}")
-        p "inside new area"
-        pp new_inside_area
+        debug("inside new area")
+        debug("#{pp new_inside_area}")
       end
 
       if !outside_list.empty?
         extclm = oa.extend_table(area, outside_list[0][:case], outside_list[0][:param])
         new_outside_area += oa.generate_new_analysis_area(area, outside_list[0], extclm)
-        pp new_outside_area
+        debug("#{pp new_outside_area}")
         if 2 <= outside_list.size
           for i in 1...outside_list.size
             extclm = oa.extend_table(area, outside_list[i][:case], outside_list[i][:param])
@@ -820,16 +782,15 @@ module Practis
           end
         end
         debug("outside new area: #{new_outside_area}")
-        p "outside new area"
-        pp new_outside_area
+        debug("outside new area")
+        debug("#{pp new_outside_area}")
       end
 
       new_area = new_inside_area + new_outside_area
 
       debug("#{new_area}")
-      pp new_area
-      p "end generate next search ====================================="
-      puts
+      debug("#{pp new_area}")
+      debug("end generate next search =====================================")
       return new_area
     end
     # 
@@ -897,14 +858,14 @@ module Practis
           }
           if flag
             nret = @database_connector.update_record(:orthogonal, upld, [:eq, [:field, "id"], id])
-            pp nret
+            debug("#{pp nret}")
           end          
         end
       }
     end
     # 
     def upload_f_test(msg)
-      p "call upload_f_test"
+      debug("call upload_f_test")
       id = msg[:f_test_id].to_i
       if (retval = 
           @database_connector.read_record(:f_test, 
@@ -913,8 +874,8 @@ module Practis
         error("the f-test result already exist. #{retval}")
         return -1
       end
-      p "upload_f_test"
-      pp msg
+      debug("upload_f_test")
+      debug("#{pp msg}")
 
       # msg.each{|f,v| arg_hash[f.to_sym] = v }
       if (retval = @database_connector.insert_record(
