@@ -286,6 +286,20 @@ module Practis
         return count
       end
 
+      # [2013/11/25 H-Matsushima]
+      def read_distinct_record(type, condition = nil)
+        connector = @connectors[type]
+        if !condition.nil?
+          retval = connector.read({type: "rdiscrecord"}, condition){
+            |retq|
+            result = []
+            return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
+          }
+        else
+          return []
+        end
+      end
+
       def register_project(project_name)
         connector = @connectors[:project]
         id = rand(MAX_PROJECT)

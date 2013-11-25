@@ -19,7 +19,7 @@ module Practis
       DATABASE_COMMAND_TYPES = %w(cdatabase ctable cgrant cgrantl cinsert
                                   drecord ddatabase dtable
                                   rrecord rcount rdatabase rinnerjoin rnow
-                                  rmax
+                                  rmax rdiscrecord 
                                   rtable runixtime urecord uglobal)
 
       def initialize(database_schema)
@@ -214,6 +214,9 @@ module Practis
             query << " #{condition_to_sql(database, table, condition)}"
           end
           query << " ;"
+        ## [2013/11/25 H-Matsushima] for unique parameters
+        when "rdiscrecord"
+          query << "SELECT DISTINCT #{condition} FROM #{database}.#{table};"
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"

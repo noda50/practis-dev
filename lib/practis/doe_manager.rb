@@ -38,7 +38,7 @@ module Practis
       CSV.foreach(doe_ini) do |r|
         if r[1] == "is_assigned"
           @assign_list[r[0]] = true
-          @limit_var[r[0]] ={:lim_low => r[2].to_f, :lim_up => r[3].to_f}
+          @limit_var[r[0]] = {:lim_low => r[2].to_f, :lim_high => r[3].to_f, :touch_low => false, :touch_high => false}
         elsif r[1] == "is_unassigned"
           @assign_list[r[0]] = false
         end
@@ -55,10 +55,14 @@ module Practis
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
+
+
+
       msgs = init_orthogonal2db(@paramDefSet.scheduler.scheduler.oa)
       upload_orthogonal_table_db(msgs)
-      new_var ={:case => "inside", 
-                :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
+
+      # new_var ={:case => "inside", 
+      #           :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
       # @paramDefSet.scheduler.scheduler.oa.extend_table([0,1,2,3,4,5,6,7], new_var[:case], new_var[:param])
       
       # update_msgs = cast_msg4orthogonalDB([0,1,2,3,4,5,6,7], @paramDefSet.scheduler.scheduler.oa)
@@ -334,9 +338,7 @@ module Practis
             upload_msg[("gradient_of_#{ef[:name]}").to_sym] = @result_list_queue[0][:weight][ef[:name]][1]
           }
 
-          if upload_f_test(upload_msg) < 0
-            error("error upload f-test results")
-          end
+          error("error upload f-test results") if upload_f_test(upload_msg) < 0
 
           if 0 < significances.size
             @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
@@ -346,9 +348,7 @@ module Practis
                   var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
                 }
                 tmp_var,tmp_area = generate_new_inside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])#result_list[:area])
-                # tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-                # tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
-
+                
                 if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
                   new_param_list.push(tmp_var)
                 elsif !tmp_area.empty?
@@ -361,10 +361,11 @@ module Practis
                 end
               end
             }
+
             priority /= significances.size
             if 0 < new_param_list.size
               # generate new_param_list & extend orthogonal array
-              next_area_list = generate_next_search_area(@result_list_queue[0][:area],
+              next_area_list = generate_next_search_area( @result_list_queue[0][:area],
                                                           @paramDefSet.scheduler.scheduler.oa,
                                                           new_param_list)
               debug("next area list: ")
@@ -388,13 +389,14 @@ module Practis
               break
             end
           }
+
           if bothside_flag
             @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
               var = []
               @result_list_queue[0][:area].each{|r|
                 var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
               }
-              if @limit_var[oc.parameter_name][:lim_low] < var.min && var.max < @limit_var[oc.parameter_name][:lim_up]
+              if @limit_var[oc.parameter_name][:lim_low] < var.min && var.max < @limit_var[oc.parameter_name][:lim_high]
                 tmp_var,tmp_area = generate_new_bothside_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
 
                 if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
@@ -428,6 +430,41 @@ module Practis
               end
             end
             # ===== (end) both_side =======
+          else
+            p "not both side search!"
+            @paramDefSet.scheduler.scheduler.oa.colums.each{|oc|
+              var = []
+              @result_list_queue[0][:area].each{|r|
+                var.push(@paramDefSet.scheduler.scheduler.oa.get_parameter(r, oc.id))
+              }
+              if @limit_var[oc.parameter_name][:touch_low] && !@limit_var[oc.parameter_name][:touch_high]
+                p "generate outside(+) parameter of #{oc.parameter_name}"
+                tmp_var,tmp_area = generate_new_outsidep_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+                if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+                  new_param_list.push(tmp_var)
+                elsif !tmp_area.empty?
+                  # ignored area is added for analysis to next_area_list
+                  debug("== exist area ==")
+                  debug("#{pp tmp_area}")
+                  tmp_area.each{|a_list|
+                    @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+                  }
+                end
+              elsif @limit_var[oc.parameter_name][:touch_high] && !@limit_var[oc.parameter_name][:touch_low]
+                p "generate outside(-) parameter of #{oc.parameter_name}"
+                tmp_var,tmp_area = generate_new_outsidem_parameter(var.uniq!, oc.parameter_name, @result_list_queue[0][:area])
+                if tmp_area.empty? and !tmp_var[:param][:paramDefs].nil?
+                  new_param_list.push(tmp_var)
+                elsif !tmp_area.empty?
+                  # ignored area is added for analysis to next_area_list
+                  debug("== exist area ==")
+                  debug("#{pp tmp_area}")
+                  tmp_area.each{|a_list|
+                    @result_list_queue.push(generate_result_list(a_list, va.get_f_value(oc.parameter_name)))
+                  }
+                end
+              end
+            }
           end
         end
 
@@ -649,12 +686,32 @@ module Practis
           new_upper,new_lower = nil,nil
           if var_min.class == Fixnum
             # new_upper,new_lower = (min-var_diff).to_i, (max+var_diff).to_i
-            new_lower = @limit_var[para_name][:lim_low] > (min-2).to_i ? @limit_var[para_name][:lim_low] : (min-2).to_i
-            new_upper = @limit_var[para_name][:lim_up] < (max+2).to_i ? @limit_var[para_name][:lim_up] : (max+2).to_i
+            if @limit_var[para_name][:lim_low] > (min-2).to_i
+              new_lower = @limit_var[para_name][:lim_low]
+              @limit_var[para_name][:touch_low] = true
+            else
+              new_lower = (min-2).to_i
+            end
+            if @limit_var[para_name][:lim_high] < (max+2).to_i
+              new_upper = @limit_var[para_name][:lim_high]
+              @limit_var[para_name][:touch_high] = true
+            else
+              new_upper = (max+2).to_i
+            end
           elsif var_min.class == Float
             # new_upper,new_lower =(min-var_diff).round(5), (max+var_diff).round(5)
-            new_lower = @limit_var[para_name][:lim_low] > (min-0.004).round(5) ? @limit_var[para_name][:lim_low] : (min-0.004).round(5)
-            new_upper = @limit_var[para_name][:lim_up] < (max+0.004).round(5) ? @limit_var[para_name][:lim_up] : (max+0.004).round(5)
+            if @limit_var[para_name][:lim_low] > (min-0.004).round(5)
+              new_lower = @limit_var[para_name][:lim_low]
+              @limit_var[para_name][:touch_low] = true
+            else
+              new_lower = (min-0.004).round(5)
+            end
+            if @limit_var[para_name][:lim_high] < (max+0.004).round(5)
+              new_upper = @limit_var[para_name][:lim_high]
+              @limit_var[para_name][:touch_high] = true
+            else
+              new_upper = (max+0.004).round(5)
+            end
           end
           new_array = [new_lower,new_upper]
           debug("generate both side parameter! ==> new array: #{pp new_array}")
@@ -749,6 +806,10 @@ module Practis
 
       if !inside_list.empty?
         extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
+        extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
+        exit(0)
+
+
         new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
         debug("#{pp new_inside_area}")
         if 2 <= inside_list.size
@@ -768,6 +829,9 @@ module Practis
 
       if !outside_list.empty?
         extclm = oa.extend_table(area, outside_list[0][:case], outside_list[0][:param])
+        extend_otableDB(area, outside_list[0][:case], outside_list[0][:param])
+        exit(0)
+
         new_outside_area += oa.generate_new_analysis_area(area, outside_list[0], extclm)
         debug("#{pp new_outside_area}")
         if 2 <= outside_list.size
@@ -863,6 +927,86 @@ module Practis
         end
       }
     end
+    #
+    def extend_otableDB(area, add_point_case, parameter)
+      old_level = 0
+      old_digit_num = 0
+      twice = false
+      ext_column = nil
+
+      condition = [:or, [:field, "id"]] + area
+      retval = @database_connector.read_record(:orthogonal, condition)
+      if retval.length == 0
+        error("the no orthogonal array exist.")
+        return -1
+      end
+
+      oldlevel = @database_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
+      old_digit_num = retval[0][parameter[:name]].size#oldlevel / 2
+      
+
+      if old_digit_num < (sqrt(oldlevel+parameter[:paramDefs].size).ceil)
+
+        twice = true
+        upload_msgs = []
+        update_msgs = []
+        retval.each{|ret|
+          upload_msgs.push("1" + ret[parameter[:name]])
+          h = {id: ret["id"]}
+          ret.each{|k,v|
+            k == parameter[:name] ? h[k.to_sym] = "0" + v : h[k.to_sym] = v
+          }
+          update_msgs.push(h)
+        }
+        update_orthogonal_table_db(update_msgs)
+      end
+
+      if twice
+        # upload_orthogonal_table_db(msg)
+      end
+
+      exit(0)
+
+      @colums.each{ |oc|
+        if oc.parameter_name == parameter[:name]
+          ext_column = oc
+          old_level = oc.level        
+          oc.update_level(parameter[:paramDefs].size)
+          old_digit_num = oc.digit_num
+          if oc.equal_digit_num(old_digit_num)
+            oc.padding(old_digit_num, old_level)
+            twice = true
+            copy = []
+            for i in 0...@table[oc.id].size
+              copy.push("1" + @table[oc.id][i])
+              @table[oc.id][i] = "0" + @table[oc.id][i]
+            end
+            @table[oc.id] += copy
+            @l_size *= 2
+          end
+          oc.assign_parameter(old_level, add_point_case, parameter[:paramDefs])
+          break
+        end
+      }
+      if twice
+        @table.each_with_index{|c, i|
+          extend_flag = true
+          @colums.each{|oc| 
+            if oc.id == i && oc.parameter_name == parameter[:name]
+              extend_flag = false
+              break
+            end 
+          }
+          if extend_flag
+            copy = []
+            @table[i].each{ |b| copy.push(b) }
+            @table[i] += copy
+          end
+        }
+      end
+      return ext_column
+    end
+
     # 
     def upload_f_test(msg)
       debug("call upload_f_test")
