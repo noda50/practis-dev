@@ -944,26 +944,33 @@ module Practis
       oldlevel = @database_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
       old_digit_num = retval[0][parameter[:name]].size#oldlevel / 2
       
-
       if old_digit_num < (sqrt(oldlevel+parameter[:paramDefs].size).ceil)
-
-        twice = true
-        upload_msgs = []
         update_msgs = []
+        upload_msgs = []
+
         retval.each{|ret|
-          upload_msgs.push("1" + ret[parameter[:name]])
-          h = {id: ret["id"]}
+          upd_h = {id: ret["id"]}
+          upl_h = {id: ret["id"] + retval.length} # ??? abunai kamo
           ret.each{|k,v|
-            k == parameter[:name] ? h[k.to_sym] = "0" + v : h[k.to_sym] = v
+            if k != "id"
+              if k == parameter[:name] 
+                upd_h[k.to_sym] = "0" + v
+                upl_h[k.to_sym] = "1" + v
+              else
+                upd_h[k.to_sym] = v
+                upl_h[k.to_sym] = v
+              end
+            end
           }
-          update_msgs.push(h)
+          update_msgs.push(upd_h)
+          upload_msgs.push(upl_h)
         }
+
         update_orthogonal_table_db(update_msgs)
+        upload_orthogonal_table_db(upload_msgs)
       end
 
-      if twice
-        # upload_orthogonal_table_db(msg)
-      end
+      # koko ha tanjun ni waritukeru dake
 
       exit(0)
 
