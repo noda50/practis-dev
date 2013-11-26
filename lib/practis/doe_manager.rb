@@ -20,6 +20,7 @@ require 'practis/result_parser'
 
 
 require 'doe/orthogonal_array'
+require 'doe/orthogonal_table'
 require 'doe/variance_analysis'
 require 'doe/f_distribution_table'
 require 'doe/regression'
@@ -28,6 +29,7 @@ module Practis
 
   class DoeManager < Practis::Manager
     include Regression
+    include OrthogonalTable
 
     attr_reader :va_queue
     attr_reader :current_var_set
@@ -44,27 +46,35 @@ module Practis
         end
       end
       super(config_file, parameter_file, database_file, result_file, myaddr, @assign_list)
-      @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
-      @paramDefSet.scheduler.scheduler.init_doe(@assign_list)
-      @total_parameters = @paramDefSet.get_total     
+
+
+      otable = generation_orthogonal_table(@paramDefSet.paramDefs)
+      @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DOEScheduler")
+      @scheduler = @paramDefSet.scheduler.scheduler
+      @scheduler.init_doe(@database_connector, otable, @assign_list)
       
-      # [2013/09/13 H-Matsushima]
+      @total_parameters = @paramDefSet.get_total
+
       @mutexAnalysis = Mutex.new
       @result_list_queue = []
-      @result_list_queue.push(generate_result_list(@paramDefSet.scheduler.scheduler.oa.analysis_area[0]))
+      # @result_list_queue.push(generate_result_list(@paramDefSet.scheduler.scheduler.oa.analysis_area[0]))
+      @result_list_queue.push([0,1,2,3])
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
 
-
-
-      msgs = init_orthogonal2db(@paramDefSet.scheduler.scheduler.oa)
-      upload_orthogonal_table_db(msgs)
-
+      # @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DesginOfExperimentScheduler")
+      # @paramDefSet.scheduler.scheduler.init_doe(@assign_list)
+      # @total_parameters = @paramDefSet.get_total
+      
+      
       # new_var ={:case => "inside", 
       #           :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
-      # @paramDefSet.scheduler.scheduler.oa.extend_table([0,1,2,3,4,5,6,7], new_var[:case], new_var[:param])
-      
+      # @scheduler.extend_otableDB([0,1,2,3], new_var[:case], new_var[:param])
+
+
+      # msgs = init_orthogonal2db(@paramDefSet.scheduler.scheduler.oa)
+      # upload_orthogonal_table_db(msgs)      
       # update_msgs = cast_msg4orthogonalDB([0,1,2,3,4,5,6,7], @paramDefSet.scheduler.scheduler.oa)
       # update_orthogonal_table_db(update_msgs)
       # msgs = cast_msg4orthogonalDB([8,9,10,11,12,13,14,15], @paramDefSet.scheduler.scheduler.oa)
@@ -185,7 +195,7 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                already_id = @paramDefSet.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
+                # already_id = @paramDefSet.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
                 paramValueSet.state = r["state"]
                 @paramValueSet_pool.push(paramValueSet)
                 # [2013/09/20]
@@ -807,14 +817,14 @@ module Practis
       if !inside_list.empty?
         extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
         extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
-        exit(0)
-
+        # exit(0)
 
         new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
         debug("#{pp new_inside_area}")
         if 2 <= inside_list.size
           for i in 1...inside_list.size
             extclm = oa.extend_table(area, inside_list[i][:case], inside_list[i][:param])
+            extend_otableDB(area, inside_list[i][:case], inside_list[i][:param])
             tmp_area = []
             new_inside_area.each { |na|
               tmp_area += oa.generate_new_analysis_area(na, inside_list[i], extclm)
@@ -830,13 +840,14 @@ module Practis
       if !outside_list.empty?
         extclm = oa.extend_table(area, outside_list[0][:case], outside_list[0][:param])
         extend_otableDB(area, outside_list[0][:case], outside_list[0][:param])
-        exit(0)
+        # exit(0)
 
         new_outside_area += oa.generate_new_analysis_area(area, outside_list[0], extclm)
         debug("#{pp new_outside_area}")
         if 2 <= outside_list.size
           for i in 1...outside_list.size
             extclm = oa.extend_table(area, outside_list[i][:case], outside_list[i][:param])
+            extend_otableDB(area, outside_list[i][:case], outside_list[i][:param])
             tmp_area = []
             new_outside_area.each { |na|
               tmp_area += oa.generate_new_analysis_area(na, outside_list[i], extclm)
@@ -970,48 +981,7 @@ module Practis
         upload_orthogonal_table_db(upload_msgs)
       end
 
-      # koko ha tanjun ni waritukeru dake
-
-      exit(0)
-
-      @colums.each{ |oc|
-        if oc.parameter_name == parameter[:name]
-          ext_column = oc
-          old_level = oc.level        
-          oc.update_level(parameter[:paramDefs].size)
-          old_digit_num = oc.digit_num
-          if oc.equal_digit_num(old_digit_num)
-            oc.padding(old_digit_num, old_level)
-            twice = true
-            copy = []
-            for i in 0...@table[oc.id].size
-              copy.push("1" + @table[oc.id][i])
-              @table[oc.id][i] = "0" + @table[oc.id][i]
-            end
-            @table[oc.id] += copy
-            @l_size *= 2
-          end
-          oc.assign_parameter(old_level, add_point_case, parameter[:paramDefs])
-          break
-        end
-      }
-      if twice
-        @table.each_with_index{|c, i|
-          extend_flag = true
-          @colums.each{|oc| 
-            if oc.id == i && oc.parameter_name == parameter[:name]
-              extend_flag = false
-              break
-            end 
-          }
-          if extend_flag
-            copy = []
-            @table[i].each{ |b| copy.push(b) }
-            @table[i] += copy
-          end
-        }
-      end
-      return ext_column
+      return parameter
     end
 
     # 

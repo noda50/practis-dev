@@ -11,7 +11,7 @@
     <config name="execution_name" type="String">dilemma_game</config>
 
     <!-- Specify debug level from FATAL, ERROR, WARN, INFO and DEBUG -->
-    <config name="debug_level" type="String">WARN</config>
+    <config name="debug_level" type="String">DEBUg</config>
 
     <!-- Logger output option -->
     <config name="debug_output" type="String">STDERR</config>

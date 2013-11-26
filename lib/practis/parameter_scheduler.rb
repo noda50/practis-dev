@@ -4,6 +4,7 @@
 require 'practis'
 require 'practis/parameter'
 require 'doe/orthogonal_array'
+require 'doe/orthogonal_table'
 require 'csv'
 require 'pp'
 
@@ -226,6 +227,7 @@ module Practis
         @unassigned = []
         @total_indexes = []
         @unassigned_total = []
+
         @paramDefList.each{|paramDef|
           chk_arg(Practis::ParamDef, paramDef)
           @total_indexes.push(paramDef.length)
@@ -237,10 +239,7 @@ module Practis
           end
         }
         
-        # @total_number = 1
-        # @total_indexes.collect {|t| @total_number *= t}
         @allocated_numbers = []
-        # @available_numbers = @total_number.times.map { |i| i }
         @unassigned_total_size = 1
         @unassigned_total.collect{|t| @unassigned_total_size *= t}
 
@@ -307,7 +306,7 @@ module Practis
         return @oa.table[0].size*@unassigned_total_size
       end
 
-      #
+      
       def already_allocation(already_id=nil, new_id=nil)
         if already_id.nil? || new_id.nil?
           error("error id is empty:")
@@ -376,6 +375,232 @@ module Practis
             indexes.push(0)
           else
             # p "name: #{@paramDefList[i].name}, divider: #{divider}, i: #{i}"
+            divider = (divider / n).to_i
+            l = (k / divider).to_i
+            k -= l * divider
+            indexes.push(l)  
+          end
+        }
+        return indexes
+      end
+    end
+
+    # 
+    class DOEScheduler
+      include Practis
+      include Math
+
+      attr_reader :current_indexes
+      attr_reader :total_indexes
+      attr_reader :paramDefList
+
+      #
+      def initialize(paramDefs)
+        @paramDefList = chk_arg(Array, paramDefs)
+      end
+      # 
+      def init_doe(sql_connector, table, assign_list)
+        @sql_connector = sql_connector
+        @assign_list = assign_list
+        @id_list = table[0].size.times.map{|a| a}
+
+        @parameters = {}
+        @total_indexes = []
+        @unassigned = []
+        @unassigned_total = []
+        @allocated_num = 0
+
+        # parameter assign to table
+        @paramDefList.each_with_index{|paramDef, i|
+          chk_arg(Practis::ParamDef, paramDef)
+          @total_indexes.push(paramDef.length)
+          if @assign_list[paramDef.name]
+            @parameters[paramDef.name] = {column_id: i, correspond: {}, paramDefs: paramDef.values.sort}
+            # parameters.push({ :name => paramDef.name, :paramDefs => paramDef.values})
+          else
+            @unassigned.push({ :name => paramDef.name, :paramDefs => paramDef.values})
+            @unassigned_total.push(paramDef.length)
+          end
+        }
+        @parameters.each{|name, param|
+          arr = table[param[:column_id]].uniq
+          arr.each_with_index{|bit, i|
+            param[:correspond][bit] = param[:paramDefs][i]
+          }
+        }
+        upload_initial_orthogonal_db(table)
+
+        @unassigned_total_size = 1
+        @unassigned_total.collect{|t| @unassigned_total_size *= t}
+        @total_number = get_total   
+        @available_numbers = get_total.times.map { |i| i }
+      end
+      
+      #
+      def get_paramValues(id=nil)
+        if @available_numbers.length <= 0
+          debug("no available parameter, \n" +
+                "total index num: #{@total_indexes.length}, \n" +
+                "total indexes: #{@total_indexes}, \n" +
+                "available: #{@available_numbers.length}, \n" +
+                "allocated: #{@allocated_num} \n")
+          return nil
+        end
+
+        v = @available_numbers.shift
+        v_index = v / @unassigned_total_size
+        @allocated_num += 1
+        not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
+        parameter_array = []
+
+        pp ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], @id_list[v_index]])
+        
+        ret.each{|r| 
+          r.delete("id")
+          r.delete("run")
+
+          @paramDefList.size.times{ |i|
+            unassign_flag = true
+            r.each{ |k, v|
+              if @paramDefList[i].name == k
+                parameter_array.push(@parameters[k][:correspond][v])
+                unassign_flag = false
+                break
+              end
+            }
+            if unassign_flag
+              parameter_array.push(@paramDefList[i].get_n(not_allocate_indexes[i]))
+            end
+          }
+        }
+        return parameter_array
+      end
+
+      def get_available
+        @available_numbers.length
+      end
+
+      # 
+      def get_total
+        @id_list.size * @unassigned_total_size
+      end
+
+      def next_area(area_list)
+        
+      end
+
+      #
+      def extend_otableDB(area, add_point_case, parameter)
+        old_level = 0
+        old_digit_num = 0
+        twice = false
+        ext_column = nil
+
+        condition = [:or, [:field, "id"]] + area
+        retval = @sql_connector.read_record(:orthogonal, condition)
+        if retval.length == 0
+          error("the no orthogonal array exist.")
+          return -1
+        end
+
+        oldlevel = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
+        old_digit_num = retval[0][parameter[:name]].size#oldlevel / 2
+        
+        if old_digit_num < (sqrt(oldlevel+parameter[:paramDefs].size).ceil)
+          update_msgs = []
+          upload_msgs = []
+
+          retval.each{|ret|
+            upd_h = {id: ret["id"]}
+            upl_h = {id: ret["id"] + retval.length} # ??? abunai kamo
+            ret.each{|k,v|
+              if k != "id"
+                if k == parameter[:name] 
+                  upd_h[k.to_sym] = "0" + v
+                  upl_h[k.to_sym] = "1" + v
+                else
+                  upd_h[k.to_sym] = v
+                  upl_h[k.to_sym] = v
+                end
+              end
+            }
+            update_msgs.push(upd_h)
+            upload_msgs.push(upl_h)
+          }
+
+          update_orthogonal_table_db(update_msgs)
+          upload_orthogonal_table_db(upload_msgs)
+        end
+
+        return parameter
+      end
+
+      private
+      def upload_initial_orthogonal_db(table=nil)
+        error("uploading data for MySQL is empty") if table.nil?
+        
+        msgs = []
+        (0...table[0].size).each{|row|
+          msg = {:id => row, :run => 0}
+          @parameters.each{|name, param|
+            msg[name.to_sym] = table[param[:column_id]][row]
+          }
+          msgs.push(msg)
+        }
+        upload_orthogonal_table_db(msgs)
+      end
+      # upload additional tables
+      def upload_orthogonal_table_db(msgs=nil)
+        error("uploading data for MySQL is empty") if msgs.nil?
+        
+        msgs.each{|msg|
+          id = msg[:id].to_i
+          if (retval =  
+              @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length == 0
+            if (retval = @sql_connector.insert_record(
+              :orthogonal, msg).length != 0)
+              error("fail to insert new orthogonal table. #{retval}")
+              return -2
+            end
+          end  
+        }
+        
+        return 0
+      end
+      # update exisiting table
+      def update_orthogonal_table_db(msgs=nil)
+        msgs.each{|msg|
+          id = msg[:id].to_i
+          
+          if (retval = 
+              @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length != 0
+            # update
+            flag = false
+            upld = {}
+            retval.each{|ret|
+              ret.each{|k, v|    
+                if msg[k.to_sym] != v
+                  upld[k.to_sym] = msg[k.to_sym]
+                  flag = true
+                end
+              }
+            }
+            if flag
+              nret = @sql_connector.update_record(:orthogonal, upld, [:eq, [:field, "id"], id])
+              debug("#{pp nret}")
+            end          
+          end
+        }
+      end
+      #
+      def unassigned_value_to_indexes(v)
+        indexes = []
+        k = v
+        divider = @unassigned_total_size
+        @total_indexes.each_with_index{ |n, i|
+          if @assign_list[@paramDefList[i].name]
+            indexes.push(0)
+          else
             divider = (divider / n).to_i
             l = (k / divider).to_i
             k -= l * divider
