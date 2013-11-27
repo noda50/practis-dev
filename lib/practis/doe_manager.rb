@@ -58,7 +58,17 @@ module Practis
       @mutexAnalysis = Mutex.new
       @result_list_queue = []
       # @result_list_queue.push(generate_result_list(@paramDefSet.scheduler.scheduler.oa.analysis_area[0]))
-      @result_list_queue.push([0,1,2,3])
+      # result_list = { :area => [0,1,2,3], :id => {}, :results => {}, :weight => {}, 
+      #                 :priority => 0, :lerp => false}
+      # result_list[:area].each{|a|
+      #   result_list[:id][a] = []
+      #   result_list[:results][a] = []
+      # }
+      # @assign_list.each{|k,v|
+      #   result_list[:weight] = {} if v==true
+      # }                      
+      # @result_list_queue.push(result_list)
+      @result_list_queue.push(generate_result_list([0,1,2,3]))
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
@@ -871,27 +881,29 @@ module Practis
     # 
     def generate_result_list(area, priority=0)
       result_list = { :area => area, :id => {}, :results => {}, :weight => {}, 
-                      :priority => priority, :lerp => false}
-      oa = @paramDefSet.scheduler.scheduler.oa
+                      :priority => priority} #, :lerp => false}
+      # oa = @paramDefSet.scheduler.scheduler.oa
       result_list[:area].each{|a|
         result_list[:id][a] = []
         result_list[:results][a] = []
       }
       @assign_list.each{|k,v|
-        if v then result_list[:weight] = {} end
+        result_list[:weight] = {} if v==true
       }
       
-      oa.colums.each{|col|
-        has_max,has_min = false,false
-        result_list[:area].each{|a|
-          if col.parameters.max == oa.get_parameter(a, col.id)
-            has_max = true
-          elsif col.parameters.min == oa.get_parameter(a, col.id)
-            has_min = true
-          end
-        }
-        if has_min && has_max then result_list[:lerp] = true end
-      }
+      # oa.colums.each{|col|
+      #   has_max,has_min = false,false
+      #   result_list[:area].each{|a|
+      #     if col.parameters.max == oa.get_parameter(a, col.id)
+      #       has_max = true
+      #     elsif col.parameters.min == oa.get_parameter(a, col.id)
+      #       has_min = true
+      #     end
+      #   }
+      #   if has_min && has_max then result_list[:lerp] = true end
+      # }
+
+
       return result_list
     end
 

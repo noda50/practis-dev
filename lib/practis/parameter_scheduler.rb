@@ -306,6 +306,9 @@ module Practis
         return @oa.table[0].size*@unassigned_total_size
       end
 
+      def get_v_index
+        return @v_index
+      end
       
       def already_allocation(already_id=nil, new_id=nil)
         if already_id.nil? || new_id.nil?
@@ -323,10 +326,6 @@ module Practis
           }
           if flag then break end
         }
-      end
-
-      def get_v_index
-        return @v_index
       end
 
       # 
@@ -410,6 +409,8 @@ module Practis
         @unassigned_total = []
         @allocated_num = 0
 
+        @v_index = nil
+
         # parameter assign to table
         @paramDefList.each_with_index{|paramDef, i|
           chk_arg(Practis::ParamDef, paramDef)
@@ -448,12 +449,12 @@ module Practis
         end
 
         v = @available_numbers.shift
-        v_index = v / @unassigned_total_size
+        @v_index = v / @unassigned_total_size
         @allocated_num += 1
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
 
-        pp ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], @id_list[v_index]])
+        ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], @id_list[@v_index]])
         
         ret.each{|r| 
           r.delete("id")
@@ -483,6 +484,10 @@ module Practis
       # 
       def get_total
         @id_list.size * @unassigned_total_size
+      end
+
+      def get_v_index
+        return @v_index
       end
 
       def next_area(area_list)
