@@ -401,7 +401,9 @@ module Practis
       def init_doe(sql_connector, table, assign_list)
         @sql_connector = sql_connector
         @assign_list = assign_list
-        @id_list = table[0].size.times.map{|a| a}
+        @id_list_queue = []
+        @current_qcounter = 0
+        @id_list_queue.push(table[0].size.times.map{|a| a})
 
         @parameters = {}
         @total_indexes = []
@@ -445,7 +447,7 @@ module Practis
                 "total indexes: #{@total_indexes}, \n" +
                 "available: #{@available_numbers.length}, \n" +
                 "allocated: #{@allocated_num} \n")
-          return nil
+          return nil if !set_next_list
         end
 
         v = @available_numbers.shift
@@ -454,7 +456,7 @@ module Practis
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
 
-        ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], @id_list[@v_index]])
+        ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], @id_list_queue[@current_qcounter][@v_index])
         
         ret.each{|r| 
           r.delete("id")
@@ -478,21 +480,24 @@ module Practis
       end
 
       def get_available
+        if @available_numbers.length <= 0
+          # variance analysis
+
+        end
+
         @available_numbers.length
       end
 
       # 
       def get_total
-        @id_list.size * @unassigned_total_size
+        @id_list_queue[@current_qcounter].size * @unassigned_total_size
       end
 
       def get_v_index
         return @v_index
       end
 
-      def next_area(area_list)
-        
-      end
+      
 
       #
       def extend_otableDB(area, add_point_case, parameter)
@@ -541,6 +546,17 @@ module Practis
       end
 
       private
+      # 
+      def set_next_list
+        if @current_qcounter + 1 < @id_list_queue.size
+          @current_qcounter += 1
+          @available_numbers = get_total.times.map { |i| i }
+          return true
+        else
+          return false
+        end
+      end
+      #
       def upload_initial_orthogonal_db(table=nil)
         error("uploading data for MySQL is empty") if table.nil?
         
