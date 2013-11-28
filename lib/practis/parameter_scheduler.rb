@@ -525,7 +525,7 @@ module Practis
             orthogonal_rows.push(ret) if ret.length > 0
           }
           
-          generate_inside(orthogonal_rows, @parameters["Noise"])
+          generate_inside(orthogonal_rows, @parameters, name)
 exit(0)
           # extend_otableDB
           # parameter set store to queue 

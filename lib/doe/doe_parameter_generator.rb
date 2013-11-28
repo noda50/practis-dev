@@ -3,22 +3,46 @@ require 'pp'
 
 #
 module DOEParameterGenerator
+  include Math
 
-  def generate_inside(orthogonal_rows, parameter)
+  def generate_inside(orthogonal_rows, parameter, name)
     created = []
 
     pp orthogonal_rows
     pp parameter
 
-    param_min = parameter[:paramDefs].min
-    param_max = parameter[:paramDefs].max
+    param_min = parameter[name][:paramDefs].min
+    param_max = parameter[name][:paramDefs].max
     min=nil
     max=nil
     exist_area = []
     new_area = []
     new_array = nil
 
+    var_diff = cast_decimal((param_max - param_min).abs / 3.0)
+    if param_min.class == Fixnum
+      new_array = [param_min + var_diff.to_i, param_max - var_diff.to_i]
+    elsif param_min.class == Float
+      new_array = [(param_min + var_diff).round(5), (param_max - var_diff).round(6)]
+    end
+
+    if 2 < parameter[name][:paramDefs].size
+      if parameter[name][:paramDefs].find{|v| var_min<v && v<var_max}.nil?
+      else
+        if parameter[name][:paramDefs].include?(new_array[0])&&parameter[name][:paramDefs].include?(new_array[1])
+          min_bit = parameter[name][:correspond].key(new_array.min)
+          max_bit = parameter[name][:correspond].key(new_array.max)
+        else
+          min = parameter[name][:paramDefs].min_by{|v| v > var_min ? v : parameter[name][:paramDefs].max}
+          max = parameter[name][:paramDefs].max_by{|v| v < var_max ? v : parameter[name][:paramDefs].min}
+          min_bit = parameter[name][:correspond].key(min)
+          max_bit = parameter[name][:correspond].key(max)
+        end
+      end
+    end
+
     orthogonal_rows.each{|row|
+      row[name]
     }
 
     return 1
