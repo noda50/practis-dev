@@ -5,6 +5,8 @@ require 'practis'
 require 'practis/parameter'
 require 'doe/orthogonal_array'
 require 'doe/orthogonal_table'
+require 'doe/f_test'
+require 'doe/doe_parameter_generator'
 require 'csv'
 require 'pp'
 
@@ -387,6 +389,7 @@ module Practis
     # 
     class DOEScheduler
       include Practis
+      include DOEParameterGenerator
       include Math
 
       attr_reader :current_indexes
@@ -396,14 +399,24 @@ module Practis
       #
       def initialize(paramDefs)
         @paramDefList = chk_arg(Array, paramDefs)
+        @f_test=FTest.new
       end
+
       # 
       def init_doe(sql_connector, table, assign_list)
         @sql_connector = sql_connector
         @assign_list = assign_list
         @id_list_queue = []
         @current_qcounter = 0
-        @id_list_queue.push(table[0].size.times.map{|a| a})
+        
+
+        h = {:or_ids => []}
+        table[0].size.times.each{|r| 
+          h[:or_ids].push(r)
+          h[r] = []
+        }
+        @id_list_queue.push(h)
+
 
         @parameters = {}
         @total_indexes = []
@@ -436,7 +449,7 @@ module Practis
         @unassigned_total_size = 1
         @unassigned_total.collect{|t| @unassigned_total_size *= t}
         @total_number = get_total   
-        @available_numbers = get_total.times.map { |i| i }
+        @available_numbers = get_total.times.map { |i| i } 
       end
       
       #
@@ -456,7 +469,10 @@ module Practis
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
 
-        ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], @id_list_queue[@current_qcounter][@v_index])
+        id_index = @id_list_queue[@current_qcounter][:or_ids][@v_index]
+        @id_list_queue[@current_qcounter][id_index].push(id)
+        ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id_index])
+
         
         ret.each{|r| 
           r.delete("id")
@@ -479,9 +495,40 @@ module Practis
         return parameter_array
       end
 
+      # 
       def get_available
         if @available_numbers.length <= 0
+          result_set = []
+          count = 0
+          parameter_keys = []
+          @assign_list.each { |k,v| parameter_keys.push(k) if v }
+          @id_list_queue[0][:or_ids].each{|oid|
+            condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
+            pp retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
+                                                base_field: :result_id, ref_field: :parameter_id,
+                                                condition: condition})
+            if retval.length >= 0
+              count += retval.length
+              result_set.push(retval)
+            end
+          }
+
+          return 1 if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+
           # variance analysis
+          @f_test.run(result_set, parameter_keys)
+
+          # parameter set generation
+          orthogonal_rows = []
+          @id_list_queue[@current_qcounter][:or_ids].each{|id|
+            ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id])
+            orthogonal_rows.push(ret) if ret.length > 0
+          }
+          
+          generate_inside(orthogonal_rows, @parameters["Noise"])
+exit(0)
+          # extend_otableDB
+          # parameter set store to queue 
 
         end
 
@@ -490,14 +537,15 @@ module Practis
 
       # 
       def get_total
-        @id_list_queue[@current_qcounter].size * @unassigned_total_size
+        @id_list_queue[@current_qcounter][:or_ids].size * @unassigned_total_size
       end
 
       def get_v_index
         return @v_index
       end
+            
 
-      
+      private
 
       #
       def extend_otableDB(area, add_point_case, parameter)
@@ -506,7 +554,7 @@ module Practis
         twice = false
         ext_column = nil
 
-        condition = [:or, [:field, "id"]] + area
+        condition = [:or] + area.map{|i| [:eq, [:field, "id"], i]}
         retval = @sql_connector.read_record(:orthogonal, condition)
         if retval.length == 0
           error("the no orthogonal array exist.")
@@ -545,8 +593,7 @@ module Practis
         return parameter
       end
 
-      private
-      # 
+      # set next list of parameter combinations set 
       def set_next_list
         if @current_qcounter + 1 < @id_list_queue.size
           @current_qcounter += 1
@@ -556,7 +603,8 @@ module Practis
           return false
         end
       end
-      #
+
+      # upload initial table
       def upload_initial_orthogonal_db(table=nil)
         error("uploading data for MySQL is empty") if table.nil?
         
@@ -570,6 +618,7 @@ module Practis
         }
         upload_orthogonal_table_db(msgs)
       end
+
       # upload additional tables
       def upload_orthogonal_table_db(msgs=nil)
         error("uploading data for MySQL is empty") if msgs.nil?
@@ -588,6 +637,7 @@ module Practis
         
         return 0
       end
+
       # update exisiting table
       def update_orthogonal_table_db(msgs=nil)
         msgs.each{|msg|
@@ -613,6 +663,7 @@ module Practis
           end
         }
       end
+
       #
       def unassigned_value_to_indexes(v)
         indexes = []

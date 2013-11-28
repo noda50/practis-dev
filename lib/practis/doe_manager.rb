@@ -57,17 +57,6 @@ module Practis
 
       @mutexAnalysis = Mutex.new
       @result_list_queue = []
-      # @result_list_queue.push(generate_result_list(@paramDefSet.scheduler.scheduler.oa.analysis_area[0]))
-      # result_list = { :area => [0,1,2,3], :id => {}, :results => {}, :weight => {}, 
-      #                 :priority => 0, :lerp => false}
-      # result_list[:area].each{|a|
-      #   result_list[:id][a] = []
-      #   result_list[:results][a] = []
-      # }
-      # @assign_list.each{|k,v|
-      #   result_list[:weight] = {} if v==true
-      # }                      
-      # @result_list_queue.push(result_list)
       @result_list_queue.push(generate_result_list([0,1,2,3]))
       @alloc_counter = 0
       @to_be_varriance_analysis = true
@@ -82,14 +71,6 @@ module Practis
       #           :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
       # @scheduler.extend_otableDB([0,1,2,3], new_var[:case], new_var[:param])
 
-
-      # msgs = init_orthogonal2db(@paramDefSet.scheduler.scheduler.oa)
-      # upload_orthogonal_table_db(msgs)      
-      # update_msgs = cast_msg4orthogonalDB([0,1,2,3,4,5,6,7], @paramDefSet.scheduler.scheduler.oa)
-      # update_orthogonal_table_db(update_msgs)
-      # msgs = cast_msg4orthogonalDB([8,9,10,11,12,13,14,15], @paramDefSet.scheduler.scheduler.oa)
-      # upload_orthogonal_table_db(msgs)
-      # exit(0)
     end
 
     ## === methods of manager.rb ===
@@ -158,10 +139,14 @@ module Practis
               debug("id_queue flag: #{@to_be_varriance_analysis}")
               debug("execution queue length: #{@result_list_queue.size}")
               #[2013/09/20]
-              if @alloc_counter < (@result_list_queue.size - 1)
-                @alloc_counter += 1
-                @paramDefSet.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
-              end
+              ## [2013/11/28] >>
+
+              # if @alloc_counter < (@result_list_queue.size - 1)
+              #   @alloc_counter += 1
+              #   @paramDefSet.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
+              # end
+              
+              ## << [2013/11/28]
               # ========
               break
             end

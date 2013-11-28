@@ -9,6 +9,7 @@ require 'optparse'
 require 'practis'
 require 'practis/manager'
 require 'practis/doe_manager'
+require 'practis/test_manager'
 
 
 # Allow access control of cross domain.
@@ -91,7 +92,7 @@ if result_file.nil?
   end
 end
 
-$manager = Practis::DoeManager.new(config_file, parameter_file, database_file,
+$manager = Practis::TestManager.new(config_file, parameter_file, database_file,
                                 result_file, doe_ini, addr)
 manager_thread = Thread.new do
   $manager.loop
