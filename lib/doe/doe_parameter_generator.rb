@@ -10,6 +10,17 @@ module DOEParameterGenerator
     pp orthogonal_rows
     pp parameter
 
+    param_min = parameter[:paramDefs].min
+    param_max = parameter[:paramDefs].max
+    min=nil
+    max=nil
+    exist_area = []
+    new_area = []
+    new_array = nil
+
+    orthogonal_rows.each{|row|
+    }
+
     return 1
   end
 
