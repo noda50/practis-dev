@@ -51,7 +51,7 @@ class FTest
     effFacts.each do |ef|
       @e_f -= ef[:free]
     end
-    p @s_e,@e_f
+    
     @e_v = @s_e / @e_f
     effFacts.each do |fact|
       fact[:f_value] = fact[:effect] / @e_v

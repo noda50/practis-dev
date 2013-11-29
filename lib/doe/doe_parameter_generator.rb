@@ -7,14 +7,11 @@ module DOEParameterGenerator
 
   
   # search only "Inside" significant parameter
-  def generate_inside(orthogonal_rows, parameter, name)
+  def generate_inside(orthogonal_rows, parameters, name)
     created = []
 
-    pp orthogonal_rows
-    pp parameter
-
-    param_min = parameter[name][:paramDefs].min
-    param_max = parameter[name][:paramDefs].max
+    param_min = parameters[name][:paramDefs].min
+    param_max = parameters[name][:paramDefs].max
     min=nil
     max=nil
     exist_area = []
@@ -28,23 +25,23 @@ module DOEParameterGenerator
       new_array = [(param_min + var_diff).round(5), (param_max - var_diff).round(6)]
     end
 
-    if 2 < parameter[name][:paramDefs].size
-      if parameter[name][:paramDefs].find{|v| var_min<v && v<var_max}.nil?
+    if 2 < parameters[name][:paramDefs].size
+      if parameters[name][:paramDefs].find{|v| var_min<v && v<var_max}.nil?
       else
-        if parameter[name][:paramDefs].include?(new_array[0])&&parameter[name][:paramDefs].include?(new_array[1])
-          min_bit = parameter[name][:correspond].key(new_array.min)
-          max_bit = parameter[name][:correspond].key(new_array.max)
+        if parameters[name][:paramDefs].include?(new_array[0])&&parameters[name][:paramDefs].include?(new_array[1])
+          min_bit = parameters[name][:correspond].key(new_array.min)
+          max_bit = parameters[name][:correspond].key(new_array.max)
         else
-          min = parameter[name][:paramDefs].min_by{|v| v > var_min ? v : parameter[name][:paramDefs].max}
-          max = parameter[name][:paramDefs].max_by{|v| v < var_max ? v : parameter[name][:paramDefs].min}
-          min_bit = parameter[name][:correspond].key(min)
-          max_bit = parameter[name][:correspond].key(max)
+          min = parameters[name][:paramDefs].min_by{|v| v > var_min ? v : parameters[name][:paramDefs].max}
+          max = parameters[name][:paramDefs].max_by{|v| v < var_max ? v : parameters[name][:paramDefs].min}
+          min_bit = parameters[name][:correspond].key(min)
+          max_bit = parameters[name][:correspond].key(max)
         end
       end
     end
 
     ### check exist area
-    #parameter[name][:correspond].has
+    #parameters[name][:correspond].has
     # oa.table[c.id].each_with_index{|b, i|
     #   if  b == min_bit || b == max_bit
     #     area.each{|row|

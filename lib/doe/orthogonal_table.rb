@@ -53,33 +53,33 @@ module OrthogonalTable
 	end
 
   # 
-	def generate_area(old_rows, new_param, parameter)
+	def generate_area(sql_connector, old_rows, new_param, parameter)
 		new_rows = []
     add_point_case = new_param[:case]
-    new_bit =[]
+    new_bits =[]
     id=nil
-    pp parameter
-exit(0)
 
+    pp new_param
+    pp parameter
+    pp old_rows
+
+    condition = [:or]
     new_param[:param][:paramDefs].each{|v|
-      new_bit.push(c.get_bit_string(v))
+      bit = parameter[:correspond].key(v)
+      new_bits.push(bit)
+      condition.push([:eq, [:field, new_param[:param][:name]], bit])
     }
 
-    # @colums.each{|c|
-    #   if c.parameter_name == new_param[:param][:name]
-    #     id = c.id
-    #     new_param[:param][:paramDefs].each{|v|
-    #       new_bit.push(c.get_bit_string(v))
-    #     }
-    #     break
-    #   end
-    # }
+    pp new_bits
 
-    # p "new bit: #{new_param[:param][:name]}"
-    # pp new_bit
+    # scalability problem (load on memory)
+    pp new_rows = sql_connector.read_record(:orthogonal, condition)
+
+    # pp new_rows = matching_row.map{|row| row["id"] }
+    
 
     # @table[id].each_with_index{|v, i|
-    #   new_bit.each{|b|
+    #   new_bits.each{|b|
     #     if b == v
     #       # compare get_row(old_rows) with get_row(i)
     #       old_rows.each{|r|
@@ -87,9 +87,7 @@ exit(0)
     #         row_r = get_row(r)
     #         row_i.delete_at(id)
     #         row_r.delete_at(id)
-    #         # if (row_i - row_r).size == 0
-    #         #   new_rows.push(i)
-    #         # end
+    #
     #         equal_flag = true
     #         row_i.size.times{|t|
     #           if row_i[t] != row_r[t]
@@ -102,37 +100,38 @@ exit(0)
     #     end
     #   }
     # }
-
-    new_rows.uniq!
-
+    #
+    # new_rows.uniq!
+    
+exit(0)
     old_lower_value_rows = []
     old_upper_value_rows = []
     old_lower_value = nil
     old_upper_value = nil
     old_rows.each{ |row|
       if old_lower_value.nil? # old lower parameter
-        old_lower_value_rows.push(row)
-        old_lower_value = parameter.corresponds[@table[parameter.id][row]]
+        old_lower_value_rows.push(row["id"])
+        old_lower_value = parameter[:correspond][row["id"]]
       else
-        if parameter.corresponds[@table[parameter.id][row]] < old_lower_value
+        if parameter[:correspond][row["id"]] < old_lower_value
           old_lower_value_rows.clear
-          old_lower_value_rows.push(row)
-          old_lower_value = parameter.corresponds[@table[parameter.id][row]]
-        elsif parameter.corresponds[@table[parameter.id][row]] == old_lower_value
-          old_lower_value_rows.push(row)
+          old_lower_value_rows.push(row["id"])
+          old_lower_value = parameter[:correspond][row["id"]]
+        elsif parameter[:correspond][row["id"]] == old_lower_value
+          old_lower_value_rows.push(row["id"])
         end
       end
       
       if old_upper_value.nil? # old upper parameter
-        old_upper_value_rows.push(row)
-        old_upper_value = parameter.corresponds[@table[parameter.id][row]]
+        old_upper_value_rows.push(row["id"])
+        old_upper_value = parameter[:correspond][row["id"]]
       else
-        if old_upper_value < parameter.corresponds[@table[parameter.id][row]]
+        if old_upper_value < parameter[:correspond][row["id"]]
           old_upper_value_rows.clear 
-          old_upper_value_rows.push(row)
-          old_upper_value = parameter.corresponds[@table[parameter.id][row]]
-        elsif old_upper_value == parameter.corresponds[@table[parameter.id][row]]
-          old_upper_value_rows.push(row)
+          old_upper_value_rows.push(row["id"])
+          old_upper_value = parameter[:correspond][row["id"]]
+        elsif old_upper_value == parameter[:correspond][row["id"]]
+          old_upper_value_rows.push(row["id"])
         end
       end
     }
@@ -143,28 +142,28 @@ exit(0)
     new_upper_value = nil
     new_rows.each{ |row|
       if new_lower_value.nil? # new lower parameter
-        new_lower_value_rows.push(row)
-        new_lower_value = parameter.corresponds[@table[parameter.id][row]]
+        new_lower_value_rows.push(row["id"])
+        new_lower_value = parameter[:correspond][row["id"]]
       else
-        if parameter.corresponds[@table[parameter.id][row]] < new_lower_value
+        if parameter[:correspond][row["id"]] < new_lower_value
           new_lower_value_rows.clear
-          new_lower_value_rows.push(row)
-          new_lower_value = parameter.corresponds[@table[parameter.id][row]]
-        elsif parameter.corresponds[@table[parameter.id][row]] == new_lower_value
-          new_lower_value_rows.push(row)
+          new_lower_value_rows.push(row["id"])
+          new_lower_value = parameter[:correspond][row["id"]]
+        elsif parameter[:correspond][row["id"]] == new_lower_value
+          new_lower_value_rows.push(row["id"])
         end
       end
       
       if new_upper_value.nil? # new upper parameter
-        new_upper_value_rows.push(row)
-        new_upper_value = parameter.corresponds[@table[parameter.id][row]]
+        new_upper_value_rows.push(row["id"])
+        new_upper_value = parameter[:correspond][row["id"]]
       else
-        if new_upper_value < parameter.corresponds[@table[parameter.id][row]]
+        if new_upper_value < parameter[:correspond][row["id"]]
           new_upper_value_rows.clear
-          new_upper_value_rows.push(row)
-          new_upper_value = parameter.corresponds[@table[parameter.id][row]]
-        elsif new_upper_value == parameter.corresponds[@table[parameter.id][row]]
-          new_upper_value_rows.push(row)
+          new_upper_value_rows.push(row["id"])
+          new_upper_value = parameter[:correspond][row["id"]]
+        elsif new_upper_value == parameter[:correspond][row["id"]]
+          new_upper_value_rows.push(row["id"])
         end
       end
     }
@@ -199,7 +198,9 @@ exit(0)
     else
       p "create NO area for analysis"
     end
-    @analysis_area += generated_area
+    # @analysis_area += generated_area
+    pp generated_area
+exit(0)
     return generated_area
 	end
 

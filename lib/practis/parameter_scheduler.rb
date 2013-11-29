@@ -519,17 +519,22 @@ module Practis
           @f_test.run(result_set, parameter_keys)
 
           # parameter set generation
+          condition = [:or]
           orthogonal_rows = []
           @id_list_queue[@current_qcounter][:or_ids].each{|id|
-            ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id])
-            orthogonal_rows += ret if ret.length > 0
+            condition.push([:eq, [:field, "id"], id])
+            # ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id])
+            # orthogonal_rows += ret if ret.length > 0
           }
+          orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+          
           
           new_param,new_area = generate_inside(orthogonal_rows, @parameters, "Noise")
           new_param_list.push(new_param)
 
-          # extend_otableDB
-          pp generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
+          # extend_otableDB 
+          # pp generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
+          pp generate_next_search_area(orthogonal_rows, new_param_list)
 exit(0)
           
           # parameter set store to queue 
@@ -564,7 +569,7 @@ exit(0)
       end
 
       # 
-      def generate_next_search_area(area, new_param_list)
+      def generate_next_search_area(orthogonal_rows, new_param_list)
         # new_area = []
         new_inside_area = []
         new_outside_area = []
@@ -579,9 +584,10 @@ exit(0)
           end
         }
 
+        pp inside_list
         if !inside_list.empty?
-          pp extclm = extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
-          generate_area(area, inside_list[0], extclm)
+          extclm = extend_otableDB(orthogonal_rows, inside_list[0][:case], inside_list[0][:param])
+          generate_area(@sql_connector, orthogonal_rows, inside_list[0], extclm)
           #new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
 
 
@@ -605,30 +611,28 @@ exit(0)
       end
 
       #
-      def extend_otableDB(area, add_point_case, parameter)
+      def extend_otableDB(orthogonal_rows, add_point_case, parameter)
         old_level = 0
         old_digit_num = 0
         twice = false
         ext_column = nil
 
-        condition = [:or] + area.map{|i| [:eq, [:field, "id"], i]}
-        retval = @sql_connector.read_record(:orthogonal, condition)
-        if retval.length == 0
+        if orthogonal_rows.length == 0
           error("the no orthogonal array exist.")
           return -1
         end
 
         old_level = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
-        old_digit_num = retval[0][parameter[:name]].size#old_level / 2
+        old_digit_num = orthogonal_rows[0][parameter[:name]].size#old_level / 2
         digit_num = sqrt(old_level + parameter[:paramDefs].size).ceil
         if old_digit_num < digit_num
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []
           upload_msgs = []
 
-          retval.each{|ret|
+          orthogonal_rows.each{|ret|
             upd_h = {id: ret["id"]}
-            upl_h = {id: ret["id"] + retval.length} # ??? abunai kamo
+            upl_h = {id: ret["id"] + orthogonal_rows.length} # ??? abunai kamo
             ret.each{|k,v|
               if k != "id"
                 if k == parameter[:name] 
@@ -765,7 +769,7 @@ exit(0)
             }
             if flag
               nret = @sql_connector.update_record(:orthogonal, upld, [:eq, [:field, "id"], id])
-              debug("#{pp nret}")
+              # debug("#{pp nret}")
             end          
           end
         }
