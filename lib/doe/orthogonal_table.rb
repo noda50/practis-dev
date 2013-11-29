@@ -54,13 +54,9 @@ module OrthogonalTable
 		
 	end
 
-
+  # 
 	def generate_area(old_rows, new_param, additional_param)
-		
-
-
 		new_rows = []
-    # old_rows.each{|row| new_rows.push(row + (@table[exteded_column.id].size / 2))}
     add_point_case = new_param[:case]
     new_bit =[]
     id=nil

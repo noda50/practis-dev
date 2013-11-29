@@ -299,13 +299,7 @@ module Practis
     end
 
     ##------------------------------------------------------------
-    def cast_decimal(var)
-      if !var.kind_of?(Float)
-        return var
-      else
-        return BigDecimal(var.to_s)
-      end
-    end
+    
 
     # TODO: 
     private

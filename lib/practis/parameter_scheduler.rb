@@ -504,7 +504,7 @@ module Practis
           @assign_list.each { |k,v| parameter_keys.push(k) if v }
           @id_list_queue[0][:or_ids].each{|oid|
             condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
-            pp retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
+            retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
                                                 base_field: :result_id, ref_field: :parameter_id,
                                                 condition: condition})
             if retval.length >= 0
@@ -522,10 +522,12 @@ module Practis
           orthogonal_rows = []
           @id_list_queue[@current_qcounter][:or_ids].each{|id|
             ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id])
-            orthogonal_rows.push(ret) if ret.length > 0
+            orthogonal_rows += ret if ret.length > 0
           }
           
-          generate_inside(orthogonal_rows, @parameters, name)
+          new_param,new_area = generate_inside(orthogonal_rows, @parameters, "Noise")
+          new_param_list = [new_param]
+          pp generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
 exit(0)
           # extend_otableDB
           # parameter set store to queue 
@@ -547,8 +549,52 @@ exit(0)
 
       private
 
+      # 
+      def generate_next_search_area(area, new_param_list)
+        # new_area = []
+        new_inside_area = []
+        new_outside_area = []
+
+        inside_list = []
+        outside_list = []
+        new_param_list.each{ |np| 
+          if np[:case] == "inside"
+            inside_list.push(np)
+          else
+            outside_list.push(np)
+          end
+        }
+
+        if !inside_list.empty?
+          # extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
+          extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
+
+
+          #new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
+
+
+          # if 2 <= inside_list.size
+          #   for i in 1...inside_list.size
+          #     extclm = oa.extend_table(area, inside_list[i][:case], inside_list[i][:param])
+          #     # extend_otableDB(area, inside_list[i][:case], inside_list[i][:param])
+          #     tmp_area = []
+          #     new_inside_area.each { |na|
+          #       tmp_area += oa.generate_new_analysis_area(na, inside_list[i], extclm)
+          #     }
+          #     new_inside_area = tmp_area
+          #   end
+          # end
+        end
+
+        if !outside_list.empty?
+        end
+
+        return new_inside_area + new_outside_area
+      end
+
       #
       def extend_otableDB(area, add_point_case, parameter)
+        p " - - - - - - - - - - "
         old_level = 0
         old_digit_num = 0
         twice = false
@@ -564,7 +610,7 @@ exit(0)
         oldlevel = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
         old_digit_num = retval[0][parameter[:name]].size#oldlevel / 2
         
-        if old_digit_num < (sqrt(oldlevel+parameter[:paramDefs].size).ceil)
+        if old_digit_num < (sqrt(oldlevel + parameter[:paramDefs].size).ceil)
           update_msgs = []
           upload_msgs = []
 
@@ -589,8 +635,7 @@ exit(0)
           update_orthogonal_table_db(update_msgs)
           upload_orthogonal_table_db(upload_msgs)
         end
-
-        return parameter
+        # return parameter
       end
 
       # set next list of parameter combinations set 

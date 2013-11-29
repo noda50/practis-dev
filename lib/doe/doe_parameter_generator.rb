@@ -5,6 +5,8 @@ require 'pp'
 module DOEParameterGenerator
   include Math
 
+  
+  # search only "Inside" significant parameter
   def generate_inside(orthogonal_rows, parameter, name)
     created = []
 
@@ -41,103 +43,74 @@ module DOEParameterGenerator
       end
     end
 
-    orthogonal_rows.each{|row|
-      row[name]
-    }
+    ### check exist area
+    #parameter[name][:correspond].has
+    # oa.table[c.id].each_with_index{|b, i|
+    #   if  b == min_bit || b == max_bit
+    #     area.each{|row|
+    #       flag = true
+    #       oa.table.each_with_index{|o, j|
+    #         if j != c.id
+    #           if o[i] != o[row]
+    #             flag = false
+    #             break
+    #           end
+    #         end
+    #       }
+    #       if flag then exist_area.push(i) end
+    #     }
+    #   end
+    # }
+    # new_area.push(exist_area)
 
-    return 1
-  end
+    # new_area_a = []
+    # new_area_b = []
 
-  # search only "inside" significant parameter(TODO: new parameter is determined by f-value)
-  def generate_new_inside_parameter(var, para_name, area)
+    # exist_area.each{|row|
+    #   tmp_bit = oa.get_bit_string(c.id, row)
+    #   if tmp_bit[tmp_bit.size - 1] == "0"
+    #     new_area_a.push(row)
+    #   elsif tmp_bit[tmp_bit.size-1] == "1"
+    #     new_area_b.push(row)
+    #   end
+    # }
 
-    oa = @paramDefSet.scheduler.scheduler.oa
-    var_min = var.min
-    var_max = var.max
-    min=nil
-    max=nil
-    exist_area = []
-    new_area = []
-    new_array = nil
+    # orthogonal_rows.each{|row|
+    #   tmp_bit = row[name]
+    #   if tmp_bit[tmp_bit.size - 1] == "0"
+    #     new_area_b.push(row["id"])
+    #   elsif tmp_bit[tmp_bit.size - 1] == "1"
+    #     new_area_a.push(row["id"])
+    #   end
+    # }
+    # new_area.push(new_area_a)
+    # new_area.push(new_area_b)
+    
+    ###
 
-    oa.colums.each{|c|
-      if para_name == c.parameter_name
-        var_diff = cast_decimal((var_max - var_min).abs / 3.0)
-        if var_min.class == Fixnum
-          new_array = [var_min+var_diff.to_i, var_max-var_diff.to_i]
-        elsif var_min.class == Float
-          new_array = [(var_min+var_diff).round(5), (var_max-var_diff).round(5)]
-        end
-
-        debug("divided parameter! ==> new array: #{pp new_array}")
-        debug("parameters: #{c.parameters}")
-
-        if 2 < c.parameters.size
-          if c.parameters.find{|v| var_min<v && v<var_max}.nil?
-            break
-          else
-            if c.parameters.include?(new_array[0]) && c.parameters.include?(new_array[1])
-              min_bit = c.get_bit_string(new_array.min)
-              max_bit = c.get_bit_string(new_array.max)
-            else
-              min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
-              max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
-              min_bit = c.get_bit_string(min)
-              max_bit = c.get_bit_string(max)
-            end
-
-            oa.table[c.id].each_with_index{|b, i|
-              if  b == min_bit || b == max_bit
-                area.each{|row|
-                  flag = true
-                  oa.table.each_with_index{|o, j|
-                    if j != c.id
-                      if o[i] != o[row]
-                        flag = false
-                        break
-                      end
-                    end
-                  }
-                  if flag then exist_area.push(i) end
-                }
-              end
-            }
-            new_area.push(exist_area)
-            new_area_a = []
-            new_area_b = []
-            exist_area.each{|row|
-              tmp_bit = oa.get_bit_string(c.id, row)
-              if tmp_bit[tmp_bit.size - 1] == "0"
-                new_area_a.push(row)
-              elsif tmp_bit[tmp_bit.size-1] == "1"
-                new_area_b.push(row)
-              end
-            }
-            area.each{|row|
-              tmp_bit = oa.get_bit_string(c.id, row)
-              if tmp_bit[tmp_bit.size - 1] == "0"
-                new_area_b.push(row)
-              elsif tmp_bit[tmp_bit.size - 1] == "1"
-                new_area_a.push(row)
-              end
-            }
-            new_area.push(new_area_a)
-            new_area.push(new_area_b)
-            break
-          end
-        end
-      end
-    }
-
-    # var.name
     new_var = { :case => "inside", 
-                :param => {:name => para_name, :paramDefs => new_array}}
-    print " ==> "
-    debug("#{pp new_var}")
-    debug("#{pp new_area}")
-    debug("end generate new parameter =====================================")
-    return new_var,new_area
+                :param => {:name => name, :paramDefs => new_array}}
+
+    return new_var, new_area
   end
+
+  # search only "Both Side" significant parameter
+  def generate_bothside(orthogonal_rows, parameter, name)
+    
+  end
+
+  # search only "Outside(+)" significant parameter
+  def generate_outside_plus(orthogonal_rows, parameter, name)
+    
+  end
+
+  # search only "Outside(-)" significant parameter
+  def generate_outside_minus(orthogonal_rows, parameter, name)
+    
+  end  
+
+
+
 
   # TODO: new value of parameter is determined by f-value
   def generate_new_outsidep_parameter(var, para_name, area)
@@ -359,79 +332,16 @@ module DOEParameterGenerator
     return new_var,new_area
   end
 
-  # return array of new searching parameters (area) 
-  def generate_next_search_area(area, oa, new_param_list)
-    new_area = []
-    new_inside_area = []
-    new_outside_area = []
-    debug("generate next search =====================================")
-    debug("old area: #{area} --> ")
-    debug("new_param_list:")
-    debug("#{pp new_param_list}")
 
-    inside_list = []
-    outside_list = []
-    new_param_list.each{ |np| 
-      if np[:case] == "inside" 
-        inside_list.push(np)
+  private
+
+  #
+  def cast_decimal(var)
+      if !var.kind_of?(Float)
+        return var
       else
-        outside_list.push(np)
+        return BigDecimal(var.to_s)
       end
-    }
-
-    if !inside_list.empty?
-      extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
-      extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
-      # exit(0)
-
-      new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
-      debug("#{pp new_inside_area}")
-      if 2 <= inside_list.size
-        for i in 1...inside_list.size
-          extclm = oa.extend_table(area, inside_list[i][:case], inside_list[i][:param])
-          extend_otableDB(area, inside_list[i][:case], inside_list[i][:param])
-          tmp_area = []
-          new_inside_area.each { |na|
-            tmp_area += oa.generate_new_analysis_area(na, inside_list[i], extclm)
-          }
-          new_inside_area = tmp_area
-        end
-      end
-      debug("inside new area: #{new_inside_area}")
-      debug("inside new area")
-      debug("#{pp new_inside_area}")
     end
-
-    if !outside_list.empty?
-      extclm = oa.extend_table(area, outside_list[0][:case], outside_list[0][:param])
-      extend_otableDB(area, outside_list[0][:case], outside_list[0][:param])
-      # exit(0)
-
-      new_outside_area += oa.generate_new_analysis_area(area, outside_list[0], extclm)
-      debug("#{pp new_outside_area}")
-      if 2 <= outside_list.size
-        for i in 1...outside_list.size
-          extclm = oa.extend_table(area, outside_list[i][:case], outside_list[i][:param])
-          extend_otableDB(area, outside_list[i][:case], outside_list[i][:param])
-          tmp_area = []
-          new_outside_area.each { |na|
-            tmp_area += oa.generate_new_analysis_area(na, outside_list[i], extclm)
-          }
-          new_outside_area += tmp_area
-          new_outside_area += oa.generate_new_analysis_area(area, outside_list[i], extclm)
-        end
-      end
-      debug("outside new area: #{new_outside_area}")
-      debug("outside new area")
-      debug("#{pp new_outside_area}")
-    end
-
-    new_area = new_inside_area + new_outside_area
-
-    debug("#{new_area}")
-    debug("#{pp new_area}")
-    debug("end generate next search =====================================")
-    return new_area
-  end
 
 end
