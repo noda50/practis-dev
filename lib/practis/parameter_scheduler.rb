@@ -222,8 +222,6 @@ module Practis
       end
       #
       def init_doe(assign_list)
-        # (2013/09/12) written by matsushima ==================
-        pp assign_list
         @assign_list = assign_list
         parameters = []
         @unassigned = []
@@ -622,8 +620,9 @@ exit(0)
 
         old_level = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
         old_digit_num = retval[0][parameter[:name]].size#old_level / 2
-        
-        if old_digit_num < (sqrt(old_level + parameter[:paramDefs].size).ceil)
+        digit_num = sqrt(old_level + parameter[:paramDefs].size).ceil
+        if old_digit_num < digit_num
+          update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []
           upload_msgs = []
 
@@ -645,12 +644,10 @@ exit(0)
             upload_msgs.push(upl_h)
           }
           assign_parameter(old_level, add_point_case, parameter[:name], parameter[:paramDefs])
-          pp @parameters
-exit(0)
           update_orthogonal_table_db(update_msgs)
           upload_orthogonal_table_db(upload_msgs)
         end
-        return parameter
+        return @parameters[parameter[:name]]
       end
 
       #
@@ -692,18 +689,18 @@ exit(0)
       end
 
       #
-      def update_parameter_correspond(parameter, old_digit_num, old_level)
+      def update_parameter_correspond(param_name, digit_num, old_digit_num, old_level)
         old_bit_str = "%0" + old_digit_num.to_s + "b"
-        new_bit_str = "%0" + @digit_num.to_s + "b"
-        parameter[:correspond][new_bit_str % i] = parameter[:correspond][old_bit_str % i]
-        parameter[:correspond].delete([old_bit_str % i])
+        new_bit_str = "%0" + digit_num.to_s + "b"
+        for i in 0...old_level
+          @parameters[param_name][:correspond][new_bit_str % i] = @parameters[param_name][:correspond][old_bit_str % i]
+          @parameters[param_name][:correspond].delete(old_bit_str % i)
+        end
       end
 
       # 
       def link_parameter(name, add_paramDefs)
-        pp add_paramDefs
-
-        pp digit_num = sqrt(@parameters[name][:paramDefs].size).ceil
+        digit_num = sqrt(@parameters[name][:paramDefs].size).ceil
         old_level = @parameters[name][:paramDefs].size - add_paramDefs.size
 
         for i in old_level...@parameters[name][:paramDefs].size do
