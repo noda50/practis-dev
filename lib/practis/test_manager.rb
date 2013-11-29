@@ -62,17 +62,6 @@ module Practis
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)      
       
-      # new_var ={:case => "inside", 
-      #           :param => {:name => "Noise", :paramDefs => [0.01, 0.02]}}
-      # @scheduler.extend_otableDB([0,1,2,3], new_var[:case], new_var[:param])
-      
-      # condition = [:or, [:eq, [:field, "result_id"], 1],
-      #                   [:eq, [:field, "result_id"], 2],
-      #                   [:eq, [:field, "result_id"], 3]]
-      # pp @database_connector.inner_join_record({base_type: :result, ref_type: :parameter,
-      #                                           base_field: :result_id, ref_field: :parameter_id, 
-      #                                           condition: condition})
-      # exit(0)
     end
 
     ## === methods of manager.rb ===
@@ -300,7 +289,6 @@ module Practis
 
     ##------------------------------------------------------------
     
-
     # TODO: 
     private
     def check_duplicate_parameters

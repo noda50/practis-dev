@@ -390,6 +390,7 @@ module Practis
     class DOEScheduler
       include Practis
       include DOEParameterGenerator
+      include OrthogonalTable
       include Math
 
       attr_reader :current_indexes
@@ -501,6 +502,7 @@ module Practis
           result_set = []
           count = 0
           parameter_keys = []
+          new_param_list = []
           @assign_list.each { |k,v| parameter_keys.push(k) if v }
           @id_list_queue[0][:or_ids].each{|oid|
             condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
@@ -526,10 +528,12 @@ module Practis
           }
           
           new_param,new_area = generate_inside(orthogonal_rows, @parameters, "Noise")
-          new_param_list = [new_param]
+          new_param_list.push(new_param)
+
+          # extend_otableDB
           pp generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
 exit(0)
-          # extend_otableDB
+          
           # parameter set store to queue 
 
         end
@@ -542,12 +546,24 @@ exit(0)
         @id_list_queue[@current_qcounter][:or_ids].size * @unassigned_total_size
       end
 
+      #
       def get_v_index
         return @v_index
       end
-            
+
 
       private
+
+      # set next list of parameter combinations set 
+      def set_next_list
+        if @current_qcounter + 1 < @id_list_queue.size
+          @current_qcounter += 1
+          @available_numbers = get_total.times.map { |i| i }
+          return true
+        else
+          return false
+        end
+      end
 
       # 
       def generate_next_search_area(area, new_param_list)
@@ -566,10 +582,8 @@ exit(0)
         }
 
         if !inside_list.empty?
-          # extclm = oa.extend_table(area, inside_list[0][:case], inside_list[0][:param])
-          extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
-
-
+          pp extclm = extend_otableDB(area, inside_list[0][:case], inside_list[0][:param])
+          generate_area(area, inside_list[0], extclm)
           #new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
 
 
@@ -594,7 +608,6 @@ exit(0)
 
       #
       def extend_otableDB(area, add_point_case, parameter)
-        p " - - - - - - - - - - "
         old_level = 0
         old_digit_num = 0
         twice = false
@@ -607,10 +620,10 @@ exit(0)
           return -1
         end
 
-        oldlevel = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
-        old_digit_num = retval[0][parameter[:name]].size#oldlevel / 2
+        old_level = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
+        old_digit_num = retval[0][parameter[:name]].size#old_level / 2
         
-        if old_digit_num < (sqrt(oldlevel + parameter[:paramDefs].size).ceil)
+        if old_digit_num < (sqrt(old_level + parameter[:paramDefs].size).ceil)
           update_msgs = []
           upload_msgs = []
 
@@ -631,21 +644,73 @@ exit(0)
             update_msgs.push(upd_h)
             upload_msgs.push(upl_h)
           }
-
+          assign_parameter(old_level, add_point_case, parameter[:name], parameter[:paramDefs])
+          pp @parameters
+exit(0)
           update_orthogonal_table_db(update_msgs)
           upload_orthogonal_table_db(upload_msgs)
         end
-        # return parameter
+        return parameter
       end
 
-      # set next list of parameter combinations set 
-      def set_next_list
-        if @current_qcounter + 1 < @id_list_queue.size
-          @current_qcounter += 1
-          @available_numbers = get_total.times.map { |i| i }
-          return true
+      #
+      def assign_parameter(old_level, add_point_case, name, add_parameters)
+        case add_point_case
+        when "outside(+)"
+          right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
+          if right_digit_of_max[right_digit_of_max.size - 1] == "1"
+            add_parameters.sort!
+          else
+            add_parameters.reverse!
+          end
+        when "outside(-)"
+          right_digit_of_min = @parameters[name][:correspond].min_by(&:last)[0]
+          if right_digit_of_min[right_digit_of_min.size - 1] == "0"
+            add_parameters.sort!
+          else
+            add_parameters.reverse!
+          end
+        when "inside"
+          digit_num_of_left_point = @parameters[name][:correspond].max_by { |item| (item[1] < add_parameters[0]) ? item[1] : -1}[0]
+          if digit_num_of_left_point[digit_num_of_left_point.size - 1] == "0"
+            add_parameters.reverse!
+          else
+            add_parameters.sort!
+          end
+        when "both side"
+          right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
+          if right_digit_of_max[right_digit_of_max.size - 1] == "1"
+            add_parameters.reverse!
+          else
+            add_parameters.sort!
+          end
         else
-          return false
+          error("new parameter could not be assigned to bit on orthogonal table")
+        end
+        @parameters[name][:paramDefs] += add_parameters
+        link_parameter(name, add_parameters)
+      end
+
+      #
+      def update_parameter_correspond(parameter, old_digit_num, old_level)
+        old_bit_str = "%0" + old_digit_num.to_s + "b"
+        new_bit_str = "%0" + @digit_num.to_s + "b"
+        parameter[:correspond][new_bit_str % i] = parameter[:correspond][old_bit_str % i]
+        parameter[:correspond].delete([old_bit_str % i])
+      end
+
+      # 
+      def link_parameter(name, add_paramDefs)
+        pp add_paramDefs
+
+        pp digit_num = sqrt(@parameters[name][:paramDefs].size).ceil
+        old_level = @parameters[name][:paramDefs].size - add_paramDefs.size
+
+        for i in old_level...@parameters[name][:paramDefs].size do
+          bit = ("%0" + digit_num.to_s + "b") % i
+          if !@parameters[name][:correspond].key?(bit)
+            @parameters[name][:correspond][bit] = @parameters[name][:paramDefs][i]
+          end
         end
       end
 

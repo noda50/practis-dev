@@ -3,9 +3,8 @@ require 'pp'
 
 
 module OrthogonalTable
-	# input = {
-	# 	parameter => { param => [0.0, 0.01], }
-	#	} 
+	
+  # 
 	def generation_orthogonal_table(input)
 		level = 2
 		table = []
@@ -51,16 +50,20 @@ module OrthogonalTable
 
 	# 
 	def extend_table(area, parameter)
-		
 	end
 
   # 
-	def generate_area(old_rows, new_param, additional_param)
+	def generate_area(old_rows, new_param, parameter)
 		new_rows = []
     add_point_case = new_param[:case]
     new_bit =[]
     id=nil
+    pp parameter
+exit(0)
 
+    new_param[:param][:paramDefs].each{|v|
+      new_bit.push(c.get_bit_string(v))
+    }
 
     # @colums.each{|c|
     #   if c.parameter_name == new_param[:param][:name]
@@ -109,26 +112,26 @@ module OrthogonalTable
     old_rows.each{ |row|
       if old_lower_value.nil? # old lower parameter
         old_lower_value_rows.push(row)
-        old_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        old_lower_value = parameter.corresponds[@table[parameter.id][row]]
       else
-        if exteded_column.corresponds[@table[exteded_column.id][row]] < old_lower_value
+        if parameter.corresponds[@table[parameter.id][row]] < old_lower_value
           old_lower_value_rows.clear
           old_lower_value_rows.push(row)
-          old_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
-        elsif exteded_column.corresponds[@table[exteded_column.id][row]] == old_lower_value
+          old_lower_value = parameter.corresponds[@table[parameter.id][row]]
+        elsif parameter.corresponds[@table[parameter.id][row]] == old_lower_value
           old_lower_value_rows.push(row)
         end
       end
       
       if old_upper_value.nil? # old upper parameter
         old_upper_value_rows.push(row)
-        old_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        old_upper_value = parameter.corresponds[@table[parameter.id][row]]
       else
-        if old_upper_value < exteded_column.corresponds[@table[exteded_column.id][row]]
+        if old_upper_value < parameter.corresponds[@table[parameter.id][row]]
           old_upper_value_rows.clear 
           old_upper_value_rows.push(row)
-          old_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
-        elsif old_upper_value == exteded_column.corresponds[@table[exteded_column.id][row]]
+          old_upper_value = parameter.corresponds[@table[parameter.id][row]]
+        elsif old_upper_value == parameter.corresponds[@table[parameter.id][row]]
           old_upper_value_rows.push(row)
         end
       end
@@ -141,26 +144,26 @@ module OrthogonalTable
     new_rows.each{ |row|
       if new_lower_value.nil? # new lower parameter
         new_lower_value_rows.push(row)
-        new_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        new_lower_value = parameter.corresponds[@table[parameter.id][row]]
       else
-        if exteded_column.corresponds[@table[exteded_column.id][row]] < new_lower_value
+        if parameter.corresponds[@table[parameter.id][row]] < new_lower_value
           new_lower_value_rows.clear
           new_lower_value_rows.push(row)
-          new_lower_value = exteded_column.corresponds[@table[exteded_column.id][row]]
-        elsif exteded_column.corresponds[@table[exteded_column.id][row]] == new_lower_value
+          new_lower_value = parameter.corresponds[@table[parameter.id][row]]
+        elsif parameter.corresponds[@table[parameter.id][row]] == new_lower_value
           new_lower_value_rows.push(row)
         end
       end
       
       if new_upper_value.nil? # new upper parameter
         new_upper_value_rows.push(row)
-        new_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
+        new_upper_value = parameter.corresponds[@table[parameter.id][row]]
       else
-        if new_upper_value < exteded_column.corresponds[@table[exteded_column.id][row]]
+        if new_upper_value < parameter.corresponds[@table[parameter.id][row]]
           new_upper_value_rows.clear
           new_upper_value_rows.push(row)
-          new_upper_value = exteded_column.corresponds[@table[exteded_column.id][row]]
-        elsif new_upper_value == exteded_column.corresponds[@table[exteded_column.id][row]]
+          new_upper_value = parameter.corresponds[@table[parameter.id][row]]
+        elsif new_upper_value == parameter.corresponds[@table[parameter.id][row]]
           new_upper_value_rows.push(row)
         end
       end
