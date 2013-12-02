@@ -584,7 +584,7 @@ exit(0)
           end
         }
 
-        pp inside_list
+        # pp inside_list
         if !inside_list.empty?
           extclm = extend_otableDB(orthogonal_rows, inside_list[0][:case], inside_list[0][:param])
           generate_area(@sql_connector, orthogonal_rows, inside_list[0], extclm)
@@ -637,6 +637,7 @@ exit(0)
               if k != "id"
                 if k == parameter[:name] 
                   upd_h[k.to_sym] = "0" + v
+                  ret[parameter[:name]] = "0" + v
                   upl_h[k.to_sym] = "1" + v
                 else
                   upd_h[k.to_sym] = v

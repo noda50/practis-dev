@@ -58,11 +58,7 @@ module OrthogonalTable
     add_point_case = new_param[:case]
     new_bits =[]
     id=nil
-
-    pp new_param
-    pp parameter
-    pp old_rows
-
+    
     condition = [:or]
     new_param[:param][:paramDefs].each{|v|
       bit = parameter[:correspond].key(v)
@@ -70,40 +66,9 @@ module OrthogonalTable
       condition.push([:eq, [:field, new_param[:param][:name]], bit])
     }
 
-    pp new_bits
+    # scalability problem (load new_rows on memory)
+    new_rows = sql_connector.read_record(:orthogonal, condition)
 
-    # scalability problem (load on memory)
-    pp new_rows = sql_connector.read_record(:orthogonal, condition)
-
-    # pp new_rows = matching_row.map{|row| row["id"] }
-    
-
-    # @table[id].each_with_index{|v, i|
-    #   new_bits.each{|b|
-    #     if b == v
-    #       # compare get_row(old_rows) with get_row(i)
-    #       old_rows.each{|r|
-    #         row_i = get_row(i)
-    #         row_r = get_row(r)
-    #         row_i.delete_at(id)
-    #         row_r.delete_at(id)
-    #
-    #         equal_flag = true
-    #         row_i.size.times{|t|
-    #           if row_i[t] != row_r[t]
-    #             equal_flag = false
-    #             break
-    #           end
-    #         }
-    #         if equal_flag then new_rows.push(i) end
-    #       }
-    #     end
-    #   }
-    # }
-    #
-    # new_rows.uniq!
-    
-exit(0)
     old_lower_value_rows = []
     old_upper_value_rows = []
     old_lower_value = nil
@@ -111,26 +76,26 @@ exit(0)
     old_rows.each{ |row|
       if old_lower_value.nil? # old lower parameter
         old_lower_value_rows.push(row["id"])
-        old_lower_value = parameter[:correspond][row["id"]]
+        old_lower_value = parameter[:correspond][row[new_param[:param][:name]]]
       else
-        if parameter[:correspond][row["id"]] < old_lower_value
+        if parameter[:correspond][row[new_param[:param][:name]]] < old_lower_value
           old_lower_value_rows.clear
           old_lower_value_rows.push(row["id"])
-          old_lower_value = parameter[:correspond][row["id"]]
-        elsif parameter[:correspond][row["id"]] == old_lower_value
+          old_lower_value = parameter[:correspond][row[new_param[:param][:name]]]
+        elsif parameter[:correspond][row[new_param[:param][:name]]] == old_lower_value
           old_lower_value_rows.push(row["id"])
         end
       end
       
       if old_upper_value.nil? # old upper parameter
         old_upper_value_rows.push(row["id"])
-        old_upper_value = parameter[:correspond][row["id"]]
+        old_upper_value = parameter[:correspond][row[new_param[:param][:name]]]
       else
-        if old_upper_value < parameter[:correspond][row["id"]]
+        if old_upper_value < parameter[:correspond][row[new_param[:param][:name]]]
           old_upper_value_rows.clear 
           old_upper_value_rows.push(row["id"])
-          old_upper_value = parameter[:correspond][row["id"]]
-        elsif old_upper_value == parameter[:correspond][row["id"]]
+          old_upper_value = parameter[:correspond][row[new_param[:param][:name]]]
+        elsif old_upper_value == parameter[:correspond][row[new_param[:param][:name]]]
           old_upper_value_rows.push(row["id"])
         end
       end
@@ -143,26 +108,26 @@ exit(0)
     new_rows.each{ |row|
       if new_lower_value.nil? # new lower parameter
         new_lower_value_rows.push(row["id"])
-        new_lower_value = parameter[:correspond][row["id"]]
+        new_lower_value = parameter[:correspond][row[new_param[:param][:name]]]
       else
-        if parameter[:correspond][row["id"]] < new_lower_value
+        if parameter[:correspond][row[new_param[:param][:name]]] < new_lower_value
           new_lower_value_rows.clear
           new_lower_value_rows.push(row["id"])
-          new_lower_value = parameter[:correspond][row["id"]]
-        elsif parameter[:correspond][row["id"]] == new_lower_value
+          new_lower_value = parameter[:correspond][row[new_param[:param][:name]]]
+        elsif parameter[:correspond][row[new_param[:param][:name]]] == new_lower_value
           new_lower_value_rows.push(row["id"])
         end
       end
       
       if new_upper_value.nil? # new upper parameter
         new_upper_value_rows.push(row["id"])
-        new_upper_value = parameter[:correspond][row["id"]]
+        new_upper_value = parameter[:correspond][row[new_param[:param][:name]]]
       else
-        if new_upper_value < parameter[:correspond][row["id"]]
+        if new_upper_value < parameter[:correspond][row[new_param[:param][:name]]]
           new_upper_value_rows.clear
           new_upper_value_rows.push(row["id"])
-          new_upper_value = parameter[:correspond][row["id"]]
-        elsif new_upper_value == parameter[:correspond][row["id"]]
+          new_upper_value = parameter[:correspond][row[new_param[:param][:name]]]
+        elsif new_upper_value == parameter[:correspond][row[new_param[:param][:name]]]
           new_upper_value_rows.push(row["id"])
         end
       end
@@ -172,17 +137,17 @@ exit(0)
     case add_point_case
     when "outside(+)"
       # (new_lower, new_upper)
-      generated_area.push(new_rows)
+      generated_area.push(new_rows.map{ |r| r["id"] })
       # new area between (old_upper, new_lower)
       generated_area.push(old_upper_value_rows + new_lower_value_rows)
     when "outside(-)"
       # (new_lower, new_upper)
-      generated_area.push(new_rows)
+      generated_area.push(new_rows.map{ |r| r["id"] })
       # new area between (new_upper, old_lower)
       generated_area.push(new_upper_value_rows + old_lower_value_rows)
     when "inside"
       # (new_lower, new_upper)
-      generated_area.push(new_rows)
+      generated_area.push(new_rows.map{ |r| r["id"] })
       # between (old_lower, new_lower) in area
       generated_area.push(old_lower_value_rows + new_lower_value_rows)
       # between (old_upper, new_upper) in area
@@ -194,16 +159,14 @@ exit(0)
       # between (old_upper, new_upper) in area
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
       # (new_lower, new_upper)
-      generated_area.push(new_rows)
+      generated_area.push(new_rows.map{ |r| r["id"] })
     else
       p "create NO area for analysis"
     end
-    # @analysis_area += generated_area
+    
     pp generated_area
-exit(0)
     return generated_area
 	end
-
 
 
 	# 
@@ -211,7 +174,6 @@ exit(0)
 		# 
 		def generate(input)
 			colum = []
-
 			return column
 		end
 	end
