@@ -454,11 +454,6 @@ module Practis
       #
       def get_paramValues(id=nil)
         if @available_numbers.length <= 0
-          debug("no available parameter, \n" +
-                "total index num: #{@total_indexes.length}, \n" +
-                "total indexes: #{@total_indexes}, \n" +
-                "available: #{@available_numbers.length}, \n" +
-                "allocated: #{@allocated_num} \n")
           return nil if !set_next_list
         end
 
@@ -469,78 +464,50 @@ module Practis
         parameter_array = []
 
         id_index = @id_list_queue[@current_qcounter][:or_ids][@v_index]
-        @id_list_queue[@current_qcounter][id_index].push(id)
         ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id_index])
 
-        
-        ret.each{|r| 
+        condition = [:or]
+        ret.each{ |r| 
           r.delete("id")
           r.delete("run")
-
+          andCond = [:and]
           @paramDefList.size.times{ |i|
             unassign_flag = true
             r.each{ |k, v|
               if @paramDefList[i].name == k
                 parameter_array.push(@parameters[k][:correspond][v])
+                andCond.push([:eq, [:field, k], @parameters[k][:correspond][v]])
                 unassign_flag = false
                 break
               end
             }
             if unassign_flag
               parameter_array.push(@paramDefList[i].get_n(not_allocate_indexes[i]))
+              andCond.push([:eq, [:field, @paramDefList[i].name], @paramDefList[i].get_n(not_allocate_indexes[i])])
             end
           }
+          condition.push(andCond)
         }
+        pp condition
+        pp parameter_array
+        
+
+        already = @sql_connector.read_record(:parameter, condition)
+
+        if already.size != 0
+          already.each{|ret|
+            p "already: #{ret["parameter_id"]}"
+            @id_list_queue[@current_qcounter][id_index].push(ret["parameter_id"])
+          }
+        else
+          @id_list_queue[@current_qcounter][id_index].push(id)
+        end
+
         return parameter_array
       end
 
       # 
       def get_available
-        if @available_numbers.length <= 0
-          result_set = []
-          count = 0
-          parameter_keys = []
-          new_param_list = []
-          @assign_list.each { |k,v| parameter_keys.push(k) if v }
-          @id_list_queue[0][:or_ids].each{|oid|
-            condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
-            retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
-                                                base_field: :result_id, ref_field: :parameter_id,
-                                                condition: condition})
-            if retval.length >= 0
-              count += retval.length
-              result_set.push(retval)
-            end
-          }
-
-          return 1 if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
-
-          # variance analysis
-          @f_test.run(result_set, parameter_keys)
-
-          # parameter set generation
-          condition = [:or]
-          orthogonal_rows = []
-          @id_list_queue[@current_qcounter][:or_ids].each{|id|
-            condition.push([:eq, [:field, "id"], id])
-            # ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id])
-            # orthogonal_rows += ret if ret.length > 0
-          }
-          orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
-          
-          
-          new_param,new_area = generate_inside(orthogonal_rows, @parameters, "Noise")
-          new_param_list.push(new_param)
-
-          # extend_otableDB 
-          # pp generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
-          pp generate_next_search_area(orthogonal_rows, new_param_list)
-exit(0)
-          
-          # parameter set store to queue 
-
-        end
-
         @available_numbers.length
       end
 
@@ -554,14 +521,78 @@ exit(0)
         return @v_index
       end
 
+      #
+      def do_variance_analysis
+        # analysis
+        result_set = []
+        count = 0
+        parameter_keys = []
+        new_param_list = []
+        @assign_list.each { |k,v| parameter_keys.push(k) if v }
+        @id_list_queue[0][:or_ids].each{|oid|
+          condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
+          retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
+                                              base_field: :result_id, ref_field: :parameter_id,
+                                              condition: condition})
+          if retval.length >= 0
+            count += retval.length
+            result_set.push(retval)
+          end
+        }
+
+        # return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+        if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+          p "list size: #{@id_list_queue.size}"
+          p "counter: #{@current_qcounter}"
+          pp @id_list_queue[0]
+          return false          
+        end
+        
+
+        # variance analysis
+        @f_test.run(result_set, parameter_keys)
+
+        # parameter set generation
+        condition = [:or]
+        condition += @id_list_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
+        pp orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+        
+
+        # hard coding
+        new_param,new_area = generate_inside(orthogonal_rows, @parameters, "Noise")
+        new_param_list.push(new_param)
+        new_param,new_area = generate_inside(orthogonal_rows, @parameters, "NumOfGameIteration")
+        new_param_list.push(new_param)
+        pp new_param_list
+
+
+        # extend_otableDB & parameter set store to queue
+        pp next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
+        next_sets.each{|set|
+          h = {:or_ids => []}
+          set.each{|r| 
+            h[:or_ids].push(r)
+            h[r] = []
+          }
+          @id_list_queue.push(h)
+        }
+        
+        @id_list_queue.shift
+        @current_qcounter -= 1 if @current_qcounter > 0
+        @available_numbers = get_total.times.map { |i| i }
+
+        return true
+      end
+
 
       private
 
       # set next list of parameter combinations set 
       def set_next_list
-        if @current_qcounter + 1 < @id_list_queue.size
+        if @current_qcounter < @id_list_queue.size - 1
           @current_qcounter += 1
           @available_numbers = get_total.times.map { |i| i }
+          p "increment counter !, #{@current_qcounter}"
           return true
         else
           return false
@@ -569,8 +600,7 @@ exit(0)
       end
 
       # 
-      def generate_next_search_area(orthogonal_rows, new_param_list)
-        # new_area = []
+      def generate_next_search_area(old_rows, new_param_list)
         new_inside_area = []
         new_outside_area = []
 
@@ -586,22 +616,19 @@ exit(0)
 
         # pp inside_list
         if !inside_list.empty?
-          extclm = extend_otableDB(orthogonal_rows, inside_list[0][:case], inside_list[0][:param])
-          generate_area(@sql_connector, orthogonal_rows, inside_list[0], extclm)
-          #new_inside_area += oa.generate_new_analysis_area(area, inside_list[0], extclm)
+          extclm = extend_otableDB(old_rows, inside_list[0][:case], inside_list[0][:param])
+          new_inside_area += generate_area(@sql_connector, old_rows, inside_list[0], extclm)
 
-
-          # if 2 <= inside_list.size
-          #   for i in 1...inside_list.size
-          #     extclm = oa.extend_table(area, inside_list[i][:case], inside_list[i][:param])
-          #     # extend_otableDB(area, inside_list[i][:case], inside_list[i][:param])
-          #     tmp_area = []
-          #     new_inside_area.each { |na|
-          #       tmp_area += oa.generate_new_analysis_area(na, inside_list[i], extclm)
-          #     }
-          #     new_inside_area = tmp_area
-          #   end
-          # end
+          if 2 <= inside_list.size
+            for i in 1...inside_list.size
+              extclm = extend_otableDB(old_rows, inside_list[i][:case], inside_list[i][:param])
+              tmp_area = []
+              new_inside_area.each { |na|
+                tmp_area += generate_area(@sql_connector, na, inside_list[i], extclm)
+              }
+              new_inside_area = tmp_area
+            end
+          end
         end
 
         if !outside_list.empty?
@@ -611,7 +638,11 @@ exit(0)
       end
 
       #
-      def extend_otableDB(orthogonal_rows, add_point_case, parameter)
+      def extend_otableDB(or_ids, add_point_case, parameter)
+        condition = [:or]
+        condition += or_ids.map{|i| [:eq, [:field, "id"], i]}
+        orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+
         old_level = 0
         old_digit_num = 0
         twice = false
@@ -622,9 +653,15 @@ exit(0)
           return -1
         end
 
-        old_level = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}" ).length
+        old_bits = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}")
+        old_level = old_bits.length
         old_digit_num = orthogonal_rows[0][parameter[:name]].size#old_level / 2
         digit_num = sqrt(old_level + parameter[:paramDefs].size).ceil
+
+        condition = [:or]
+        condition += old_bits.map{|v| [:eq, [:field, parameter[:name]], v[parameter[:name]]]}
+        orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+
         if old_digit_num < digit_num
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []

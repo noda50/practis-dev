@@ -8,10 +8,15 @@ module DOEParameterGenerator
   
   # search only "Inside" significant parameter
   def generate_inside(orthogonal_rows, parameters, name)
-    created = []
+    param = []
+    orthogonal_rows.each{|row|
+      if !param.include?(parameters[name][:correspond][row[name]])
+        param.push(parameters[name][:correspond][row[name]])
+      end
+    }
 
-    param_min = parameters[name][:paramDefs].min
-    param_max = parameters[name][:paramDefs].max
+    param_min = param.min
+    param_max = param.max
     min=nil
     max=nil
     exist_area = []
@@ -22,26 +27,25 @@ module DOEParameterGenerator
     if param_min.class == Fixnum
       new_array = [param_min + var_diff.to_i, param_max - var_diff.to_i]
     elsif param_min.class == Float
-      new_array = [(param_min + var_diff).round(5), (param_max - var_diff).round(6)]
+      new_array = [(param_min + var_diff).round(6), (param_max - var_diff).round(6)]
     end
 
     if 2 < parameters[name][:paramDefs].size
-      if parameters[name][:paramDefs].find{|v| var_min<v && v<var_max}.nil?
+      if parameters[name][:paramDefs].find{|v| param_min<v && v<param_max}.nil?
       else
         if parameters[name][:paramDefs].include?(new_array[0])&&parameters[name][:paramDefs].include?(new_array[1])
           min_bit = parameters[name][:correspond].key(new_array.min)
           max_bit = parameters[name][:correspond].key(new_array.max)
         else
-          min = parameters[name][:paramDefs].min_by{|v| v > var_min ? v : parameters[name][:paramDefs].max}
-          max = parameters[name][:paramDefs].max_by{|v| v < var_max ? v : parameters[name][:paramDefs].min}
+          min = parameters[name][:paramDefs].min_by{|v| v > param_min ? v : parameters[name][:paramDefs].max}
+          max = parameters[name][:paramDefs].max_by{|v| v < param_max ? v : parameters[name][:paramDefs].min}
           min_bit = parameters[name][:correspond].key(min)
           max_bit = parameters[name][:correspond].key(max)
         end
       end
     end
 
-    ### check exist area
-    #parameters[name][:correspond].has
+    ### check exist parameter
     # oa.table[c.id].each_with_index{|b, i|
     #   if  b == min_bit || b == max_bit
     #     area.each{|row|
@@ -114,8 +118,8 @@ module DOEParameterGenerator
     debug("generate new outside(+) parameter =====================================")
     debug("var: #{var}")
     oa = @paramDefSet.scheduler.scheduler.oa
-    var_min = var.min
-    var_max = var.max
+    param_min = var.min
+    param_max = var.max
     min=nil
     max=nil
 
@@ -124,17 +128,17 @@ module DOEParameterGenerator
 
     oa.colums.each{|c|
       if para_name == c.parameter_name
-        if c.parameters.max <= var_max
+        if c.parameters.max <= param_max
           min=c.parameters.min
           max=c.parameters.max
-          var_diff = cast_decimal((var_max - var_min).abs / 3.0)
+          var_diff = cast_decimal((param_max - param_min).abs / 3.0)
 
-          if var_min.class == Fixnum
-            # new_array = [var_max+var_diff.to_i, var_max+(2*var_diff).to_i]
-            new_array = [var_max+2, var_max+4]
-          elsif var_min.class == Float
-            # new_array = [(var_max+var_diff).round(5), (var_max+2*var_diff).round(5)]
-            new_array = [(var_max+0.004).round(5), (var_max+0.004).round(5)]
+          if param_min.class == Fixnum
+            # new_array = [param_max+var_diff.to_i, param_max+(2*var_diff).to_i]
+            new_array = [param_max+2, param_max+4]
+          elsif param_min.class == Float
+            # new_array = [(param_max+var_diff).round(6), (param_max+2*var_diff).round(6)]
+            new_array = [(param_max+0.004).round(6), (param_max+0.004).round(6)]
           end
 
           debug("generate outside(+) parameter! ==> new array: #{pp new_array}")
@@ -158,8 +162,8 @@ module DOEParameterGenerator
     debug("generate new outside(-) parameter =====================================")
     debug("var: #{var}")
     oa = @paramDefSet.scheduler.scheduler.oa
-    var_min = var.min
-    var_max = var.max
+    param_min = var.min
+    param_max = var.max
     min=nil
     max=nil
 
@@ -168,17 +172,17 @@ module DOEParameterGenerator
 
     oa.colums.each{|c|
       if para_name == c.parameter_name
-        if var_min <= c.parameters.min
+        if param_min <= c.parameters.min
           min=c.parameters.min
           max=c.parameters.max
-          var_diff = cast_decimal((var_max - var_min).abs / 3.0)
+          var_diff = cast_decimal((param_max - param_min).abs / 3.0)
 
-          if var_min.class == Fixnum
-            # new_array = [var_min-var_diff.to_i, var_min-(2*var_diff).to_i]
-            new_array = [var_min-4, var_min-2]
-          elsif var_min.class == Float
-            # new_array = [(var_min-var_diff).round(5), (var_min-2*var_diff).round(5)]
-            new_array = [(var_min-0.004).round(5), (var_min-0.004).round(5)]
+          if param_min.class == Fixnum
+            # new_array = [param_min-var_diff.to_i, param_min-(2*var_diff).to_i]
+            new_array = [param_min-4, param_min-2]
+          elsif param_min.class == Float
+            # new_array = [(param_min-var_diff).round(6), (param_min-2*var_diff).round(6)]
+            new_array = [(param_min-0.004).round(6), (param_min-0.004).round(6)]
           end
 
           debug("generate outside(-) parameter! ==> new array: #{pp new_array}")
@@ -202,8 +206,8 @@ module DOEParameterGenerator
     debug("generate new both side parameter =====================================")
     debug("var: #{var}")
     oa = @paramDefSet.scheduler.scheduler.oa
-    var_min = var.min
-    var_max = var.max
+    param_min = var.min
+    param_max = var.max
     min=nil
     max=nil
     
@@ -212,24 +216,24 @@ module DOEParameterGenerator
     new_array = nil
     oa.colums.each{|c|
       if para_name == c.parameter_name
-        if c.parameters.min <= var_min && var_max <= c.parameters.max
+        if c.parameters.min <= param_min && param_max <= c.parameters.max
           min=c.parameters.min
           max=c.parameters.max
         else
-          if var_min < c.parameters.min
-          error("var_min: #{var_min}")
+          if param_min < c.parameters.min
+          error("param_min: #{param_min}")
           # TODO:
-          min = var_min
+          min = param_min
           end
-          if c.parameters.max < var_max
-          error("var_max: #{var_max}")
+          if c.parameters.max < param_max
+          error("param_max: #{param_max}")
           # TODO:
-          max = var_max
+          max = param_max
           end
         end
         var_diff = cast_decimal((max - min).abs / 2.0)
         new_upper,new_lower = nil,nil
-        if var_min.class == Fixnum
+        if param_min.class == Fixnum
           # new_upper,new_lower = (min-var_diff).to_i, (max+var_diff).to_i
           if @limit_var[para_name][:lim_low] > (min-2).to_i
             new_lower = @limit_var[para_name][:lim_low]
@@ -243,19 +247,19 @@ module DOEParameterGenerator
           else
             new_upper = (max+2).to_i
           end
-        elsif var_min.class == Float
-          # new_upper,new_lower =(min-var_diff).round(5), (max+var_diff).round(5)
-          if @limit_var[para_name][:lim_low] > (min-0.004).round(5)
+        elsif param_min.class == Float
+          # new_upper,new_lower =(min-var_diff).round(6), (max+var_diff).round(6)
+          if @limit_var[para_name][:lim_low] > (min-0.004).round(6)
             new_lower = @limit_var[para_name][:lim_low]
             @limit_var[para_name][:touch_low] = true
           else
-            new_lower = (min-0.004).round(5)
+            new_lower = (min-0.004).round(6)
           end
-          if @limit_var[para_name][:lim_high] < (max+0.004).round(5)
+          if @limit_var[para_name][:lim_high] < (max+0.004).round(6)
             new_upper = @limit_var[para_name][:lim_high]
             @limit_var[para_name][:touch_high] = true
           else
-            new_upper = (max+0.004).round(5)
+            new_upper = (max+0.004).round(6)
           end
         end
         new_array = [new_lower,new_upper]
@@ -263,15 +267,15 @@ module DOEParameterGenerator
         debug("parameters: #{c.parameters}")
 
         if 2 < c.parameters.size
-          if c.parameters.find{|v| v<var_min && var_max<v }.nil?
+          if c.parameters.find{|v| v<param_min && param_max<v }.nil?
             break
           else
             if c.parameters.include?(new_array[0]) && c.parameters.include?(new_array[1])
               min_bit = c.get_bit_string(new_array.min)
               max_bit = c.get_bit_string(new_array.max)
             else
-              # min = c.parameters.min_by{|v| v > var_min ? v : c.parameters.max}
-              # max = c.parameters.max_by{|v| v < var_max ? v : c.parameters.min}
+              # min = c.parameters.min_by{|v| v > param_min ? v : c.parameters.max}
+              # max = c.parameters.max_by{|v| v < param_max ? v : c.parameters.min}
               min_bit = c.get_bit_string(min)
               max_bit = c.get_bit_string(max)
             end

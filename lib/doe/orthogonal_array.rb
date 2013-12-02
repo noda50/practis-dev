@@ -67,7 +67,7 @@ class OrthogonalArray
   end
 
   # 
-  def extend_table(id_set, add_point_case, parameter)
+  def extend_table(add_point_case, parameter)
     old_level = 0
     old_digit_num = 0
     twice = false

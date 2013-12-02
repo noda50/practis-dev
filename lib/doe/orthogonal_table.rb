@@ -48,25 +48,40 @@ module OrthogonalTable
 		return table
 	end
 
-	# 
-	def extend_table(area, parameter)
-	end
+	# # 
+	# def extend_table(area, parameter)
+	# end
 
   # 
-	def generate_area(sql_connector, old_rows, new_param, parameter)
-		new_rows = []
+	def generate_area(sql_connector, id_list, new_param, parameter)
+    new_rows = []
     add_point_case = new_param[:case]
     new_bits =[]
     id=nil
-    
+
+    # scalability problem (load new_rows on memory)
     condition = [:or]
+    condition += id_list.map{|i| [:eq, [:field, "id"], i]}
+    old_rows = sql_connector.read_record(:orthogonal, condition)
+    
+    orCond = [:or]
     new_param[:param][:paramDefs].each{|v|
       bit = parameter[:correspond].key(v)
       new_bits.push(bit)
-      condition.push([:eq, [:field, new_param[:param][:name]], bit])
+      orCond.push([:eq, [:field, new_param[:param][:name]], bit])
     }
 
-    # scalability problem (load new_rows on memory)
+    condition = [:or]
+    old_rows.each {|r|
+      andCond = [:and]
+      r.each{|k, v|
+        if k != "id" and k != "run" and k != new_param[:param][:name]
+          andCond.push([:eq, [:field, k], v])
+        end
+      }
+      andCond.push(orCond)
+      condition.push(andCond)
+    }
     new_rows = sql_connector.read_record(:orthogonal, condition)
 
     old_lower_value_rows = []
@@ -92,7 +107,7 @@ module OrthogonalTable
         old_upper_value = parameter[:correspond][row[new_param[:param][:name]]]
       else
         if old_upper_value < parameter[:correspond][row[new_param[:param][:name]]]
-          old_upper_value_rows.clear 
+          old_upper_value_rows.clear
           old_upper_value_rows.push(row["id"])
           old_upper_value = parameter[:correspond][row[new_param[:param][:name]]]
         elsif old_upper_value == parameter[:correspond][row[new_param[:param][:name]]]
@@ -153,7 +168,6 @@ module OrthogonalTable
       # between (old_upper, new_upper) in area
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
     when "both side" # TODO
-      
       # between (old_lower, new_lower) in area
       generated_area.push(old_lower_value_rows + new_lower_value_rows)
       # between (old_upper, new_upper) in area
@@ -164,7 +178,6 @@ module OrthogonalTable
       p "create NO area for analysis"
     end
     
-    pp generated_area
     return generated_area
 	end
 

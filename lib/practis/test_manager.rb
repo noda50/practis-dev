@@ -128,17 +128,6 @@ module Practis
             else
               info("wait to finish analyzing result !")
               debug("id_queue flag: #{@to_be_varriance_analysis}")
-              # debug("execution queue length: #{@result_list_queue.size}")
-              #[2013/09/20]
-              ## [2013/11/28] >>
-
-              # if @alloc_counter < (@result_list_queue.size - 1)
-              #   @alloc_counter += 1
-              #   @paramDefSet.scheduler.scheduler.update_analysis(@result_list_queue[@alloc_counter][:area])
-              # end
-              
-              ## << [2013/11/28]
-              # ========
               break
             end
           end
@@ -166,12 +155,6 @@ module Practis
               paramValueSetList.push(paramValueSet)
               @paramValueSet_pool.push(paramValueSet)
               request_number -= 1
-              # [2013/09/20]
-                # area_index = @paramDefSet.scheduler.scheduler.get_v_index
-                # if !@result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].include?(newId)
-                #   @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(newId)
-                # end
-              # ======
             end
           else
             warn("the parameter already executed on previous or by the others." +
@@ -181,13 +164,8 @@ module Practis
             @database_connector.read_record(:parameter, condition){|retval|
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
-                # already_id = @paramDefSet.scheduler.scheduler.already_allocation(r["parameter_id"], newId)
                 paramValueSet.state = r["state"]
                 @paramValueSet_pool.push(paramValueSet)
-                # [2013/09/20]
-                  # area_index = @paramDefSet.scheduler.scheduler.get_v_index
-                  # @result_list_queue[@alloc_counter][:id][@result_list_queue[@alloc_counter][:area][area_index]].push(r["parameter_id"])
-                # ============
               }
             }
             debug("paramValueSet.state = #{paramValueSet.state.inspect}");
@@ -217,9 +195,11 @@ module Practis
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
-      if @paramDefSet.get_available <= 0 && @to_be_varriance_analysis
-        @mutexAnalysis.synchronize{variance_analysis}        
-      end
+      # if @paramDefSet.get_available <= 0 #&& @to_be_varriance_analysis
+        # @mutexAnalysis.synchronize{@scheduler.do_variance_analysis}
+      # end
+
+      @mutexAnalysis.synchronize{@scheduler.do_variance_analysis}
 
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@paramDefSet.get_available}, " +
