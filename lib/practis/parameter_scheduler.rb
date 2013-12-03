@@ -540,12 +540,10 @@ module Practis
         }
 
         # return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
-        if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
-          p "list size: #{@id_list_queue.size}"
-          p "counter: #{@current_qcounter}"
-          pp @id_list_queue[0]
-          return false          
-        end
+        return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+        p "list size: #{@id_list_queue.size}"
+        p "counter: #{@current_qcounter}"
+        pp @id_list_queue[0]
         
 
         # variance analysis
@@ -557,8 +555,9 @@ module Practis
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         
 
-        # hard coding
-        new_param, new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "Noise")
+        # = = = hard coding = = = 
+        #new_param, new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "Noise")
+        new_param, new_area = generate_bothside(@sql_connector, orthogonal_rows, @parameters, "Noise")
         if new_area.empty? and !new_param[:param][:paramDefs].nil?
           new_param_list.push(new_param)
         elsif !new_area.empty?
@@ -571,7 +570,8 @@ module Practis
           }
         end
 
-        new_param,new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "NumOfGameIteration")
+        #new_param,new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "NumOfGameIteration")
+        new_param,new_area = generate_bothside(@sql_connector, orthogonal_rows, @parameters, "NumOfGameIteration")
         if new_area.empty? and !new_param[:param][:paramDefs].nil?
           new_param_list.push(new_param)
         elsif !new_area.empty?
@@ -583,6 +583,9 @@ module Practis
             @id_list_queue.push(h)
           }
         end
+
+        # = = = hard coding = = = 
+
 
         # extend_otableDB & parameter set store to queue
         next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
@@ -648,6 +651,19 @@ module Practis
         end
 
         if !outside_list.empty?
+          extclm = extend_otableDB(old_rows, outside_list[0][:case], outside_list[0][:param])
+          new_outside_area += generate_area(@sql_connector, old_rows, outside_list[0], extclm)
+
+          if 2 <= outside_list.size
+            for i in 1...outside_list.size
+              extclm = extend_otableDB(old_rows, outside_list[i][:case], outside_list[i][:param])
+              tmp_area = []
+              new_outside_area.each { |na|
+                tmp_area += generate_area(@sql_connector, na, outside_list[i], extclm)
+              }
+              new_outside_area = tmp_area
+            end
+          end
         end
 
         return new_inside_area + new_outside_area

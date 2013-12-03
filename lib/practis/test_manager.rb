@@ -195,10 +195,6 @@ module Practis
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
-      # if @paramDefSet.get_available <= 0 #&& @to_be_varriance_analysis
-        # @mutexAnalysis.synchronize{@scheduler.do_variance_analysis}
-      # end
-
       @mutexAnalysis.synchronize{@scheduler.do_variance_analysis}
 
       debug(cluster_tree.to_s)
@@ -233,7 +229,6 @@ module Practis
     def generate_result_list(area, priority=0)
       result_list = { :area => area, :id => {}, :results => {}, :weight => {}, 
                       :priority => priority} #, :lerp => false}
-      # oa = @paramDefSet.scheduler.scheduler.oa
       result_list[:area].each{|a|
         result_list[:id][a] = []
         result_list[:results][a] = []
