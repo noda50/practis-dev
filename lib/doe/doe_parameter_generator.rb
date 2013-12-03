@@ -1,13 +1,14 @@
+require 'practis'
 require 'doe/f_test'
 require 'pp'
 
 #
 module DOEParameterGenerator
+  include Practis
   include Math
-
   
   # search only "Inside" significant parameter
-  def generate_inside(sql_connetor, orthogonal_rows, parameters, name)
+  def generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -24,10 +25,13 @@ module DOEParameterGenerator
     new_array = nil
 
     var_diff = cast_decimal((param_max - param_min).abs / 3.0)
+    return [],[] if var_diff <= definition["step_size"]
+
     if param_min.class == Fixnum
       new_array = [param_min + var_diff.to_i, param_max - var_diff.to_i]
     elsif param_min.class == Float
-      new_array = [(param_min + var_diff).round(6), (param_max - var_diff).round(6)]
+      new_array = [ (param_min + var_diff).round(definition["num_decimal"]), 
+                    (param_max - var_diff).round(definition["num_decimal"]) ]
     end
 
     if 2 < parameters[name][:paramDefs].size
@@ -84,10 +88,8 @@ module DOEParameterGenerator
     return new_var, new_area
   end
   
-  #
-  def generate_ooutside(sql_connetor, orthogonal_rows, parameters, name)
-    
-
+  # search only "Out side" parameter
+  def generate_ooutside(sql_connetor, orthogonal_rows, parameters, name, definition)
     #
     # both side
     #
@@ -95,11 +97,10 @@ module DOEParameterGenerator
     #
     # out side(-)
     #
-
   end
 
-  # search only "Both Side" significant parameter
-  def generate_bothside(sql_connetor, orthogonal_rows, parameters, name)
+  # search only "Both Side" parameter
+  def generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -135,34 +136,36 @@ module DOEParameterGenerator
 
     new_upper, new_lower = nil,nil
     if param_min.class == Fixnum
-      if 1 > (min - 9).to_i #if @limit_var[para_name][:lim_low] > (min - 2).to_i
-        new_lower = 1 # new_lower = @limit_var[para_name][:lim_low]
+      if definition["bottom"] > (min - 9).to_i #if @limit_var[para_name][:lim_low] > (min - 2).to_i
+        new_lower = definition["bottom"] # new_lower = @limit_var[para_name][:lim_low]
         ## @limit_var[para_name][:touch_low] = true
       else
         new_lower = (min - 9).to_i
       end
-      if 300 < (max + 9).to_i # if @limit_var[para_name][:lim_high] < (max + 2).to_i
-        new_upper = 300 # new_upper = @limit_var[para_name][:lim_high]
+      if definition["top"] < (max + 9).to_i # if @limit_var[para_name][:lim_high] < (max + 2).to_i
+        new_upper = definition["top"] # new_upper = @limit_var[para_name][:lim_high]
         ## @limit_var[para_name][:touch_high] = true
       else
         new_upper = (max + 9).to_i
       end
     elsif param_min.class == Float
-      if 0.0 > (min - 0.004).round(6)# if @limit_var[para_name][:lim_low] > (min - 0.004).round(6)
-        new_lower = 0.0 # new_lower = @limit_var[para_name][:lim_low]
+      if definition["bottom"] > (min - 0.004)
+      # if 0.0 > (min - 0.004).round(definition["num_decimal"])
+        new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - 0.004).round(6)
+        new_lower = (min - 0.004).round(definition["num_decimal"])
       end
-      if 1.0 < (max + 0.004).round(6) # if @limit_var[para_name][:lim_high] < (max + 0.004).round(6)
-        new_upper = 1.0 # new_upper = @limit_var[para_name][:lim_high]
+      if definition["top"] < (max + 0.004).round(definition["num_decimal"])
+      # if 1.0 < (max + 0.004).round(definition["num_decimal"]) 
+        new_upper = definition["top"]
         # @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + 0.004).round(6)
+        new_upper = (max + 0.004).round(definition["num_decimal"])
       end
     end
 
-    # === hard coding ====
+    # === (end) hard coding ====
 
 
     new_array = [new_lower, new_upper]
@@ -220,7 +223,7 @@ module DOEParameterGenerator
   end
 
   # search only "Outside(+)" significant parameter
-  def generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name)
+  def generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -245,130 +248,58 @@ module DOEParameterGenerator
         # new_array = [param_max+var_diff.to_i, param_max+(2*var_diff).to_i]
         new_array = [param_max + 3, param_max + 6]
       elsif param_min.class == Float
-        # new_array = [(param_max+var_diff).round(6), (param_max+2*var_diff).round(6)]
-        new_array = [(param_max + 0.004).round(6), (param_max + 0.008).round(6)]
+        # new_array = [ (param_max+var_diff).round(definition["num_decimal"]), 
+        #               (param_max+2*var_diff).round(definition["num_decimal"]) ]
+        new_array = [ (param_max + 0.004).round(definition["num_decimal"]),
+                      (param_max + 0.008).round(definition["num_decimal"]) ]
       end
     end
 
-exit(0)
-    # oa.colums.each{|c|
-    #   if para_name == c.parameter_name
-    #     if c.parameters.max <= param_max
-    #       min=c.parameters.min
-    #       max=c.parameters.max
-    #       var_diff = cast_decimal((param_max - param_min).abs / 3.0)
-
-    #       if param_min.class == Fixnum
-    #         # new_array = [param_max+var_diff.to_i, param_max+(2*var_diff).to_i]
-    #         new_array = [param_max+2, param_max+4]
-    #       elsif param_min.class == Float
-    #         # new_array = [(param_max+var_diff).round(6), (param_max+2*var_diff).round(6)]
-    #         new_array = [(param_max+0.004).round(6), (param_max+0.004).round(6)]
-    #       end
-    #     end
-    #     break
-    #   end
-    # }
-
     # var.name
     new_var ={:case => "outside(+)", 
-              :param => {:name => para_name, :paramDefs => new_array}}
+              :param => {:name => name, :paramDefs => new_array}}
     return new_var,new_area
   end
 
   # search only "Outside(-)" significant parameter
-  def generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name)
-    
-  end  
-
-
-  # TODO: new value of parameter is determined by f-value
-  def generate_new_outsidep_parameter(var, para_name, area)
-    debug("generate new outside(+) parameter =====================================")
-    debug("var: #{var}")
-    oa = @paramDefSet.scheduler.scheduler.oa
-    param_min = var.min
-    param_max = var.max
-    min=nil
-    max=nil
-
-    new_area = []
-    new_array = nil
-
-    oa.colums.each{|c|
-      if para_name == c.parameter_name
-        if c.parameters.max <= param_max
-          min=c.parameters.min
-          max=c.parameters.max
-          var_diff = cast_decimal((param_max - param_min).abs / 3.0)
-
-          if param_min.class == Fixnum
-            # new_array = [param_max+var_diff.to_i, param_max+(2*var_diff).to_i]
-            new_array = [param_max+2, param_max+4]
-          elsif param_min.class == Float
-            # new_array = [(param_max+var_diff).round(6), (param_max+2*var_diff).round(6)]
-            new_array = [(param_max+0.004).round(6), (param_max+0.004).round(6)]
-          end
-
-          debug("generate outside(+) parameter! ==> new array: #{pp new_array}")
-          debug("parameters: #{c.parameters}")
-        end
-        break
+  def generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    param = []
+    orthogonal_rows.each{|row|
+      if !param.include?(parameters[name][:correspond][row[name]])
+        param.push(parameters[name][:correspond][row[name]])
       end
     }
 
-    # var.name
-    new_var ={:case => "outside(+)", 
-              :param => {:name => para_name, :paramDefs => new_array}}
-    debug("#{pp new_var}")
-    # pp @variable_set.scheduler.scheduler.oa.get_table
-    debug("end generate outside(+) parameter =====================================")
-    return new_var,new_area
-  end
-
-  # TODO: new value of parameter is determined by f-value
-  def generate_new_outsidem_parameter(var, para_name, area)
-    debug("generate new outside(-) parameter =====================================")
-    debug("var: #{var}")
-    oa = @paramDefSet.scheduler.scheduler.oa
-    param_min = var.min
-    param_max = var.max
-    min=nil
-    max=nil
-
+    param_min = param.min
+    param_max = param.max
+    min = nil
+    max = nil
+    exist_area = []
     new_area = []
     new_array = nil
 
-    oa.colums.each{|c|
-      if para_name == c.parameter_name
-        if param_min <= c.parameters.min
-          min=c.parameters.min
-          max=c.parameters.max
-          var_diff = cast_decimal((param_max - param_min).abs / 3.0)
 
-          if param_min.class == Fixnum
-            # new_array = [param_min-var_diff.to_i, param_min-(2*var_diff).to_i]
-            new_array = [param_min-4, param_min-2]
-          elsif param_min.class == Float
-            # new_array = [(param_min-var_diff).round(6), (param_min-2*var_diff).round(6)]
-            new_array = [(param_min-0.004).round(6), (param_min-0.004).round(6)]
-          end
+    if param_min <= parameters[name][:paramDefs].min
+      min = parameters[name][:paramDefs].min
+      max = parameters[name][:paramDefs].max
+      var_diff = cast_decimal((param_max - param_min).abs / 3.0)
 
-          debug("generate outside(-) parameter! ==> new array: #{pp new_array}")
-          debug("parameters: #{c.parameters}")
-        end
-        break
+      if param_min.class == Fixnum
+        # new_array = [param_min-var_diff.to_i, param_min-(2*var_diff).to_i]
+        new_array = [param_min - 6, param_min - 3]
+      elsif param_min.class == Float
+        # new_array = [ (param_min-var_diff).round(definition["num_decimal"]),
+        #               (param_min-2*var_diff).round(definition["num_decimal"]) ]
+        new_array = [ (param_min - 0.004).round(definition["num_decimal"]), 
+                      (param_min - 0.008).round(definition["num_decimal"])]
       end
-    }
+    end
 
     # var.name
     new_var ={:case => "outside(-)", 
-              :param => {:name => para_name, :paramDefs => new_array}}
-    debug("#{pp new_var}")
-    # pp @variable_set.scheduler.scheduler.oa.get_table
-    debug("end generate outside(-) parameter =====================================")
+              :param => {:name => name, :paramDefs => new_array}}
     return new_var,new_area
-  end
+  end  
 
   private
 

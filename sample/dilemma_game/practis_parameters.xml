@@ -5,9 +5,9 @@
       <parameter name="Noise" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
-            <start>0.4</start>
-            <end>0.5</end>
-            <step>0.1</step>
+            <start>0.2</start>
+            <end>0.25</end>
+            <step>0.05</step>
           </condition>
         </conditions>
       </parameter>

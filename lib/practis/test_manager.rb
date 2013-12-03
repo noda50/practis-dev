@@ -35,29 +35,11 @@ module Practis
     attr_reader :current_var_set
 
     def initialize(config_file, parameter_file, database_file, result_file, doe_conf, myaddr = nil)
-      # @assign_list = {}
-      @limit_var = {}
-
       @doe_definitions = nil
-
       open(doe_conf, 'r'){|fp|
         @doe_definitions = JSON.parse(fp.read)
       }
-
-      pp @doe_definitions
-
-      # CSV.foreach(doe_conf) do |r|
-      #   if r[1] == "is_assigned"
-      #     @assign_list[r[0]] = true
-      #     @limit_var[r[0]] = {:lim_low => r[2].to_f, :lim_high => r[3].to_f, :touch_low => false, :touch_high => false}
-      #   elsif r[1] == "is_unassigned"
-      #     @assign_list[r[0]] = false
-      #   end
-      # end
-      # pp @assign_list
-
       super(config_file, parameter_file, database_file, result_file, myaddr, @doe_definitions)
-
 
       otable = generation_orthogonal_table(@paramDefSet.paramDefs)
       @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DOEScheduler")
@@ -69,8 +51,7 @@ module Practis
       @mutexAnalysis = Mutex.new
       @alloc_counter = 0
       @to_be_varriance_analysis = true
-      @f_disttable = F_DistributionTable.new(0.01)      
-      exit(0)
+      @f_disttable = F_DistributionTable.new(0.01)
     end
 
     ## === methods of manager.rb ===

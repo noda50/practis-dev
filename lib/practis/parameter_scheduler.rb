@@ -432,7 +432,6 @@ module Practis
           @total_indexes.push(paramDef.length)
           if @definitions[paramDef.name]["is_assigned"]
             @parameters[paramDef.name] = {column_id: i, correspond: {}, paramDefs: paramDef.values.sort}
-            # parameters.push({ :name => paramDef.name, :paramDefs => paramDef.values})
           else
             @unassigned.push({ :name => paramDef.name, :paramDefs => paramDef.values})
             @unassigned_total.push(paramDef.length)
@@ -461,7 +460,7 @@ module Practis
         return nil if @extending
 
         v = @available_numbers.shift
-        @v_index = v / @unassigned_total_size
+        @v_index = v / @unassigned_total_size # debug error
         @allocated_num += 1
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
@@ -491,7 +490,8 @@ module Practis
           }
           condition.push(andCond)
         }        
-
+        
+        # pp condition # debug error
         already = @sql_connector.read_record(:parameter, condition)
 
         if already.size != 0
@@ -501,6 +501,7 @@ module Practis
         else
           @id_list_queue[@current_qcounter][id_index].push(id)
         end
+        @id_list_queue[@current_qcounter][id_index].uniq!
 
         return parameter_array
       end
@@ -539,7 +540,6 @@ module Practis
           end
         }
 
-        # return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
         p "list size: #{@id_list_queue.size}"
         p "counter: #{@current_qcounter}"
@@ -556,35 +556,29 @@ module Practis
         
 
         # = = = hard coding = = = 
-        #new_param, new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "Noise")
-        new_param, new_area = generate_bothside(@sql_connector, orthogonal_rows, @parameters, "Noise")
-        if new_area.empty? and !new_param[:param][:paramDefs].nil?
-          new_param_list.push(new_param)
-        elsif !new_area.empty?
-          new_area.each{|a|
-            h = {:or_ids => a}
-            a.each{|i|
-              h[i] = []
+        @parameters.each{|k, v|
+          new_param, exist_ids = generate_inside(@sql_connector, orthogonal_rows, 
+                                                @parameters, k, @definitions[k])
+          # new_param, exist_ids = generate_bothside(@sql_connector, orthogonal_rows, 
+          #                                       @parameters, k, @definitions[k])
+          # new_param, exist_ids = generate_outside_plus(@sql_connector, orthogonal_rows, 
+          #                                       @parameters, k, @definitions[k])
+          # new_param, exist_ids = generate_outside_minus(@sql_connector, orthogonal_rows, 
+          #                                       @parameters, k, @definitions[k])
+          if exist_ids.empty? and !new_param[:param][:paramDefs].nil?
+            new_param_list.push(new_param)
+          elsif !exist_ids.empty?
+            exist_ids.each{|a|
+              h = {:or_ids => a}
+              a.each{|i|
+                h[i] = []
+              }
+              @id_list_queue.push(h)
             }
-            @id_list_queue.push(h)
-          }
-        end
+          end
+        }
 
-        #new_param,new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "NumOfGameIteration")
-        new_param,new_area = generate_bothside(@sql_connector, orthogonal_rows, @parameters, "NumOfGameIteration")
-        if new_area.empty? and !new_param[:param][:paramDefs].nil?
-          new_param_list.push(new_param)
-        elsif !new_area.empty?
-          new_area.each{|a|
-            h = {:or_ids => a}
-            a.each{|i|
-              h[i] = []
-            }
-            @id_list_queue.push(h)
-          }
-        end
-
-        # = = = hard coding = = = 
+        # = = = (end) hard coding = = = 
 
 
         # extend_otableDB & parameter set store to queue

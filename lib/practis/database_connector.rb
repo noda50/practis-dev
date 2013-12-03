@@ -71,7 +71,6 @@ module Practis
         end
         # <<<=== [2013/10/04 written by H-Matsushima]
         # === add f-test fields to f-test table ===
-        pp doe_definitions
         paramDefs.each do |paramDef|
           if doe_definitions[paramDef.name]["is_assigned"]
             if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
