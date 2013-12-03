@@ -34,34 +34,43 @@ module Practis
     attr_reader :va_queue
     attr_reader :current_var_set
 
-    def initialize(config_file, parameter_file, database_file, result_file, doe_ini, myaddr = nil)
-      @assign_list = {}
+    def initialize(config_file, parameter_file, database_file, result_file, doe_conf, myaddr = nil)
+      # @assign_list = {}
       @limit_var = {}
-      CSV.foreach(doe_ini) do |r|
-        if r[1] == "is_assigned"
-          @assign_list[r[0]] = true
-          @limit_var[r[0]] = {:lim_low => r[2].to_f, :lim_high => r[3].to_f, :touch_low => false, :touch_high => false}
-        elsif r[1] == "is_unassigned"
-          @assign_list[r[0]] = false
-        end
-      end
-      super(config_file, parameter_file, database_file, result_file, myaddr, @assign_list)
+
+      @doe_definitions = nil
+
+      open(doe_conf, 'r'){|fp|
+        @doe_definitions = JSON.parse(fp.read)
+      }
+
+      pp @doe_definitions
+
+      # CSV.foreach(doe_conf) do |r|
+      #   if r[1] == "is_assigned"
+      #     @assign_list[r[0]] = true
+      #     @limit_var[r[0]] = {:lim_low => r[2].to_f, :lim_high => r[3].to_f, :touch_low => false, :touch_high => false}
+      #   elsif r[1] == "is_unassigned"
+      #     @assign_list[r[0]] = false
+      #   end
+      # end
+      # pp @assign_list
+
+      super(config_file, parameter_file, database_file, result_file, myaddr, @doe_definitions)
 
 
       otable = generation_orthogonal_table(@paramDefSet.paramDefs)
       @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DOEScheduler")
       @scheduler = @paramDefSet.scheduler.scheduler
-      @scheduler.init_doe(@database_connector, otable, @assign_list)
+      @scheduler.init_doe(@database_connector, otable, @doe_definitions)
       
       @total_parameters = @paramDefSet.get_total
 
       @mutexAnalysis = Mutex.new
-      # @result_list_queue = []
-      # @result_list_queue.push(generate_result_list([0,1,2,3]))
       @alloc_counter = 0
       @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)      
-      
+      exit(0)
     end
 
     ## === methods of manager.rb ===
@@ -263,11 +272,8 @@ module Practis
     end
 
     ##------------------------------------------------------------
-    
-    # TODO: 
+     
     private
-    def check_duplicate_parameters
-    end
 
     #
     def value_to_indexes(v, total_indexes, total_num)
@@ -308,14 +314,5 @@ module Practis
       return maxid + 1 ;
     end
 
-    #
-    def show_param_combination
-      for j in 0...@paramCombinationArray[0].size
-        for i in 0...@paramCombinationArray.size
-          print @paramCombinationArray[i][j].to_s + ","
-        end
-        puts
-      end
-    end
   end
 end

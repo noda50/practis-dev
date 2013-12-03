@@ -220,12 +220,64 @@ module DOEParameterGenerator
   end
 
   # search only "Outside(+)" significant parameter
-  def generate_outside_plus(orthogonal_rows, parameter, name)
-    
+  def generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name)
+    param = []
+    orthogonal_rows.each{|row|
+      if !param.include?(parameters[name][:correspond][row[name]])
+        param.push(parameters[name][:correspond][row[name]])
+      end
+    }
+
+    param_min = param.min
+    param_max = param.max
+    min = nil
+    max = nil
+    exist_area = []
+    new_area = []
+    new_array = nil
+
+    if parameters[name][:paramDefs].max <= param_max
+      min = parameters[name][:paramDefs].min
+      max = parameters[name][:paramDefs].max
+      # var_diff = cast_decimal((param_max - param_min).abs / 3.0)
+
+      if param_min.class == Fixnum
+        # new_array = [param_max+var_diff.to_i, param_max+(2*var_diff).to_i]
+        new_array = [param_max + 3, param_max + 6]
+      elsif param_min.class == Float
+        # new_array = [(param_max+var_diff).round(6), (param_max+2*var_diff).round(6)]
+        new_array = [(param_max + 0.004).round(6), (param_max + 0.008).round(6)]
+      end
+    end
+
+exit(0)
+    # oa.colums.each{|c|
+    #   if para_name == c.parameter_name
+    #     if c.parameters.max <= param_max
+    #       min=c.parameters.min
+    #       max=c.parameters.max
+    #       var_diff = cast_decimal((param_max - param_min).abs / 3.0)
+
+    #       if param_min.class == Fixnum
+    #         # new_array = [param_max+var_diff.to_i, param_max+(2*var_diff).to_i]
+    #         new_array = [param_max+2, param_max+4]
+    #       elsif param_min.class == Float
+    #         # new_array = [(param_max+var_diff).round(6), (param_max+2*var_diff).round(6)]
+    #         new_array = [(param_max+0.004).round(6), (param_max+0.004).round(6)]
+    #       end
+    #     end
+    #     break
+    #   end
+    # }
+
+    # var.name
+    new_var ={:case => "outside(+)", 
+              :param => {:name => para_name, :paramDefs => new_array}}
+    return new_var,new_area
   end
 
   # search only "Outside(-)" significant parameter
-  def generate_outside_minus(orthogonal_rows, parameter, name)
+  def generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name)
     
   end  
 

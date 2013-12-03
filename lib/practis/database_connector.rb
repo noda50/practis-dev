@@ -38,7 +38,7 @@ module Practis
         @database_parser.parse
       end
       
-      def setup_database(paramDefs, result_set, config, assign_list=nil)
+      def setup_database(paramDefs, result_set, config, doe_definitions=nil)
         # add parameter fields to parameter table
         paramDefs.each do |paramDef|
           if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
@@ -71,8 +71,9 @@ module Practis
         end
         # <<<=== [2013/10/04 written by H-Matsushima]
         # === add f-test fields to f-test table ===
+        pp doe_definitions
         paramDefs.each do |paramDef|
-          if assign_list[paramDef.name]
+          if doe_definitions[paramDef.name]["is_assigned"]
             if (type_field = type_to_sqltype(paramDef.type.to_s)).nil?
               error("type field requires any types. #{paramDef}")
               next

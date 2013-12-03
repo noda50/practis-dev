@@ -65,7 +65,7 @@ if (directory = options[:directory]) and File.directory?(directory)
   database_file = File.join(directory, "practis_database.xml")
   parameter_file = File.join(directory, "practis_parameters.xml")
   result_file = File.join(directory, "practis_result.xml")
-  doe_ini = File.join(directory, "design_of_experiment.ini")
+  doe_conf = File.join(directory, "doe_config.json")
   unless File.exist?(config_file) and File.exist?(database_file) and
       File.exist?(parameter_file) and File.exist?(result_file)
     config_file, database_file, parameter_file, result_file = nil, nil, nil, nil
@@ -93,7 +93,7 @@ if result_file.nil?
 end
 
 $manager = Practis::TestManager.new(config_file, parameter_file, database_file,
-                                result_file, doe_ini, addr)
+                                result_file, doe_conf, addr)
 manager_thread = Thread.new do
   $manager.loop
 end

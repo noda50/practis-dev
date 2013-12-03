@@ -1,0 +1,23 @@
+{
+	"Noise" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 0.5,
+		"step" : 0.000005,
+		"num_decimal" : 6
+	},
+	"NumOfGameIteration" : {
+		"is_assigned" : true,
+		"bottom" : 1,
+		"top" : 300,
+		"step" : 1,
+		"num_decimal" : 1
+	},
+	"seed" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 10,
+		"step" : 1,
+		"num_decimal" : 0
+	}
+}

@@ -403,9 +403,9 @@ module Practis
       end
 
       # 
-      def init_doe(sql_connector, table, assign_list)
+      def init_doe(sql_connector, table, doe_definitions)
         @sql_connector = sql_connector
-        @assign_list = assign_list
+        @definitions = doe_definitions
         @id_list_queue = []
         @current_qcounter = 0
         
@@ -430,7 +430,7 @@ module Practis
         @paramDefList.each_with_index{|paramDef, i|
           chk_arg(Practis::ParamDef, paramDef)
           @total_indexes.push(paramDef.length)
-          if @assign_list[paramDef.name]
+          if @definitions[paramDef.name]["is_assigned"]
             @parameters[paramDef.name] = {column_id: i, correspond: {}, paramDefs: paramDef.values.sort}
             # parameters.push({ :name => paramDef.name, :paramDefs => paramDef.values})
           else
@@ -527,7 +527,7 @@ module Practis
         count = 0
         parameter_keys = []
         new_param_list = []
-        @assign_list.each { |k,v| parameter_keys.push(k) if v }
+        @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
         @id_list_queue[0][:or_ids].each{|oid|
           condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
           retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
@@ -855,7 +855,7 @@ module Practis
         k = v
         divider = @unassigned_total_size
         @total_indexes.each_with_index{ |n, i|
-          if @assign_list[@paramDefList[i].name]
+          if @definitions[@paramDefList[i].name]["is_assigned"]
             indexes.push(0)
           else
             divider = (divider / n).to_i
