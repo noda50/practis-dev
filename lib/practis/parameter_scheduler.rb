@@ -399,6 +399,7 @@ module Practis
       def initialize(paramDefs)
         @paramDefList = chk_arg(Array, paramDefs)
         @f_test=FTest.new
+        @extending = false
       end
 
       # 
@@ -457,6 +458,8 @@ module Practis
           return nil if !set_next_list
         end
 
+        return nil if @extending
+
         v = @available_numbers.shift
         @v_index = v / @unassigned_total_size
         @allocated_num += 1
@@ -487,16 +490,12 @@ module Practis
             end
           }
           condition.push(andCond)
-        }
-        pp condition
-        pp parameter_array
-        
+        }        
 
         already = @sql_connector.read_record(:parameter, condition)
 
         if already.size != 0
           already.each{|ret|
-            p "already: #{ret["parameter_id"]}"
             @id_list_queue[@current_qcounter][id_index].push(ret["parameter_id"])
           }
         else
@@ -555,19 +554,38 @@ module Practis
         # parameter set generation
         condition = [:or]
         condition += @id_list_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
-        pp orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+        orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         
 
         # hard coding
-        new_param,new_area = generate_inside(orthogonal_rows, @parameters, "Noise")
-        new_param_list.push(new_param)
-        new_param,new_area = generate_inside(orthogonal_rows, @parameters, "NumOfGameIteration")
-        new_param_list.push(new_param)
-        pp new_param_list
+        new_param, new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "Noise")
+        if new_area.empty? and !new_param[:param][:paramDefs].nil?
+          new_param_list.push(new_param)
+        elsif !new_area.empty?
+          new_area.each{|a|
+            h = {:or_ids => a}
+            a.each{|i|
+              h[i] = []
+            }
+            @id_list_queue.push(h)
+          }
+        end
 
+        new_param,new_area = generate_inside(@sql_connector, orthogonal_rows, @parameters, "NumOfGameIteration")
+        if new_area.empty? and !new_param[:param][:paramDefs].nil?
+          new_param_list.push(new_param)
+        elsif !new_area.empty?
+          new_area.each{|a|
+            h = {:or_ids => a}
+            a.each{|i|
+              h[i] = []
+            }
+            @id_list_queue.push(h)
+          }
+        end
 
         # extend_otableDB & parameter set store to queue
-        pp next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
+        next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
         next_sets.each{|set|
           h = {:or_ids => []}
           set.each{|r| 
@@ -592,7 +610,6 @@ module Practis
         if @current_qcounter < @id_list_queue.size - 1
           @current_qcounter += 1
           @available_numbers = get_total.times.map { |i| i }
-          p "increment counter !, #{@current_qcounter}"
           return true
         else
           return false
@@ -614,7 +631,6 @@ module Practis
           end
         }
 
-        # pp inside_list
         if !inside_list.empty?
           extclm = extend_otableDB(old_rows, inside_list[0][:case], inside_list[0][:param])
           new_inside_area += generate_area(@sql_connector, old_rows, inside_list[0], extclm)
@@ -653,16 +669,16 @@ module Practis
           return -1
         end
 
-        old_bits = @sql_connector.read_distinct_record(:orthogonal, "#{parameter[:name]}")
-        old_level = old_bits.length
-        old_digit_num = orthogonal_rows[0][parameter[:name]].size#old_level / 2
+        old_level = @parameters[parameter[:name]][:paramDefs].size #old_bits.length
+        old_digit_num = orthogonal_rows[0][parameter[:name]].size
         digit_num = sqrt(old_level + parameter[:paramDefs].size).ceil
 
         condition = [:or]
-        condition += old_bits.map{|v| [:eq, [:field, parameter[:name]], v[parameter[:name]]]}
+        condition += @parameters[parameter[:name]][:correspond].map{|k,v| [:eq, [:field, parameter[:name]], k]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
 
         if old_digit_num < digit_num
+          @extending = true
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []
           upload_msgs = []
@@ -685,10 +701,13 @@ module Practis
             update_msgs.push(upd_h)
             upload_msgs.push(upl_h)
           }
-          assign_parameter(old_level, add_point_case, parameter[:name], parameter[:paramDefs])
           update_orthogonal_table_db(update_msgs)
           upload_orthogonal_table_db(upload_msgs)
+          @extending = false
         end
+
+        assign_parameter(old_level, add_point_case, parameter[:name], parameter[:paramDefs])
+        
         return @parameters[parameter[:name]]
       end
 
@@ -728,6 +747,7 @@ module Practis
         end
         @parameters[name][:paramDefs] += add_parameters
         link_parameter(name, add_parameters)
+        @parameters[name]
       end
 
       #

@@ -7,7 +7,7 @@ module DOEParameterGenerator
 
   
   # search only "Inside" significant parameter
-  def generate_inside(orthogonal_rows, parameters, name)
+  def generate_inside(sql_connetor, orthogonal_rows, parameters, name)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -31,9 +31,9 @@ module DOEParameterGenerator
     end
 
     if 2 < parameters[name][:paramDefs].size
-      if parameters[name][:paramDefs].find{|v| param_min<v && v<param_max}.nil?
+      if parameters[name][:paramDefs].find{ |v| param_min < v && v < param_max }.nil?
       else
-        if parameters[name][:paramDefs].include?(new_array[0])&&parameters[name][:paramDefs].include?(new_array[1])
+        if parameters[name][:paramDefs].include?(new_array[0]) && parameters[name][:paramDefs].include?(new_array[1])
           min_bit = parameters[name][:correspond].key(new_array.min)
           max_bit = parameters[name][:correspond].key(new_array.max)
         else
@@ -42,53 +42,42 @@ module DOEParameterGenerator
           min_bit = parameters[name][:correspond].key(min)
           max_bit = parameters[name][:correspond].key(max)
         end
+
+        condition = [:or]
+        orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], max_bit]]
+        orthogonal_rows.each{|row|
+          andCond = [:and]
+          row.each{ |k, v|
+            if k != "id" and k != "run" and k != name and !v.nil?
+              andCond.push([:eq, [:field, k], v])
+            end
+          }
+          andCond.push(orCond)
+          condition.push(andCond)
+        }
+
+        exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+        
+        new_area.push(exist_area.map{|r| r["id"]})
+        
+        new_area_a = []
+        new_area_b = []
+
+        exist_area.each{|r|
+          new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "0"
+          new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "1"
+        }
+        orthogonal_rows.map{|r|
+          new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "1"
+          new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
+        }
+
+        new_area.push(new_area_a)
+        new_area.push(new_area_b)
+
       end
     end
-
-    ### check exist parameter
-    # oa.table[c.id].each_with_index{|b, i|
-    #   if  b == min_bit || b == max_bit
-    #     area.each{|row|
-    #       flag = true
-    #       oa.table.each_with_index{|o, j|
-    #         if j != c.id
-    #           if o[i] != o[row]
-    #             flag = false
-    #             break
-    #           end
-    #         end
-    #       }
-    #       if flag then exist_area.push(i) end
-    #     }
-    #   end
-    # }
-    # new_area.push(exist_area)
-
-    # new_area_a = []
-    # new_area_b = []
-
-    # exist_area.each{|row|
-    #   tmp_bit = oa.get_bit_string(c.id, row)
-    #   if tmp_bit[tmp_bit.size - 1] == "0"
-    #     new_area_a.push(row)
-    #   elsif tmp_bit[tmp_bit.size-1] == "1"
-    #     new_area_b.push(row)
-    #   end
-    # }
-
-    # orthogonal_rows.each{|row|
-    #   tmp_bit = row[name]
-    #   if tmp_bit[tmp_bit.size - 1] == "0"
-    #     new_area_b.push(row["id"])
-    #   elsif tmp_bit[tmp_bit.size - 1] == "1"
-    #     new_area_a.push(row["id"])
-    #   end
-    # }
-    # new_area.push(new_area_a)
-    # new_area.push(new_area_b)
     
-    ###
-
     new_var = { :case => "inside", 
                 :param => {:name => name, :paramDefs => new_array}}
 
