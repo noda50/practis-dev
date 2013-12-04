@@ -15,8 +15,6 @@ class F_DistributionTable
         @f_table[i][j] =@f_table[i][j].to_f
       end
     end
-#    p @f_table # 確認
-
   end
 
   def readfile()

@@ -459,6 +459,12 @@ module Practis
 
         return nil if @extending
 
+        if @available_numbers.size == 0
+          pp @id_list_queue
+          p @current_qcounter
+          pp @id_list_queue[@current_qcounter]
+        end
+        
         v = @available_numbers.shift
         @v_index = v / @unassigned_total_size # debug error
         @allocated_num += 1
@@ -539,59 +545,72 @@ module Practis
             result_set.push(retval)
           end
         }
-
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+
         p "list size: #{@id_list_queue.size}"
         p "counter: #{@current_qcounter}"
         pp @id_list_queue[0]
         
 
         # variance analysis
-        @f_test.run(result_set, parameter_keys)
+        f_result = @f_test.run(result_set, parameter_keys, @sql_connector)
 
         # parameter set generation
         condition = [:or]
         condition += @id_list_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         
-
+        bothside_flag = true
+        outside_plus_flag = true
+        outside_minus_flag = true
         # = = = hard coding = = = 
         @parameters.each{|k, v|
-          new_param, exist_ids = generate_inside(@sql_connector, orthogonal_rows, 
-                                                @parameters, k, @definitions[k])
-          # new_param, exist_ids = generate_bothside(@sql_connector, orthogonal_rows, 
-          #                                       @parameters, k, @definitions[k])
-          # new_param, exist_ids = generate_outside_plus(@sql_connector, orthogonal_rows, 
-          #                                       @parameters, k, @definitions[k])
-          # new_param, exist_ids = generate_outside_minus(@sql_connector, orthogonal_rows, 
-          #                                       @parameters, k, @definitions[k])
-          if exist_ids.empty? and !new_param[:param][:paramDefs].nil?
-            new_param_list.push(new_param)
-          elsif !exist_ids.empty?
-            exist_ids.each{|a|
-              h = {:or_ids => a}
-              a.each{|i|
-                h[i] = []
+          if @f_test.check_significant(k, f_result) # inside
+            new_param, exist_ids = generate_inside(@sql_connector, orthogonal_rows, 
+                                                  @parameters, k, @definitions[k])
+            if exist_ids.empty? && !new_param[:param][:paramDefs].nil? # !new_param[:param][:paramDefs].empty?
+              new_param_list.push(new_param)
+            elsif !exist_ids.empty?
+              exist_ids.each{|a|
+                h = {:or_ids => a}
+                a.each{|i|
+                  h[i] = []
+                }
+                @id_list_queue.push(h)
               }
-              @id_list_queue.push(h)
-            }
+            end
           end
+          params = orthogonal_rows.map {|r| @parameters[k][:correspond][r[k]] }
+          bothside_flag = bothside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
+          outside_plus_flag = outside_plus_flag && params.include?(@parameters[k][:paramDefs].max)
+          outside_minus_flag = outside_minus_flag && params.include?(@parameters[k][:paramDefs].min)
         }
+
+        p "do both side: #{bothside_flag}"
+        p "do out side(+): #{outside_plus_flag}"
+        p "do out side(-): #{outside_minus_flag}"
+        # out side
+        # new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
+        #                                       @parameters, k, @definitions[k])
 
         # = = = (end) hard coding = = = 
 
 
         # extend_otableDB & parameter set store to queue
-        next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
-        next_sets.each{|set|
-          h = {:or_ids => []}
-          set.each{|r| 
-            h[:or_ids].push(r)
-            h[r] = []
+        if !new_param_list.empty?
+          next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
+          next_sets.each{|set|
+            if !set.empty?
+              h = {:or_ids => []}
+              set.each{|r| 
+                h[:or_ids].push(r)
+                h[r] = []
+              }
+              @id_list_queue.push(h)
+            end
           }
-          @id_list_queue.push(h)
-        }
-        
+        end
+
         @id_list_queue.shift
         @current_qcounter -= 1 if @current_qcounter > 0
         @available_numbers = get_total.times.map { |i| i }

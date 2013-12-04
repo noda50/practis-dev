@@ -28,16 +28,6 @@ class VarianceAnalysis
       }
     end
 
-    # generate inside parameters set
-    if 0 < significances.size
-
-    end
-
-
-
-
-
-
 
     upload_msg = {}
     upload_msg[:f_test_id] = getNewFtestId();

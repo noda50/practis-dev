@@ -185,7 +185,7 @@ module Practis
 
       debug("id_queue flag: #{@to_be_varriance_analysis}")
 
-      @mutexAnalysis.synchronize{@scheduler.do_variance_analysis}
+      @mutexAllocateParameter.synchronize{@scheduler.do_variance_analysis}
 
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@paramDefSet.get_available}, " +
