@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<practis>
+  <exhaustive>
+    <parameters>
+      <parameter name="x1" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>1.0</end>
+            <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="x2" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>1.0</end>
+            <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="x3" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>1.0</end>
+            <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="x4" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>1.0</end>
+            <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="x5" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>1.0</end>
+            <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="x6" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.0</start>
+            <end>1.0</end>
+            <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="iteration" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0</start>
+            <end>4</end>
+            <step>1</step>
+          </condition>
+        </conditions>
+      </parameter>
+    </parameters>
+  </exhaustive>
+</practis>

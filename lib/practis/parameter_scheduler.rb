@@ -394,11 +394,13 @@ module Practis
       attr_reader :current_indexes
       attr_reader :total_indexes
       attr_reader :paramDefList
+      attr_reader :eop # end_of_parameters
 
       #
       def initialize(paramDefs)
         @paramDefList = chk_arg(Array, paramDefs)
         @f_test=FTest.new
+        @eop = false
         @extending = false
       end
 
@@ -446,7 +448,9 @@ module Practis
         upload_initial_orthogonal_db(table)
 
         @unassigned_total_size = 1
-        @unassigned_total.collect{|t| @unassigned_total_size *= t}
+        if !@unassigned_total.empty?
+          @unassigned_total.collect{|t| @unassigned_total_size *= t}
+        end
         @total_number = get_total   
         @available_numbers = get_total.times.map { |i| i } 
       end
@@ -612,8 +616,13 @@ module Practis
         end
 
         @id_list_queue.shift
-        @current_qcounter -= 1 if @current_qcounter > 0
-        @available_numbers = get_total.times.map { |i| i }
+
+        if !@id_list_queue.empty?
+          @current_qcounter -= 1 if @current_qcounter > 0
+          @available_numbers = get_total.times.map { |i| i }
+        else
+          @eop = true
+        end
 
         return true
       end

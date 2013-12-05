@@ -1,0 +1,51 @@
+{
+	"x1" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 1.0,
+		"step_size" : 0.000005,
+		"num_decimal" : 6
+	},
+	"x2" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 1.0,
+		"step_size" : 0.000005,
+		"num_decimal" : 6
+	},
+	"x3" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 1.0,
+		"step_size" : 0.000005,
+		"num_decimal" : 6
+	},
+	"x4" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 1.0,
+		"step_size" : 0.000005,
+		"num_decimal" : 6
+	},
+	"x5" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 1.0,
+		"step_size" : 0.000005,
+		"num_decimal" : 6
+	},
+	"x6" : {
+		"is_assigned" : true,
+		"bottom" : 0.0,
+		"top" : 1.0,
+		"step_size" : 0.000005,
+		"num_decimal" : 6
+	},
+	"iteration" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 100,
+		"step_size" : 1,
+		"num_decimal" : 6
+	}
+}

@@ -48,9 +48,6 @@ module Practis
       
       @total_parameters = @paramDefSet.get_total
 
-      @mutexAnalysis = Mutex.new
-      @alloc_counter = 0
-      @to_be_varriance_analysis = true
       @f_disttable = F_DistributionTable.new(0.01)
     end
 
@@ -78,7 +75,7 @@ module Practis
     def allocate_paramValueSets(request_number, src_id)
       paramValueSetList = []   # allocated parameter value sets
       if (timeval = @database_connector.read_time(:parameter)).nil?
-        return nil
+        return []
       end
 
       # get the parameter with 'ready' state.
@@ -112,14 +109,8 @@ module Practis
         while request_number > 0
           newId = getNewParameterId
           if (paramValueSet = @paramDefSet.get_next(newId)).nil?
-            if !@to_be_varriance_analysis
-              info("all parameter is already allocated!")
-              break
-            else
-              info("wait to finish analyzing result !")
-              debug("id_queue flag: #{@to_be_varriance_analysis}")
-              break
-            end
+            debug("end of parameter allocation: #{@scheduler.eop}")
+            break
           end
 
           condition = [:and] ;
@@ -183,8 +174,6 @@ module Practis
         end
       end
 
-      debug("id_queue flag: #{@to_be_varriance_analysis}")
-
       @mutexAllocateParameter.synchronize{@scheduler.do_variance_analysis}
 
       debug(cluster_tree.to_s)
@@ -201,18 +190,16 @@ module Practis
       end
 
       if @paramDefSet.get_available <= 0 and @paramValueSet_pool.length <= 0
-        if !@to_be_varriance_analysis # 2013/08/01
+        if @scheduler.eop # 2013/08/01
           if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")} 
-            debug("call finalize !")
+            info("call finalize !")
             finalize
-            # @doe_file.close
           else
             error("all parameter is finished? Huh???")
           end
         end
       end
-      # @doe_file.flush
     end
     
     # 

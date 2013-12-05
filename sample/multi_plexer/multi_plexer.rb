@@ -1,13 +1,71 @@
-include Math
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
 
-header_bit_num = 2
-bit_num = header_bit_num + 2**header_bit_num
+require 'json'
 
-p inputs = bit_num.times.map{|i| rand(2) }
+require 'practis'
+require 'practis/message'
+require 'practis/net'
+require 'practis/database'
 
-h = header_bit_num.times.map{|i| inputs[i]}.join
-p "#{h}, #{("0b" + h).oct}"
+# This code is a sample to execute an executable on practis. The functionality 
+# quite simply calcuates exp(-(x ^ 2 + y ^ 2)).
 
-p inputs[header_bit_num+("0b" + header_bit_num.times.map{|i| inputs[i]}.join).oct]
+# Executor provides a parameter ID, an allocated parameter set, a manager IP 
+# address and names of result fileds.
+
+# Template from here ###########################################################
+include Practis
+argument_hash = nil
+begin
+  exit if (argument_hash = parse_executor_arguments(ARGV)).nil?
+rescue Exception => e
+  error("fail to prepare practis execution. #{e.message}")
+  error(e.backtrace)
+  raise e
+end
+# Template to here #############################################################
+
+# From here, you can run any programs!
+# Of couse, you need not to use this template. Executor just forks a process. If
+# you don't want to be disturbed by them, you can run Java or Python program
+# from here using "system" such as "system('java -cp . yourprog.jar')".
+
+x = []
+
+# You can get parameters from argument_hash. This example provides two parameter
+# such as "a" and "b".
+argument_hash[:parameter_set].each do |parameter|
+  case parameter[:name]
+  when "x1" then x.push(parameter[:value].to_f)
+  when "x2" then x.push(parameter[:value].to_f)
+  when "x3" then x.push(parameter[:value].to_f)
+  when "x4" then x.push(parameter[:value].to_f)
+  when "x5" then x.push(parameter[:value].to_f)
+  when "x6" then x.push(parameter[:value].to_f)
+  end
+end
+
+require_relative 'lib/MultiPlexer'
+
+# am = AistMark.new(Stat::Gaussian.new(0,0.2)) ;
+
+# To upload your result, please define variables that is same name with the
+# fields you defined. This example defines one result field in the
+# configuration named "value".
+value = MultiPlexer.run_continuous_value(2, x)
 
 
+# Template from here ###########################################################
+begin
+  fields = {}
+  argument_hash[:result_fields].each { |f|
+    fields[f[:name].to_sym] = eval(f[:name]) }
+  argument_hash[:results] = fields
+  exit if upload_result(argument_hash) < 0
+rescue Exception => e
+  error("fail to upload the result. #{e.message}")
+  error(e.backtrace)
+  raise e
+end
+# Template to here #############################################################
