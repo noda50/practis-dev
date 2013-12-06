@@ -174,7 +174,9 @@ module Practis
         end
       end
 
-      @mutexAllocateParameter.synchronize{@scheduler.do_variance_analysis}
+      @mutexAllocateParameter.synchronize{
+        @scheduler.do_variance_analysis if !@scheduler.eop
+      }
 
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@paramDefSet.get_available}, " +
