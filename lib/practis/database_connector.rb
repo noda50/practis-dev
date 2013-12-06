@@ -81,7 +81,7 @@ module Practis
             if @database_parser.add_field(
                 config.read("#{DB_ORTHOGONAL}_database_name"),
                 config.read("#{DB_ORTHOGONAL}_database_tablename"),
-                {field: "#{paramDef.name}", type: "Varchar(64)", null: "NO", key: "MUL"}
+                {field: "#{paramDef.name}", type: "Varchar(64)", null: "YES", key: "MUL", default: "NULL"}
                                          ) < 0
               error("fail to add a filed. #{paramDef.name}, #{type_field}")
             end

@@ -594,9 +594,10 @@ module Practis
         p "do out side(+): #{outside_plus_flag}"
         p "do out side(-): #{outside_minus_flag}"
         # out side
-        # new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
-        #                                       @parameters, k, @definitions[k])
-
+        if bothside_flag
+          # new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
+          #                                       @parameters, k, @definitions[k])
+        end
         # = = = (end) hard coding = = = 
 
 
@@ -716,29 +717,38 @@ module Practis
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
 
         if old_digit_num < digit_num
+          max_count = @sql_connector.read_max(:orthogonal, 'id', :integer)
+          row_ids = orthogonal_rows.map{|r| r["id"] + max_count }
           @extending = true
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []
           upload_msgs = []
 
+          upload_msgs = (max_count...(2*max_count)).inject([]){|arr, i|
+            arr << {id: i} if !row_ids.include?(i)
+            arr
+          }
+
+
           orthogonal_rows.each{|ret|
-            upd_h = {id: ret["id"]}
-            upl_h = {id: ret["id"] + orthogonal_rows.length} # ??? abunai kamo
-            ret.each{|k,v|
-              if k != "id"
-                if k == parameter[:name] 
-                  upd_h[k.to_sym] = "0" + v
+            old_value_msg = {}
+            upl_h = {id: ret["id"] + max_count}
+            ret.each{|k, v|
+              if k != "id" # TODO: reducing after bugfix
+                if k == parameter[:name]
+                  p "#{k} old: #{v} new:#{"0"+v}"
+                  old_value_msg[k.to_sym] = {old: v, new: "0" + v}
                   ret[parameter[:name]] = "0" + v
                   upl_h[k.to_sym] = "1" + v
                 else
-                  upd_h[k.to_sym] = v
                   upl_h[k.to_sym] = v
                 end
               end
             }
-            update_msgs.push(upd_h)
+            update_msgs.push(old_value_msg)
             upload_msgs.push(upl_h)
           }
+          
           update_orthogonal_table_db(update_msgs)
           upload_orthogonal_table_db(upload_msgs)
           @extending = false
@@ -847,27 +857,13 @@ module Practis
 
       # update exisiting table
       def update_orthogonal_table_db(msgs=nil)
+
+        pp msgs
         msgs.each{|msg|
-          id = msg[:id].to_i
-          
-          if (retval = 
-              @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length != 0
-            # update
-            flag = false
-            upld = {}
-            retval.each{|ret|
-              ret.each{|k, v|    
-                if msg[k.to_sym] != v
-                  upld[k.to_sym] = msg[k.to_sym]
-                  flag = true
-                end
-              }
-            }
-            if flag
-              nret = @sql_connector.update_record(:orthogonal, upld, [:eq, [:field, "id"], id])
-              # debug("#{pp nret}")
-            end          
-          end
+          msg.each{|name, vh|
+            @sql_connector.update_record( :orthogonal, {name => vh[:new]}, 
+                                          [:eq, [:field, name.to_s], vh[:old]])
+          }
         }
       end
 

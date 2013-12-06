@@ -88,6 +88,8 @@ class FTest
       msg[("range_#{k}").to_sym] = (results_set.map{|r| r[0][k] }.uniq).to_s
       if f_result[k][:f_value].nan?
         msg[("f_value_of_#{k}").to_sym] = 0.0
+      elsif !f_result[k][:f_value].finite?
+        msg[("f_value_of_#{k}").to_sym] = 1024
       else
         msg[("f_value_of_#{k}").to_sym] = f_result[k][:f_value]
       end

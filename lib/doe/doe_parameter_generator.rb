@@ -78,11 +78,6 @@ module DOEParameterGenerator
 
           new_area.push(new_area_a)
           new_area.push(new_area_b)
-          if new_area_a.size < 4 || new_area_b.size < 4
-            p "new_area_a: #{new_area_a}"
-            p "new_area_b: #{new_area_b}"
-          end
-
         end
       end
     end
