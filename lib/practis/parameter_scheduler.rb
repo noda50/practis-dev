@@ -588,8 +588,8 @@ module Practis
         p "do out side(-): #{outside_minus_flag}"
         # out side
         if bothside_flag
-          # new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
-          #                                       @parameters, k, @definitions[k])
+          new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
+                                                @parameters, k, @definitions[k])
         end
 
 
