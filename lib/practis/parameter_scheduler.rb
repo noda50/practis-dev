@@ -411,11 +411,11 @@ module Practis
         @id_list_queue = []
         @current_qcounter = 0
         
-
+        # init list
         h = {:or_ids => []}
         table[0].size.times.each{|r| 
-          h[:or_ids].push(r)
-          h[r] = []
+          h[:or_ids].push(r+1)
+          h[r+1] = []
         }
         @id_list_queue.push(h)
 
@@ -462,12 +462,6 @@ module Practis
         end
 
         return nil if @extending
-
-        if @available_numbers.size == 0
-          pp @id_list_queue
-          p @current_qcounter
-          pp @id_list_queue[@current_qcounter]
-        end
         
         v = @available_numbers.shift
         @v_index = v / @unassigned_total_size # debug error
@@ -551,11 +545,9 @@ module Practis
         }
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
 
-        p "list size: #{@id_list_queue.size}"
-        p "counter: #{@current_qcounter}"
-        pp @id_list_queue[0]
+        p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
+        p "f_test: #{pp @id_list_queue[0]}"
         
-
         # variance analysis
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector)
 
@@ -567,7 +559,8 @@ module Practis
         bothside_flag = true
         outside_plus_flag = true
         outside_minus_flag = true
-        # = = = hard coding = = = 
+
+
         @parameters.each{|k, v|
           if @f_test.check_significant(k, f_result) # inside
             new_param, exist_ids = generate_inside(@sql_connector, orthogonal_rows, 
@@ -598,7 +591,6 @@ module Practis
           # new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
           #                                       @parameters, k, @definitions[k])
         end
-        # = = = (end) hard coding = = = 
 
 
         # extend_otableDB & parameter set store to queue
@@ -717,17 +709,17 @@ module Practis
         # orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
 
         if old_digit_num < digit_num
-          max_count = @sql_connector.read_max(:orthogonal, 'id', :integer) + 1
+          max_count = @sql_connector.read_max(:orthogonal, 'id', :integer)
           
           @extending = true
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []
           upload_msgs = []
-
+          p "max: #{max_count}"
           max_count.times.each{|id|
             old_value_msg = {}
-            upl_h = {id: id + max_count}
-            ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])
+            upl_h = {id: id + 1 + max_count }
+            ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id + 1])
             ret[0].each{|k, v|
               if k == parameter[:name]
                 old_value_msg[k.to_sym] = {old: v, new: "0" + v}
@@ -837,7 +829,7 @@ module Practis
         
         msgs = []
         (0...table[0].size).each{|row|
-          msg = {:id => row, :run => 0}
+          msg = {:id => row+1, :run => 0}
           @parameters.each{|name, param|
             msg[name.to_sym] = table[param[:column_id]][row]
           }
