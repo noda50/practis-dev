@@ -578,8 +578,8 @@ module Practis
           outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
         }
 
-        p "generate outside parameter: #{outside_flag}"
         # out side
+        p "generate outside parameter: #{outside_flag}"
         if outside_flag
           new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
                                                 @parameters, k, @definitions[k])

@@ -89,33 +89,34 @@ module DOEParameterGenerator
   
   # search only "Out side" parameter
   def generate_ooutside(sql_connetor, orthogonal_rows, parameters, name, definition)
+    p_lmts = parameters.map{|k,v| 
+      {k=>{:name=>k, :top=>false, :bottom=>false}}
+    }
 
-    parameters.each_key{|k|
-      orthogonal_rows.each{|r|
-        parameters[k][:correspond].each_value{|v|
-
-        }
+    orthogonal_rows.each{|r|
+      p_lmts.each{|prm|
+        if parameters[prm[:name]][r[prm[:name]]] <= parameters[prm[:name]][:paramDefs].min
+          prm[:bottom] = true
+        elsif parameters[prm[:name]][r[prm[:name]]] >= parameters[prm[:name]][:paramDefs].max
+          prm[:top] = true
+        end
       }
     }
-    
 
+    p_lmts.each{|prm|
+      if !prm[:bottom] && !prm[:top]
+        #both side
+        generate_bothside(sql_connetor, orthogonal_rows, parameters, prm[:name], definition)
+      elsif !prm[:bottom]
+        #outside(+)
+        generate_outside_plus(sql_connetor, orthogonal_rows, parameters, prm[:name], definition)
+      elsif !prm[:top]
+        #outside(-)
+        generate_outside_minus(sql_connetor, orthogonal_rows, parameters, prm[:name], definition)
+      end
+    }
 
     return [],[] #debug
-
-    parameters.each{|param|
-
-    }
-    
-    
-    # both side
-    return generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
-    
-    # out side(+)
-    return generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
-    
-    # out side(-)
-    return generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
-    
   end
 
   private
