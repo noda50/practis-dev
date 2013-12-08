@@ -90,9 +90,22 @@ module DOEParameterGenerator
   # search only "Out side" parameter
   def generate_ooutside(sql_connetor, orthogonal_rows, parameters, name, definition)
 
+    parameters.each_key{|k|
+      orthogonal_rows.each{|r|
+        parameters[k][:correspond].each_value{|v|
+
+        }
+      }
+    }
+    
 
 
-    # if 
+    return [],[] #debug
+
+    parameters.each{|param|
+
+    }
+    
     
     # both side
     return generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)

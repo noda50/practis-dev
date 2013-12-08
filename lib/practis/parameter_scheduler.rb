@@ -556,10 +556,7 @@ module Practis
         condition += @id_list_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         
-        bothside_flag = true
-        outside_plus_flag = true
-        outside_minus_flag = true
-
+        outside_flag = true
 
         @parameters.each{|k, v|
           if @f_test.check_significant(k, f_result) # inside
@@ -578,16 +575,12 @@ module Practis
             end
           end
           params = orthogonal_rows.map {|r| @parameters[k][:correspond][r[k]] }
-          bothside_flag = bothside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
-          outside_plus_flag = outside_plus_flag && params.include?(@parameters[k][:paramDefs].max)
-          outside_minus_flag = outside_minus_flag && params.include?(@parameters[k][:paramDefs].min)
+          outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
         }
 
-        p "do both side: #{bothside_flag}"
-        p "do out side(+): #{outside_plus_flag}"
-        p "do out side(-): #{outside_minus_flag}"
+        p "generate outside parameter: #{outside_flag}"
         # out side
-        if bothside_flag
+        if outside_flag
           new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
                                                 @parameters, k, @definitions[k])
         end
