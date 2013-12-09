@@ -48,10 +48,6 @@ module OrthogonalTable
 		return table
 	end
 
-	# # 
-	# def extend_table(area, parameter)
-	# end
-
   # 
 	def generate_area(sql_connector, id_list, new_param, parameter)
     new_rows = []
@@ -150,7 +146,7 @@ module OrthogonalTable
 
     generated_area = []
     case add_point_case
-      when "inside"
+    when "inside"
       # (new_lower, new_upper)
       generated_area.push(new_rows.map{ |r| r["id"] })
       # between (old_lower, new_lower) in area
@@ -179,15 +175,5 @@ module OrthogonalTable
     end
     
     return generated_area
-	end
-
-
-	# 
-	module OrthogonalColumn
-		# 
-		def generate(input)
-			colum = []
-			return column
-		end
 	end
 end

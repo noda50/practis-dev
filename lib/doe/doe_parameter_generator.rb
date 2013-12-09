@@ -62,7 +62,7 @@ module DOEParameterGenerator
           condition.push(andCond)
         }
 
-        if (exist_area = sql_connetor.read_record(:orthogonal, condition)).length > 0 
+        if (exist_area = sql_connetor.read_record(:orthogonal, condition)).length > 0
           new_area.push(exist_area.map{|r| r["id"]})
           new_area_a = []
           new_area_b = []
@@ -76,8 +76,8 @@ module DOEParameterGenerator
             new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
           }
 
-          new_area.push(new_area_a)
-          new_area.push(new_area_b)
+          new_area.push(new_area_a.uniq)
+          new_area.push(new_area_b.uniq)
         end
       end
     end
@@ -94,14 +94,11 @@ module DOEParameterGenerator
     p_lmts = parameters.map{|k,v| 
       {:name=>k, :top=>false, :bottom=>false}
     }
-    pp parameters
-    pp p_lmts
-    pp orthogonal_rows
     orthogonal_rows.each{|r|
       p_lmts.each{|prm|
-        if parameters[prm[:name]][:correspond][r[prm[:name]]] <= parameters[prm[:name]][:paramDefs].min
+        if parameters[prm[:name]][:paramDefs].min <= definitions[prm[:name]]["bottom"]
           prm[:bottom] = true
-        elsif parameters[prm[:name]][:correspond][r[prm[:name]]] >= parameters[prm[:name]][:paramDefs].max
+      elsif parameters[prm[:name]][:correspond][r[prm[:name]]] >= definitions[prm[:name]]["top"]
           prm[:top] = true
         end
       }
@@ -112,14 +109,13 @@ module DOEParameterGenerator
       if !prm[:bottom] && !prm[:top]
         #both side
         new_var, new_area = generate_bothside(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
-      elsif !prm[:bottom]
+      elsif !prm[:top]
         #outside(+)
         new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
-      elsif !prm[:top]
+      elsif !prm[:bottom]
         #outside(-)
         new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       end
-
       new_var_list.push(new_var) if !new_var.empty?
       new_area_list.push(new_area) if !new_area.empty?
     }

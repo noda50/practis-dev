@@ -33,11 +33,6 @@ module Practis
         end
         return parameter_array
       }
-      # parameter_array = @scheduler.get_paramValues
-      # if parameter_array.nil? then return nil
-      # elsif parameter_array.include?(nil) then return nil
-      # else return parameter_array
-      # end
     end
 
     def get_available
@@ -367,13 +362,10 @@ module Practis
         indexes = []
         k = v
         divider = @unassigned_total_size
-        # pp @assign_list
-        # p "divider: #{divider}, total indexes: #{@total_indexes}"
         @total_indexes.each_with_index{ |n, i|
           if @assign_list[@paramDefList[i].name]
             indexes.push(0)
           else
-            # p "name: #{@paramDefList[i].name}, divider: #{divider}, i: #{i}"
             divider = (divider / n).to_i
             l = (k / divider).to_i
             k -= l * divider
@@ -464,7 +456,7 @@ module Practis
         return nil if @extending
         
         v = @available_numbers.shift
-        @v_index = v / @unassigned_total_size # debug error
+        @v_index = v / @unassigned_total_size
         @allocated_num += 1
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
@@ -495,7 +487,6 @@ module Practis
           condition.push(andCond)
         }        
         
-        # pp condition # debug error
         already = @sql_connector.read_record(:parameter, condition)
 
         if already.size != 0
@@ -546,7 +537,8 @@ module Practis
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
 
         p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
-        p "f_test: #{pp @id_list_queue[0]}"
+        p "f_test: "
+        pp @id_list_queue[0]
         
         # variance analysis
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector)
@@ -570,6 +562,10 @@ module Practis
                 a.each{|i|
                   h[i] = []
                 }
+                if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
+                  p "exist area: #{exist_ids}"
+                  exit(0)
+                end
                 @id_list_queue.push(h)
               }
             end
@@ -600,6 +596,10 @@ module Practis
                 h[:or_ids].push(r)
                 h[r] = []
               }
+              if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
+                p "new area: #{next_sets}"
+                exit(0)
+              end
               @id_list_queue.push(h)
             end
           }
@@ -663,9 +663,18 @@ module Practis
         end
 
         if !outside_list.empty?
-          extclm = extend_otableDB(old_rows, outside_list[0][:case], outside_list[0][:param])
-          new_outside_area += generate_area(@sql_connector, old_rows, outside_list[0], extclm)
+          condition = [:and]
+          condition += @parameters.map{|k, v|
+            [:or,
+              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
+              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
+            ]
+          }
+          old_out_rows = @sql_connector.read_record(:orthogonal, condition)
+          old_out_ids = old_out_rows.map{|r| r["id"]}
 
+          extclm = extend_otableDB(old_out_ids, outside_list[0][:case], outside_list[0][:param])
+          new_outside_area += generate_area(@sql_connector, old_out_ids, outside_list[0], extclm)
           if 2 <= outside_list.size
             for i in 1...outside_list.size
               extclm = extend_otableDB(old_rows, outside_list[i][:case], outside_list[i][:param])
@@ -676,6 +685,7 @@ module Practis
               new_outside_area = tmp_area
             end
           end
+
         end
 
         return new_inside_area + new_outside_area
@@ -703,7 +713,6 @@ module Practis
 
         condition = [:or]
         condition += @parameters[parameter[:name]][:correspond].map{|k,v| [:eq, [:field, parameter[:name]], k]}
-        # orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
 
         if old_digit_num < digit_num
           max_count = @sql_connector.read_max(:orthogonal, 'id', :integer)
@@ -712,7 +721,7 @@ module Practis
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
           update_msgs = []
           upload_msgs = []
-          p "max: #{max_count}"
+
           max_count.times.each{|id|
             old_value_msg = {}
             upl_h = {id: id + 1 + max_count }
@@ -728,25 +737,6 @@ module Practis
             update_msgs.push(old_value_msg)
             upload_msgs.push(upl_h)
           }
-
-
-          # orthogonal_rows.each{|ret|
-          #   old_value_msg = {}
-          #   upl_h = {id: ret["id"] + orthogonal_rows.length}
-          #   ret.each{|k, v|
-          #     if k != "id"
-          #       if k == parameter[:name]
-          #         old_value_msg[k.to_sym] = {old: v, new: "0" + v}
-          #         ret[parameter[:name]] = "0" + v
-          #         upl_h[k.to_sym] = "1" + v
-          #       else
-          #         upl_h[k.to_sym] = v
-          #       end
-          #     end
-          #   }
-          #   update_msgs.push(old_value_msg)
-          #   upload_msgs.push(upl_h)
-          # }
           
           update_orthogonal_table_db(update_msgs)
           upload_orthogonal_table_db(upload_msgs)
@@ -841,14 +831,11 @@ module Practis
         
         msgs.each{|msg|
           id = msg[:id].to_i
-          # if (retval =  
-          #     @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id])).length == 0
-            if (retval = @sql_connector.insert_record(
-              :orthogonal, msg).length != 0)
-              error("fail to insert new orthogonal table. #{retval}")
-              return -2
-            end
-          # end  
+          if (retval = @sql_connector.insert_record(
+            :orthogonal, msg).length != 0)
+            error("fail to insert new orthogonal table. #{retval}")
+            return -2
+          end
         }
         
         return 0
