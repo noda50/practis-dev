@@ -581,10 +581,14 @@ module Practis
         # out side
         p "generate outside parameter: #{outside_flag}"
         if outside_flag
-          new_param, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
-                                                @parameters, k, @definitions[k])
+          new_params, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
+                                                @parameters, @definitions)
+          if exist_ids.flatten.empty? # && !new_param[:param][:paramDefs].nil?
+            new_param_list += new_params
+          elsif !exist_ids.flatten.empty?
+            error("outside check is error")
+          end
         end
-
 
         # extend_otableDB & parameter set store to queue
         if !new_param_list.empty?

@@ -8,7 +8,7 @@ class FTest
 
   # 
   def initialize
-    @f_disttable = F_DistributionTable.new(0.001)
+    @f_disttable = F_DistributionTable.new(0.005)
   end
 
   # 

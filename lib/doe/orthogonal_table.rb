@@ -150,17 +150,7 @@ module OrthogonalTable
 
     generated_area = []
     case add_point_case
-    when "outside(+)"
-      # (new_lower, new_upper)
-      generated_area.push(new_rows.map{ |r| r["id"] })
-      # new area between (old_upper, new_lower)
-      generated_area.push(old_upper_value_rows + new_lower_value_rows)
-    when "outside(-)"
-      # (new_lower, new_upper)
-      generated_area.push(new_rows.map{ |r| r["id"] })
-      # new area between (new_upper, old_lower)
-      generated_area.push(new_upper_value_rows + old_lower_value_rows)
-    when "inside"
+      when "inside"
       # (new_lower, new_upper)
       generated_area.push(new_rows.map{ |r| r["id"] })
       # between (old_lower, new_lower) in area
@@ -174,6 +164,16 @@ module OrthogonalTable
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
       # (new_lower, new_upper)
       generated_area.push(new_rows.map{ |r| r["id"] })
+    when "outside(+)"
+      # (new_lower, new_upper)
+      generated_area.push(new_rows.map{ |r| r["id"] })
+      # new area between (old_upper, new_lower)
+      generated_area.push(old_upper_value_rows + new_lower_value_rows)
+    when "outside(-)"
+      # (new_lower, new_upper)
+      generated_area.push(new_rows.map{ |r| r["id"] })
+      # new area between (new_upper, old_lower)
+      generated_area.push(new_upper_value_rows + old_lower_value_rows)
     else
       p "create NO area for analysis"
     end

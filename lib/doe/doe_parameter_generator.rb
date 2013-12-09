@@ -88,35 +88,43 @@ module DOEParameterGenerator
   end
   
   # search only "Out side" parameter
-  def generate_ooutside(sql_connetor, orthogonal_rows, parameters, name, definition)
-    p_lmts = parameters.map{|k,v| 
-      {k=>{:name=>k, :top=>false, :bottom=>false}}
-    }
+  def generate_outside(sql_connetor, orthogonal_rows, parameters, definitions)
+    new_var_list, new_area_list = [], []
 
+    p_lmts = parameters.map{|k,v| 
+      {:name=>k, :top=>false, :bottom=>false}
+    }
+    pp parameters
+    pp p_lmts
+    pp orthogonal_rows
     orthogonal_rows.each{|r|
       p_lmts.each{|prm|
-        if parameters[prm[:name]][r[prm[:name]]] <= parameters[prm[:name]][:paramDefs].min
+        if parameters[prm[:name]][:correspond][r[prm[:name]]] <= parameters[prm[:name]][:paramDefs].min
           prm[:bottom] = true
-        elsif parameters[prm[:name]][r[prm[:name]]] >= parameters[prm[:name]][:paramDefs].max
+        elsif parameters[prm[:name]][:correspond][r[prm[:name]]] >= parameters[prm[:name]][:paramDefs].max
           prm[:top] = true
         end
       }
     }
 
     p_lmts.each{|prm|
+      new_var, new_area = [], []
       if !prm[:bottom] && !prm[:top]
         #both side
-        generate_bothside(sql_connetor, orthogonal_rows, parameters, prm[:name], definition)
+        new_var, new_area = generate_bothside(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       elsif !prm[:bottom]
         #outside(+)
-        generate_outside_plus(sql_connetor, orthogonal_rows, parameters, prm[:name], definition)
+        new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       elsif !prm[:top]
         #outside(-)
-        generate_outside_minus(sql_connetor, orthogonal_rows, parameters, prm[:name], definition)
+        new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       end
+
+      new_var_list.push(new_var) if !new_var.empty?
+      new_area_list.push(new_area) if !new_area.empty?
     }
 
-    return [],[] #debug
+    return new_var_list, new_area_list #debug
   end
 
   private
