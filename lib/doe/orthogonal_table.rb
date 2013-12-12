@@ -5,7 +5,7 @@ require 'pp'
 module OrthogonalTable
 	
   # 
-	def generation_orthogonal_table(input)
+	def self.generation_orthogonal_table(input)
 		level = 2
 		table = []
 
@@ -49,7 +49,7 @@ module OrthogonalTable
 	end
 
   # 
-	def generate_area(sql_connector, id_list, new_param, parameter)
+	def self.generate_area(sql_connector, id_list, new_param, parameter)
     new_rows = []
     add_point_case = new_param[:case]
     new_bits =[]
@@ -159,7 +159,7 @@ module OrthogonalTable
       # between (old_upper, new_upper) in area
       generated_area.push(old_upper_value_rows + new_upper_value_rows)
       # (new_lower, new_upper)
-      generated_area.push(new_rows.map{ |r| r["id"] })
+      # generated_area.push(new_rows.map{ |r| r["id"] })
     when "outside(+)"
       # (new_lower, new_upper)
       generated_area.push(new_rows.map{ |r| r["id"] })

@@ -2,9 +2,9 @@
 	"Noise" : {
 		"is_assigned" : true,
 		"bottom" : 0.0,
-		"top" : 0.5,
-		"step_size" : 0.000005,
-		"num_decimal" : 6
+		"top" : 0.9,
+		"step_size" : 0.00005,
+		"num_decimal" : 5
 	},
 	"NumOfGameIteration" : {
 		"is_assigned" : true,

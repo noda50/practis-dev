@@ -29,7 +29,7 @@ module Practis
 
   class DoeManager < Practis::Manager
     include Regression
-    include OrthogonalTable
+    # include OrthogonalTable
 
     attr_reader :va_queue
     attr_reader :current_var_set
@@ -41,7 +41,7 @@ module Practis
       }
       super(config_file, parameter_file, database_file, result_file, myaddr, @doe_definitions)
 
-      otable = generation_orthogonal_table(@paramDefSet.paramDefs)
+      otable = OrthogonalTable.generation_orthogonal_table(@paramDefSet.paramDefs)
       @paramDefSet = Practis::ParamDefSet.new(@paramDefSet.paramDefs, "DOEScheduler")
       @scheduler = @paramDefSet.scheduler.scheduler
       @scheduler.init_doe(@database_connector, otable, @doe_definitions)

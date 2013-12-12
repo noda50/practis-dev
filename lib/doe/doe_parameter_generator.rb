@@ -8,7 +8,7 @@ module DOEParameterGenerator
   include Math
   
   # search only "Inside" significant parameter
-  def generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -88,7 +88,7 @@ module DOEParameterGenerator
   end
   
   # search only "Out side" parameter
-  def generate_outside(sql_connetor, orthogonal_rows, parameters, definitions)
+  def self.generate_outside(sql_connetor, orthogonal_rows, parameters, definitions)
     new_var_list, new_area_list = [], []
 
     p_lmts = parameters.map{|k,v| 
@@ -105,6 +105,7 @@ module DOEParameterGenerator
     }
 
     p_lmts.each{|prm|
+      p "bottom: #{prm[:bottom]}, top: #{prm[:top]}"
       new_var, new_area = [], []
       if !prm[:bottom] && !prm[:top]
         #both side
@@ -126,7 +127,7 @@ module DOEParameterGenerator
   private
 
   # search only "Both Side" parameter
-  def generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -157,33 +158,37 @@ module DOEParameterGenerator
     end
 
     # === hard coding ====
+    ##hard coding
+    istep = 15
+    fstep = 0.015
+    ##hard coding
 
     new_upper, new_lower = nil,nil
     if param.min.class == Fixnum
-      if definition["bottom"] > (min - 9).to_i
+      if definition["bottom"] > (min - istep).to_i
         new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - 9).to_i
+        new_lower = (min - istep).to_i
       end
-      if definition["top"] < (max + 9).to_i
+      if definition["top"] < (max + istep).to_i
         new_upper = definition["top"] 
         ## @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + 9).to_i
+        new_upper = (max + istep).to_i
       end
     elsif param.min.class == Float
-      if definition["bottom"] > (min - 0.004).round(definition["num_decimal"])
+      if definition["bottom"] > (min - fstep).round(definition["num_decimal"])
         new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - 0.004).round(definition["num_decimal"])
+        new_lower = (min - fstep).round(definition["num_decimal"])
       end
-      if definition["top"] < (max + 0.004).round(definition["num_decimal"])
+      if definition["top"] < (max + fstep).round(definition["num_decimal"])
         new_upper = definition["top"]
         # @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + 0.004).round(definition["num_decimal"])
+        new_upper = (max + fstep).round(definition["num_decimal"])
       end
     end
 
@@ -245,36 +250,53 @@ module DOEParameterGenerator
   end
 
   # search only "Outside(+)" significant parameter
-  def generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
         param.push(parameters[name][:correspond][row[name]])
       end
     }
-
-    min = nil
-    max = nil
+    # p "outside(+)"
+    max = parameters[name][:paramDefs].max
     exist_area = []
     new_area = []
     new_array = nil
 
-    if parameters[name][:paramDefs].max <= param.max
-      min = parameters[name][:paramDefs].min
-      max = parameters[name][:paramDefs].max
-      # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
+    ##hard coding
+    istep = 15
+    fstep = 0.015
+    ##hard coding
 
-      if param.min.class == Fixnum
-        # new_array = [param.max + var_diff.to_i, param.max + (2*var_diff).to_i]
-        new_array = [param.max + 3, param.max + 6]
-      elsif param.min.class == Float
-        # new_array = [ (param.max + var_diff).round(definition["num_decimal"]), 
-        #               (param.max + 2*var_diff).round(definition["num_decimal"]) ]
-        new_array = [ (param.max + 0.004).round(definition["num_decimal"]),
-                      (param.max + 0.008).round(definition["num_decimal"]) ]
+    # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
+
+    if max.class == Fixnum
+      if (max + 2*istep) > definition["top"]
+        dif = ((definition["top"] - max).abs / 2).to_i
+        # return [],[] if dif <= definition["step_size"]
+        if dif >= definition["step_size"]
+          new_array = [max + dif, max + 2*dif] 
+        end
+      else
+        # new_array = [max + var_diff.to_i, max + (2*var_diff).to_i]
+        new_array = [max + istep, max + 2*istep]
+      end
+    elsif max.class == Float
+      if (max + 2*fstep) > definition["top"]
+        dif = ((definition["top"] - max).abs / 2.0).round(definition["num_decimal"])
+        if dif >= definition["step_size"]# return [],[] if dif <= definition["step_size"]
+          new_array = [ (max + dif).round(definition["num_decimal"]),
+                        (max + 2*dif).round(definition["num_decimal"])]
+        end
+      else
+        # new_array = [ (max + var_diff).round(definition["num_decimal"]), 
+        #               (max + 2*var_diff).round(definition["num_decimal"]) ]
+        new_array = [ (max + fstep).round(definition["num_decimal"]),
+                      (max + 2*fstep).round(definition["num_decimal"]) ]
       end
     end
 
+    p "new array: #{new_array}"
     # var.name
     new_var ={:case => "outside(+)", 
               :param => {:name => name, :paramDefs => new_array}}
@@ -282,37 +304,53 @@ module DOEParameterGenerator
   end
 
   # search only "Outside(-)" significant parameter
-  def generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
         param.push(parameters[name][:correspond][row[name]])
       end
     }
-
-    min = nil
-    max = nil
+    # p "outside(-)"
+    min = parameters[name][:paramDefs].min # min = param.min
     exist_area = []
     new_area = []
     new_array = nil
 
+    ##hard coding
+    istep = 15
+    fstep = 0.015
+    ##hard coding
 
-    if param.min <= parameters[name][:paramDefs].min
-      min = parameters[name][:paramDefs].min
-      max = parameters[name][:paramDefs].max
-      var_diff = cast_decimal((param.max - param.min).abs / 3.0)
+    # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
 
-      if param.min.class == Fixnum
+    if param.min.class == Fixnum
+      if (min - istep*2) < definition["bottom"]
+        dif = ((definition["bottom"] - min).abs / 2).to_i
+        # return [],[] if dif < definition["step_size"]
+        if dif >= definition["step_size"]
+          new_array = [min - 2*dif, min - dif] 
+        end
+      else
         # new_array = [param.min - var_diff.to_i, param.min - (2*var_diff).to_i]
-        new_array = [param.min - 6, param.min - 3]
-      elsif param.min.class == Float
+        new_array = [param.min - 2*istep, param.min - istep]
+      end
+    elsif param.min.class == Float
+      if (min - fstep*2) < definition["bottom"]
+        dif = ((definition["bottom"] - min).abs / 2.0).round(definition["num_decimal"])
+        if dif >= definition["step_size"]
+          new_array = [ (min - 2*dif).round(definition["num_decimal"]), 
+                        (min - dif).round(definition["num_decimal"])]
+        end
+      else
         # new_array = [ (param.min-var_diff).round(definition["num_decimal"]),
         #               (param.min-2*var_diff).round(definition["num_decimal"]) ]
-        new_array = [ (param.min - 0.004).round(definition["num_decimal"]), 
-                      (param.min - 0.008).round(definition["num_decimal"])]
+        new_array = [ (param.min - 2*fstep).round(definition["num_decimal"]), 
+                      (param.min - fstep).round(definition["num_decimal"])]
       end
     end
 
+    p "new array: #{new_array}"
     # var.name
     new_var ={:case => "outside(-)", 
               :param => {:name => name, :paramDefs => new_array}}
@@ -320,7 +358,7 @@ module DOEParameterGenerator
   end  
 
   #
-  def cast_decimal(var)
+  def self.cast_decimal(var)
     if !var.kind_of?(Float)
       return var
     else

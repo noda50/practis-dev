@@ -379,7 +379,6 @@ module Practis
     # 
     class DOEScheduler
       include Practis
-      include DOEParameterGenerator
       include OrthogonalTable
       include Math
 
@@ -537,8 +536,8 @@ module Practis
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
 
         p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
-        p "f_test: "
-        pp @id_list_queue[0]
+        # p "f_test: "
+        # pp @id_list_queue[0]
         
         # variance analysis
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector)
@@ -552,9 +551,10 @@ module Practis
 
         @parameters.each{|k, v|
           if @f_test.check_significant(k, f_result) # inside
-            new_param, exist_ids = generate_inside(@sql_connector, orthogonal_rows, 
-                                                  @parameters, k, @definitions[k])
-            if exist_ids.empty? && !new_param[:param][:paramDefs].nil? # !new_param[:param][:paramDefs].empty?
+            new_param, exist_ids = DOEParameterGenerator.generate_inside(
+                                    @sql_connector, orthogonal_rows, @parameters,
+                                    k, @definitions[k])
+            if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
               new_param_list.push(new_param)
             elsif !exist_ids.empty?
               exist_ids.each{|a|
@@ -577,8 +577,17 @@ module Practis
         # out side
         p "generate outside parameter: #{outside_flag}"
         if outside_flag
-          new_params, exist_ids = generate_outside(@sql_connector, orthogonal_rows, 
-                                                @parameters, @definitions)
+          condition = [:and]
+          condition += @parameters.map{|k, v|
+            [:or,
+              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
+              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
+            ]
+          }
+          old_out_rows = @sql_connector.read_record(:orthogonal, condition)
+          new_params, exist_ids = DOEParameterGenerator.generate_outside(
+                                    @sql_connector, old_out_rows, @parameters,
+                                    @definitions)
           if exist_ids.flatten.empty? # && !new_param[:param][:paramDefs].nil?
             new_param_list += new_params
           elsif !exist_ids.flatten.empty?
@@ -648,14 +657,14 @@ module Practis
 
         if !inside_list.empty?
           extclm = extend_otableDB(old_rows, inside_list[0][:case], inside_list[0][:param])
-          new_inside_area += generate_area(@sql_connector, old_rows, inside_list[0], extclm)
+          new_inside_area += OrthogonalTable.generate_area(@sql_connector, old_rows, inside_list[0], extclm)
 
           if 2 <= inside_list.size
             for i in 1...inside_list.size
               extclm = extend_otableDB(old_rows, inside_list[i][:case], inside_list[i][:param])
               tmp_area = []
               new_inside_area.each { |na|
-                tmp_area += generate_area(@sql_connector, na, inside_list[i], extclm)
+                tmp_area += OrthogonalTable.generate_area(@sql_connector, na, inside_list[i], extclm)
               }
               new_inside_area = tmp_area
             end
@@ -670,22 +679,30 @@ module Practis
               [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
             ]
           }
+          
           old_out_rows = @sql_connector.read_record(:orthogonal, condition)
           old_out_ids = old_out_rows.map{|r| r["id"]}
-
-          extclm = extend_otableDB(old_out_ids, outside_list[0][:case], outside_list[0][:param])
-          new_outside_area += generate_area(@sql_connector, old_out_ids, outside_list[0], extclm)
-          if 2 <= outside_list.size
-            for i in 1...outside_list.size
-              extclm = extend_otableDB(old_rows, outside_list[i][:case], outside_list[i][:param])
+          
+          outside_list.each{|prm|
+            if !prm[:param][:paramDefs].nil?
+              extclm = extend_otableDB(old_out_ids, prm[:case], prm[:param])
               tmp_area = []
-              new_outside_area.each { |na|
-                tmp_area += generate_area(@sql_connector, na, outside_list[i], extclm)
-              }
-              new_outside_area = tmp_area
+              if new_outside_area.empty?
+                tmp_area += OrthogonalTable.generate_area(
+                              @sql_connector, old_out_ids, prm, extclm)
+              else
+                tmp_list = new_outside_area.map{|i| i}
+                tmp_list.push(old_out_ids)
+                tmp_list.each{|a|
+                  tmp_area += OrthogonalTable.generate_area(
+                                @sql_connector, a, prm, extclm)
+                }
+              end
+              new_outside_area += tmp_area
+            else
+              p "parameter array is nil"
             end
-          end
-
+          }
         end
 
         return new_inside_area + new_outside_area
@@ -813,7 +830,7 @@ module Practis
       # upload initial table
       def upload_initial_orthogonal_db(table=nil)
         error("uploading data for MySQL is empty") if table.nil?
-        
+        return if @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], 1]).length > 0
         msgs = []
         (0...table[0].size).each{|row|
           msg = {:id => row+1, :run => 0}
