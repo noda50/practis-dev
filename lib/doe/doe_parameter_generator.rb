@@ -159,8 +159,8 @@ module DOEParameterGenerator
 
     # === hard coding ====
     ##hard coding
-    istep = 15
-    fstep = 0.015
+    istep = 9
+    fstep = 0.03
     ##hard coding
 
     new_upper, new_lower = nil,nil
@@ -264,8 +264,8 @@ module DOEParameterGenerator
     new_array = nil
 
     ##hard coding
-    istep = 15
-    fstep = 0.015
+    istep = 9
+    fstep = 0.03
     ##hard coding
 
     # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
@@ -318,8 +318,8 @@ module DOEParameterGenerator
     new_array = nil
 
     ##hard coding
-    istep = 15
-    fstep = 0.015
+    istep = 9
+    fstep = 0.03
     ##hard coding
 
     # var_diff = cast_decimal((param.max - param.min).abs / 3.0)

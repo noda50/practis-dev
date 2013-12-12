@@ -14,7 +14,7 @@ require 'practis'
 require 'practis/database'
 require 'practis/database_command'
 require 'practis/database_parser'
-
+require "pp"
 
 module Practis
   module Database
@@ -298,6 +298,17 @@ module Practis
         else
           return []
         end
+      end
+
+      ## [2013/12/12 H-Matsushima]
+      ## 
+      def copy_records(type, condition)
+        connector = @connectors[type]
+        retval = connector.read({type: "copyrecords"}, condition){
+          |retq|
+          result = []
+          return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
+        }
       end
 
       def register_project(project_name)

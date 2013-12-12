@@ -682,7 +682,7 @@ module Practis
           
           old_out_rows = @sql_connector.read_record(:orthogonal, condition)
           old_out_ids = old_out_rows.map{|r| r["id"]}
-          
+
           outside_list.each{|prm|
             if !prm[:param][:paramDefs].nil?
               extclm = extend_otableDB(old_out_ids, prm[:case], prm[:param])
