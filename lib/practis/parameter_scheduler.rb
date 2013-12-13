@@ -732,31 +732,16 @@ module Practis
         condition += @parameters[parameter[:name]][:correspond].map{|k,v| [:eq, [:field, parameter[:name]], k]}
 
         if old_digit_num < digit_num
-          max_count = @sql_connector.read_max(:orthogonal, 'id', :integer)
+          old_max_count = @sql_connector.read_max(:orthogonal, 'id', :integer)
           
-          @extending = true
+          @extending = true # nen no tame
           update_parameter_correspond(parameter[:name], digit_num, old_digit_num, old_level)
-          update_msgs = []
-          upload_msgs = []
-
-          max_count.times.each{|id|
-            old_value_msg = {}
-            upl_h = {id: id + 1 + max_count }
-            ret = @sql_connector.read_record(:orthogonal, [:eq, [:field, "id"], id + 1])
-            ret[0].each{|k, v|
-              if k == parameter[:name]
-                old_value_msg[k.to_sym] = {old: v, new: "0" + v}
-                upl_h[k.to_sym] = "1" + v
-              elsif k != "id"
-                upl_h[k.to_sym] = v
-              end
-            }
-            update_msgs.push(old_value_msg)
-            upload_msgs.push(upl_h)
-          }
           
-          update_orthogonal_table_db(update_msgs)
-          upload_orthogonal_table_db(upload_msgs)
+          @sql_connector.copy_records(:orthogonal, nil)
+          update_orthogonalDB(parameter[:name], "0", 1, old_max_count)
+          new_max_count = @sql_connector.read_max(:orthogonal, 'id', :integer)
+          update_orthogonalDB(parameter[:name], "1", old_max_count + 1, new_max_count)
+
           @extending = false
         end
 
@@ -840,6 +825,15 @@ module Practis
           msgs.push(msg)
         }
         upload_orthogonal_table_db(msgs)
+      end
+
+
+      def update_orthogonalDB(pname, bit_str, strt_id, end_id)
+        # querry << update dilemma_game.orthogonal set 'pname' = concat('0', pname) 
+        # where id between id and id
+        condition = "#{pname} = CONCAT('#{bit_str}', #{pname}) WHERE id BETWEEN #{strt_id} AND #{end_id}"
+        @sql_connector.update_string(:orthogonal, condition)
+        #                                                           
       end
 
       # upload additional tables

@@ -304,7 +304,16 @@ module Practis
       ## 
       def copy_records(type, condition)
         connector = @connectors[type]
-        retval = connector.read({type: "copyrecords"}, condition){
+        retval = connector.read({type: "cprecords"}, condition){
+          |retq|
+          result = []
+          return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
+        }
+      end
+      ## [2013/12/12 H-Matsushima]
+      def update_string(type, condition)
+        connector = @connectors[type]
+        retval = connector.read({type: "ustr"}, condition){
           |retq|
           result = []
           return retq.nil? ? result : retq.inject(result) { |r, q| r << q }

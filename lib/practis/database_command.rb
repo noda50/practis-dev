@@ -19,7 +19,7 @@ module Practis
       DATABASE_COMMAND_TYPES = %w(cdatabase ctable cgrant cgrantl cinsert
                                   drecord ddatabase dtable
                                   rrecord rcount rdatabase rinnerjoin rnow
-                                  rmax rdiscrecord copyrecords 
+                                  rmax rdiscrecord cprecords ustr  
                                   rtable runixtime urecord uglobal)
 
       def initialize(database_schema)
@@ -217,7 +217,8 @@ module Practis
         ## [2013/11/25 H-Matsushima] for unique parameters
         when "rdiscrecord"
           query << "SELECT DISTINCT #{condition} FROM #{database}.#{table};"
-        when "copyrecords"
+        ## [2013/12/12 H-Matsushima] for unique parameters
+        when "cprecords"
           query << "INSERT INTO #{database}.#{table} SELECT "
           query << tbl[:fields].map { |f| 
             if f[:field] == "id"
@@ -229,6 +230,9 @@ module Practis
             end
           }.join(", ")
           query << " FROM #{database}.#{table};"
+        ## [2013/12/13 H-Matsushima] for unique parameters
+        when "ustr"
+          query << "UPDATE #{database}.#{table} SET #{condition};"
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"
