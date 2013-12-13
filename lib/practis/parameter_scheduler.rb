@@ -517,6 +517,8 @@ module Practis
 
       #
       def do_variance_analysis
+        count = @id_list_queue[0][:or_ids].inject(0){|sum, oid| sum + @id_list_queue[0][oid].size}
+        return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
         # analysis
         result_set = []
         count = 0
@@ -524,7 +526,8 @@ module Practis
         new_param_list = []
         @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
         @id_list_queue[0][:or_ids].each{|oid|
-          condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
+          # condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
+          condition = "WHERE result_id IN ( " + @id_list_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
           retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
                                               base_field: :result_id, ref_field: :parameter_id,
                                               condition: condition})
@@ -534,7 +537,6 @@ module Practis
           end
         }
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
-
         p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
         # p "f_test: "
         # pp @id_list_queue[0]
@@ -827,13 +829,10 @@ module Practis
         upload_orthogonal_table_db(msgs)
       end
 
-
+      # 
       def update_orthogonalDB(pname, bit_str, strt_id, end_id)
-        # querry << update dilemma_game.orthogonal set 'pname' = concat('0', pname) 
-        # where id between id and id
         condition = "#{pname} = CONCAT('#{bit_str}', #{pname}) WHERE id BETWEEN #{strt_id} AND #{end_id}"
         @sql_connector.update_string(:orthogonal, condition)
-        #                                                           
       end
 
       # upload additional tables

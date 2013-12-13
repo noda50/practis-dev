@@ -19,7 +19,7 @@ module Practis
       DATABASE_COMMAND_TYPES = %w(cdatabase ctable cgrant cgrantl cinsert
                                   drecord ddatabase dtable
                                   rrecord rcount rdatabase rinnerjoin rnow
-                                  rmax rdiscrecord cprecords ustr  
+                                  rmax rdiscrecord cprecords ustr rrecordin
                                   rtable runixtime urecord uglobal)
 
       def initialize(database_schema)
@@ -233,13 +233,18 @@ module Practis
         ## [2013/12/13 H-Matsushima] for unique parameters
         when "ustr"
           query << "UPDATE #{database}.#{table} SET #{condition};"
+        when "rrecordin"
+          query << "SELECT * FROM #{database}.#{table} WHERE #{condition[:field]} IN ("
+          query << condition[:args].map{|arg| "#{arg}"}.join(", ")
+          query << ");"
         when "rdatabase"
           query << "SHOW DATABASES;"
         when "rinnerjoin"
           # query << "SELECT * FROM #{database}.#{table} INNER JOIN #{condition};"
           query << "SELECT * FROM #{database}.#{table} INNER JOIN #{condition[0]}"
           if(!condition[1].nil?)
-            query << " #{condition_to_sql(database, table, condition[1])}"
+            # query << " #{condition_to_sql(database, table, condition[1])}"
+            query << " #{condition[1]};"
           end
         when "rnow"
           query << "SELECT DATE_FORMAT(NOW(), GET_FORMAT(DATETIME, 'ISO'));"

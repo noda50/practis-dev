@@ -319,6 +319,16 @@ module Practis
           return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
         }
       end
+      ## [2013/12/12 H-Matsushima]
+      ## 
+      def read_record_in(type, condition)
+        connector = @connectors[type]
+        retval = connector.read({type: "rrecordin"}, condition){
+          |retq|
+          result = []
+          return retq.nil? ? result : retq.inject(result) { |r, q| r << q }
+        }
+      end
 
       def register_project(project_name)
         connector = @connectors[:project]
