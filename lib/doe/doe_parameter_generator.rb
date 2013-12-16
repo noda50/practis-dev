@@ -87,8 +87,29 @@ module DOEParameterGenerator
     return new_var, new_area
   end
 
+  # 
   def self.generate_outside(sql_connetor, orthogonal_rows, parameters, name, definition)
-    
+    p_lmts = {:name=>name, :top=>false, :bottom=>false}
+    orthogonal_rows.each{|r|
+      if parameters[name][:paramDefs].min <= definition["bottom"]
+        p_lmts[:bottom] = true
+      elsif parameters[name][:correspond][r[name]] >= definition["top"]
+        p_lmts[:top] = true
+      end
+    }
+    new_var, new_area = [], []
+    if !p_lmts[:bottom] && !p_lmts[:top]
+      #both side
+      new_var, new_area = generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+    elsif !p_lmts[:top]
+      #outside(+)
+      new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    elsif !p_lmts[:bottom]
+      #outside(-)
+      new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    end
+
+    return new_var, new_area
   end
   
   # search only "Out side" parameter
@@ -102,7 +123,7 @@ module DOEParameterGenerator
       p_lmts.each{|prm|
         if parameters[prm[:name]][:paramDefs].min <= definitions[prm[:name]]["bottom"]
           prm[:bottom] = true
-      elsif parameters[prm[:name]][:correspond][r[prm[:name]]] >= definitions[prm[:name]]["top"]
+        elsif parameters[prm[:name]][:correspond][r[prm[:name]]] >= definitions[prm[:name]]["top"]
           prm[:top] = true
         end
       }

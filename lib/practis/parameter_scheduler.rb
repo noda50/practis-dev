@@ -393,6 +393,7 @@ module Practis
         @f_test=FTest.new
         @eop = false
         @extending = false
+        srand(0)
       end
 
       # 
@@ -555,7 +556,7 @@ module Practis
               new_param_list.push(new_param)
             elsif !exist_ids.empty?
               exist_ids.each{|set|
-                h = generate_id_data_list(set, 0.0)
+                h = generate_id_data_list(set, f_result[k][:f_value])
                 # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
                 #   p "exist area: #{exist_ids}"
                 #   exit(0)
@@ -579,14 +580,38 @@ module Practis
             ]
           }
           old_out_rows = @sql_connector.read_record(:orthogonal, condition)
-          new_params, exist_ids = DOEParameterGenerator.generate_outside_all(
-                                    @sql_connector, old_out_rows, @parameters,
-                                    @definitions)
-          if exist_ids.flatten.empty?
-            new_param_list += new_params
-          elsif !exist_ids.flatten.empty?
-            error("outside check is error")
+
+          prms = parameters_maxFValue(f_result)
+          if prms.size == 1
+            name = prms[0]
+          elsif prms.size >= 2
+            name = prms[rand(prms.size)]
+          else
+            error("parameters are missing!!")
+          end          
+
+          new_param, exist_ids = DOEParameterGenerator.generate_outside(
+                                  @sql_connector, old_out_rows, @parameters,
+                                  name, @definitions[name])
+          if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
+            new_param_list.push(new_param)
+          elsif !exist_ids.empty?
+            exist_ids.each{ |set|
+              h = generate_id_data_list(set, f_result[name][:f_value])
+              @id_list_queue.push(h)
+            }
           end
+
+          ## => all of paraameters are generaterd
+          # new_params, exist_ids = DOEParameterGenerator.generate_outside_all(
+          #                           @sql_connector, old_out_rows, @parameters,
+          #                           @definitions)
+          # if exist_ids.flatten.empty?
+          #   new_param_list += new_params
+          # elsif !exist_ids.flatten.empty?
+          #   error("outside check is error")
+          # end
+          ## = = = = = = =
         end
 
         # extend_otableDB & parameter set store to queue
@@ -619,11 +644,22 @@ module Practis
 
       private
 
+      # 
       def generate_id_data_list(id_list, priority=0.0)
         h = {:or_ids => id_list}
         id_list.each{ |id| h[id] = [] }
         h[:priority] = priority
         return h
+      end
+
+      # 
+      def parameters_maxFValue(f_result)
+        params = []
+        name, max_fv = f_result.max_by{ |k, v| v[:f_value] }
+        f_result.each{ |k, v|
+          params.push(k) if max_fv[:f_value] == v[:f_value]
+        }
+        return params
       end
 
       # set next list of parameter combinations set 

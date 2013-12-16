@@ -5,10 +5,12 @@ require 'pp'
 #
 class FTest
   include Practis
+  include Math
 
   # 
   def initialize
-    @f_disttable = F_DistributionTable.new(0.005)
+    @p_sig = 0.005
+    @f_disttable = F_DistributionTable.new(@p_sig)
   end
 
   # 
@@ -41,11 +43,13 @@ class FTest
         effFact[:effect] += (v.inject(:+) ** 2).to_f / v.size
       end
       effFact[:effect] -= @ct
+      effFact[:effect] = 0.0 if effFact[:effect] < 0.0
       effFact[:free] = 1
       effFact
     end
 
     @s_e = @ss - (@ct + @effFacts.inject(0) {|sum,ef| sum + ef[:effect]})
+    @s_e = 0.0 if @s_e < 0.0
     @e_f = @count - 1
     @effFacts.each do |ef|
       @e_f -= ef[:free]
@@ -53,7 +57,16 @@ class FTest
     
     @e_v = @s_e / @e_f
     @effFacts.each do |fact|
-      fact[:f_value] = fact[:effect] / @e_v
+      if !(fact[:effect] / @e_v).nan?
+        fact[:f_value] = fact[:effect] / @e_v
+      else
+        fact[:f_value] = fact[:effect] / @p_sig
+      end
+
+      if fact[:f_value] < 0.0
+        p "ss: #{@ss}, ct:#{@ct}, s_e: #{@s_e}"
+        pp fact[:effect]
+      end
     end
 
     result = {}
@@ -86,9 +99,7 @@ class FTest
     msg[:id_combination] = results_set.map{|rs| rs.map{|r| r["result_id"]}}.to_s
     parameter_keys.each{|k|
       msg[("range_#{k}").to_sym] = (results_set.map{|r| r[0][k] }.uniq).to_s
-      if f_result[k][:f_value].nan?
-        msg[("f_value_of_#{k}").to_sym] = 0.0
-      elsif !f_result[k][:f_value].finite?
+      if !f_result[k][:f_value].finite?
         msg[("f_value_of_#{k}").to_sym] = 1024
       else
         msg[("f_value_of_#{k}").to_sym] = f_result[k][:f_value]
