@@ -9,7 +9,7 @@
     <config name="execution_name" type="String">simple_equation</config>
 
     <!-- Specify debug level from FATAL, ERROR, WARN, INFO and DEBUG -->
-    <config name="debug_level" type="String">DEBUG</config>
+    <config name="debug_level" type="String">ERROR</config>
 
     <!-- Logger output option -->
     <config name="debug_output" type="String">STDERR</config>
@@ -76,64 +76,100 @@
     <!-- Database commons -->
     <config name="database_query_retry" type="Integer">-1</config>
 
+    <!-- Database defauilts -->
+    <config name="default_database_type" type="String"
+        id="DB_type">mysql</config>
+    <config name="default_database_hostname" type="String"
+        id="DB_host">127.0.0.1</config>
+    <config name="default_database_management_username" type="String"
+        id="DB_admin">practis_manager</config>
+    <config name="default_database_management_password" type="String"
+        id="DB_admin_pass">sitcarp</config>
+    <config name="default_database_username" type="String"
+        id="DB_user">practis</config>
+    <config name="default_database_password" type="String"
+        id="DB_pass">sitcarp</config>
+    <config name="default_database_name" type="String"
+        id="DB_name">simple_equation</config>
+
     <!-- Project database -->
-    <config name="project_database_type" type="String">mysql</config>
-    <config name="project_database_hostname" type="String">127.0.0.1</config>
-    <config name="project_database_management_username" type="String">practis_manager</config>
-    <config name="project_database_management_password" type="String">sitcarp</config>
-    <config name="project_database_username" type="String">practis</config>
-    <config name="project_database_password" type="String">sitcarp</config>
-    <config name="project_database_name" type="String">simple_equation</config>
+    <config name="project_database_type" ref="#DB_type"/>
+    <config name="project_database_hostname" ref="#DB_host"/>
+    <config name="project_database_management_username" ref="#DB_admin"/>
+    <config name="project_database_management_password" ref="#DB_admin_pass"/>
+    <config name="project_database_username" ref="#DB_user"/>
+    <config name="project_database_password" ref="#DB_pass"/>
+    <config name="project_database_name" ref="#DB_name"/>
     <config name="project_database_tablename" type="String">project</config>
 
     <!-- Execution database -->
-    <config name="execution_database_type" type="String">mysql</config>
-    <config name="execution_database_hostname" type="String">127.0.0.1</config>
-    <config name="execution_database_management_username" type="String">practis_manager</config>
-    <config name="execution_database_management_password" type="String">sitcarp</config>
-    <config name="execution_database_username" type="String">practis</config>
-    <config name="execution_database_password" type="String">sitcarp</config>
-    <config name="execution_database_name" type="String">simple_equation</config>
+    <config name="execution_database_type" ref="#DB_type"/>
+    <config name="execution_database_hostname" ref="#DB_host"/>
+    <config name="execution_database_management_username" ref="#DB_admin"/>
+    <config name="execution_database_management_password" ref="#DB_admin_pass"/>
+    <config name="execution_database_username" ref="#DB_user"/>
+    <config name="execution_database_password" ref="#DB_pass"/>
+    <config name="execution_database_name" ref="#DB_name"/>
     <config name="execution_database_tablename" type="String">execution</config>
 
     <!-- Executable database -->
-    <config name="executable_database_type" type="String">mysql</config>
-    <config name="executable_database_hostname" type="String">127.0.0.1</config>
-    <config name="executable_database_management_username" type="String">practis_manager</config>
-    <config name="executable_database_management_password" type="String">sitcarp</config>
-    <config name="executable_database_username" type="String">practis</config>
-    <config name="executable_database_password" type="String">sitcarp</config>
-    <config name="executable_database_name" type="String">simple_equation</config>
+    <config name="executable_database_type" ref="#DB_type"/>
+    <config name="executable_database_hostname" ref="#DB_host"/>
+    <config name="executable_database_management_username" ref="#DB_admin"/>
+    <config name="executable_database_management_password" ref="#DB_admin_pass"/>
+    <config name="executable_database_username" ref="#DB_user"/>
+    <config name="executable_database_password" ref="#DB_pass"/>
+    <config name="executable_database_name" ref="#DB_name"/>
     <config name="executable_database_tablename" type="String">executable</config>
 
     <!-- Node database -->
-    <config name="node_database_type" type="String">mysql</config>
-    <config name="node_database_hostname" type="String">127.0.0.1</config>
-    <config name="node_database_management_username" type="String">practis_manager</config>
-    <config name="node_database_management_password" type="String">sitcarp</config>
-    <config name="node_database_username" type="String">practis</config>
-    <config name="node_database_password" type="String">sitcarp</config>
-    <config name="node_database_name" type="String">simple_equation</config>
+    <config name="node_database_type" ref="#DB_type"/>
+    <config name="node_database_hostname" ref="#DB_host"/>
+    <config name="node_database_management_username" ref="#DB_admin"/>
+    <config name="node_database_management_password" ref="#DB_admin_pass"/>
+    <config name="node_database_username" ref="#DB_user"/>
+    <config name="node_database_password" ref="#DB_pass"/>
+    <config name="node_database_name" ref="#DB_name"/>
     <config name="node_database_tablename" type="String">node</config>
 
     <!-- Parameter database -->
-    <config name="parameter_database_type" type="String">mysql</config>
-    <config name="parameter_database_hostname" type="String">127.0.0.1</config>
-    <config name="parameter_database_management_username" type="String">practis_manager</config>
-    <config name="parameter_database_management_password" type="String">sitcarp</config>
-    <config name="parameter_database_username" type="String">practis</config>
-    <config name="parameter_database_password" type="String">sitcarp</config>
-    <config name="parameter_database_name" type="String">simple_equation</config>
+    <config name="parameter_database_type" ref="#DB_type"/>
+    <config name="parameter_database_hostname" ref="#DB_host"/>
+    <config name="parameter_database_management_username" ref="#DB_admin"/>
+    <config name="parameter_database_management_password" ref="#DB_admin_pass"/>
+    <config name="parameter_database_username" ref="#DB_user"/>
+    <config name="parameter_database_password" ref="#DB_pass"/>
+    <config name="parameter_database_name" ref="#DB_name"/>
     <config name="parameter_database_tablename" type="String">parameter</config>
 
     <!-- Result database -->
-    <config name="result_database_type" type="String">mysql</config>
-    <config name="result_database_hostname" type="String">127.0.0.1</config>
-    <config name="result_database_management_username" type="String">practis_manager</config>
-    <config name="result_database_management_password" type="String">sitcarp</config>
-    <config name="result_database_username" type="String">practis</config>
-    <config name="result_database_password" type="String">sitcarp</config>
-    <config name="result_database_name" type="String">simple_equation</config>
+    <config name="result_database_type" ref="#DB_type"/>
+    <config name="result_database_hostname" ref="#DB_host"/>
+    <config name="result_database_management_username" ref="#DB_admin"/>
+    <config name="result_database_management_password" ref="#DB_admin_pass"/>
+    <config name="result_database_username" ref="#DB_user"/>
+    <config name="result_database_password" ref="#DB_pass"/>
+    <config name="result_database_name" ref="#DB_name"/>
     <config name="result_database_tablename" type="String">result</config>
+
+    <!-- orthogonal table database -->
+    <config name="orthogonal_database_type" ref="#DB_type"/>
+    <config name="orthogonal_database_hostname" ref="#DB_host"/>
+    <config name="orthogonal_database_management_username" ref="#DB_admin"/>
+    <config name="orthogonal_database_management_password" ref="#DB_admin_pass"/>
+    <config name="orthogonal_database_username" ref="#DB_user"/>
+    <config name="orthogonal_database_password" ref="#DB_pass"/>
+    <config name="orthogonal_database_name" ref="#DB_name"/>
+    <config name="orthogonal_database_tablename" type="String">orthogonal</config>
+
+    <!-- f_test database -->
+    <config name="f_test_database_type" ref="#DB_type"/>
+    <config name="f_test_database_hostname" ref="#DB_host"/>
+    <config name="f_test_database_management_username" ref="#DB_admin"/>
+    <config name="f_test_database_management_password" ref="#DB_admin_pass"/>
+    <config name="f_test_database_username" ref="#DB_user"/>
+    <config name="f_test_database_password" ref="#DB_pass"/>
+    <config name="f_test_database_name" ref="#DB_name"/>
+    <config name="f_test_database_tablename" type="String">f_test</config>
   </configuration>
 </practis>

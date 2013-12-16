@@ -5,8 +5,8 @@
       <parameter name="a" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
-            <start>-2.0</start>
-            <end>2.0</end>
+            <start>-0.5</start>
+            <end>0.5</end>
             <step>1.0</step>
           </condition>
         </conditions>
@@ -14,9 +14,18 @@
       <parameter name="b" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
-            <start>-2.0</start>
-            <end>2.0</end>
+            <start>-0.5</start>
+            <end>0.5</end>
             <step>1.0</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="seed" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0</start>
+            <end>4</end>
+            <step>1</step>
           </condition>
         </conditions>
       </parameter>
