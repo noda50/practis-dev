@@ -403,11 +403,7 @@ module Practis
         @current_qcounter = 0
         
         # init list
-        h = {:or_ids => []}
-        table[0].size.times.each{|r| 
-          h[:or_ids].push(r+1)
-          h[r+1] = []
-        }
+        h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, 0.0)
         @id_list_queue.push(h)
 
 
@@ -538,8 +534,6 @@ module Practis
         }
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
         p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
-        # p "f_test: "
-        # pp @id_list_queue[0]
         
         # variance analysis
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector)
@@ -551,23 +545,21 @@ module Practis
         
         outside_flag = true
 
+        # inside
         @parameters.each{|k, v|
-          if @f_test.check_significant(k, f_result) # inside
+          if @f_test.check_significant(k, f_result)
             new_param, exist_ids = DOEParameterGenerator.generate_inside(
                                     @sql_connector, orthogonal_rows, @parameters,
                                     k, @definitions[k])
             if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
               new_param_list.push(new_param)
             elsif !exist_ids.empty?
-              exist_ids.each{|a|
-                h = {:or_ids => a}
-                a.each{|i|
-                  h[i] = []
-                }
-                if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
-                  p "exist area: #{exist_ids}"
-                  exit(0)
-                end
+              exist_ids.each{|set|
+                h = generate_id_data_list(set, 0.0)
+                # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
+                #   p "exist area: #{exist_ids}"
+                #   exit(0)
+                # end
                 @id_list_queue.push(h)
               }
             end
@@ -576,7 +568,7 @@ module Practis
           outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
         }
 
-        # out side
+        # outside
         p "generate outside parameter: #{outside_flag}"
         if outside_flag
           condition = [:and]
@@ -587,10 +579,10 @@ module Practis
             ]
           }
           old_out_rows = @sql_connector.read_record(:orthogonal, condition)
-          new_params, exist_ids = DOEParameterGenerator.generate_outside(
+          new_params, exist_ids = DOEParameterGenerator.generate_outside_all(
                                     @sql_connector, old_out_rows, @parameters,
                                     @definitions)
-          if exist_ids.flatten.empty? # && !new_param[:param][:paramDefs].nil?
+          if exist_ids.flatten.empty?
             new_param_list += new_params
           elsif !exist_ids.flatten.empty?
             error("outside check is error")
@@ -602,15 +594,11 @@ module Practis
           next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
           next_sets.each{|set|
             if !set.empty?
-              h = {:or_ids => []}
-              set.each{|r| 
-                h[:or_ids].push(r)
-                h[r] = []
-              }
-              if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
-                p "new area: #{next_sets}"
-                exit(0)
-              end
+              h = generate_id_data_list(set, 0.0)
+              # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
+              #   p "new area: #{next_sets}"
+              #   exit(0)
+              # end
               @id_list_queue.push(h)
             end
           }
@@ -630,6 +618,13 @@ module Practis
 
 
       private
+
+      def generate_id_data_list(id_list, priority=0.0)
+        h = {:or_ids => id_list}
+        id_list.each{ |id| h[id] = [] }
+        h[:priority] = priority
+        return h
+      end
 
       # set next list of parameter combinations set 
       def set_next_list

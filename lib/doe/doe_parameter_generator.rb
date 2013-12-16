@@ -86,9 +86,13 @@ module DOEParameterGenerator
 
     return new_var, new_area
   end
+
+  def self.generate_outside(sql_connetor, orthogonal_rows, parameters, name, definition)
+    
+  end
   
   # search only "Out side" parameter
-  def self.generate_outside(sql_connetor, orthogonal_rows, parameters, definitions)
+  def self.generate_outside_all(sql_connetor, orthogonal_rows, parameters, definitions)
     new_var_list, new_area_list = [], []
 
     p_lmts = parameters.map{|k,v| 
@@ -123,6 +127,7 @@ module DOEParameterGenerator
 
     return new_var_list, new_area_list #debug
   end
+
 
   private
 
