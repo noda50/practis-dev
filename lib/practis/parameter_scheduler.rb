@@ -748,7 +748,7 @@ module Practis
       # 
       def check_duplicate_f_test(list=nil)
         return false if list.nil?
-        condition = [:eq, [:field, :id_combination]]
+        condition = [:eq, [:field, "id_combination"]]
         condition.push(list[:or_ids].map{|id| list[id] }.to_s)
         retval = @sql_connector.read_record(:f_test, condition)
         return if retval.size > 0 ? true : false
