@@ -534,6 +534,10 @@ module Practis
           end
         }
         return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+        if check_duplicate_f_test(@id_list_queue[0])
+          p "duplicate set of parameter combinations in variance analysis"
+          return false 
+        end
         p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
         
         # variance analysis
@@ -739,6 +743,15 @@ module Practis
         end
 
         return new_inside_area + new_outside_area
+      end
+
+      # 
+      def check_duplicate_f_test(list=nil)
+        return false return list.nil?
+        condition = [:eq, [:field, :id_combination]]
+        condition.push(list[:or_ids].map{|id| list[id] }.to_s)
+        retval = @sql_connector.read_record(:f_test, condition)
+        return if retval.size > 0 ? true : false
       end
 
       #

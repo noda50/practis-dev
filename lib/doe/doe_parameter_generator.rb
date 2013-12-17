@@ -36,6 +36,7 @@ module DOEParameterGenerator
                     (param_max - var_diff).round(definition["num_decimal"]) ]
     end
 
+    parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
       if parameters[name][:paramDefs].find{ |v| param_min < v && v < param_max }.nil?
       else
@@ -43,10 +44,13 @@ module DOEParameterGenerator
           min_bit = parameters[name][:correspond].key(new_array.min)
           max_bit = parameters[name][:correspond].key(new_array.max)
         else
-          min = parameters[name][:paramDefs].min_by{|v| v > param_min ? v : parameters[name][:paramDefs].max}
-          max = parameters[name][:paramDefs].max_by{|v| v < param_max ? v : parameters[name][:paramDefs].min}
-          min_bit = parameters[name][:correspond].key(min)
-          max_bit = parameters[name][:correspond].key(max)
+          # minp = parameters[name][:paramDefs].min_by{|v| v > param_min ? v : parameters[name][:paramDefs].max}
+          # maxp = parameters[name][:paramDefs].max_by{|v| v < param_max ? v : parameters[name][:paramDefs].min}
+          step = parameters[name][:paramDefs].size / 3
+          minp = parameters[name][:paramDefs][step - 1]
+          maxp = parameters[name][:paramDefs][parameters[name][:paramDefs].size - step - 1]
+          min_bit = parameters[name][:correspond].key(minp)
+          max_bit = parameters[name][:correspond].key(maxp)
         end
 
         condition = [:or]
@@ -186,7 +190,7 @@ module DOEParameterGenerator
     # === hard coding ====
     ##hard coding
     istep = 9
-    fstep = 0.03
+    fstep = 0.3
     ##hard coding
 
     new_upper, new_lower = nil,nil
@@ -291,7 +295,7 @@ module DOEParameterGenerator
 
     ##hard coding
     istep = 9
-    fstep = 0.03
+    fstep = 0.3
     ##hard coding
 
     # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
@@ -345,7 +349,7 @@ module DOEParameterGenerator
 
     ##hard coding
     istep = 9
-    fstep = 0.03
+    fstep = 0.3
     ##hard coding
 
     # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
