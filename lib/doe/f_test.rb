@@ -14,7 +14,7 @@ class FTest
   end
 
   # 
-  def run(results_set, parameter_keys, sql_connector=nil)
+  def run(results_set, parameter_keys, sql_connector=nil, id_list)
     @mean, @ss, @count = 0, 0, 0
     
     result_array(results_set).each{|results|
@@ -75,7 +75,7 @@ class FTest
       result[ ef[:name] ].delete(:name)
     end
 
-    upload_f_test(sql_connector, results_set, parameter_keys, result) if !sql_connector.nil?
+    upload_f_test(sql_connector, results_set, parameter_keys, result, id_list) if !sql_connector.nil?
     return result
   end
 
@@ -93,10 +93,11 @@ class FTest
   end
 
   #
-  def upload_f_test(sql_connector, results_set, parameter_keys, f_result)
+  def upload_f_test(sql_connector, results_set, parameter_keys, f_result, id_list)
     msg = {}
     msg[:f_test_id] = getNewFtestId(sql_connector)
-    msg[:id_combination] = results_set.map{|rs| rs.map{|r| r["result_id"]}}.to_s
+    msg[:id_combination] = id_list[:or_ids].sort.to_s
+    # msg[:result_set] = results_set.map{|rs| rs.map{|r| r["result_id"]}}.to_s
     parameter_keys.each{|k|
       msg[("range_#{k}").to_sym] = (results_set.map{|r| r[0][k] }.uniq).to_s
       if !f_result[k][:f_value].finite?

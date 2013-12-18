@@ -400,12 +400,13 @@ module Practis
       def init_doe(sql_connector, table, doe_definitions)
         @sql_connector = sql_connector
         @definitions = doe_definitions
-        @id_list_queue = []
+        @run_id_queue = []
+        @f_test_queue = []
         @current_qcounter = 0
         
         # init list
         h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, 0.0)
-        @id_list_queue.push(h)
+        @run_id_queue.push(h)
 
 
         @parameters = {}
@@ -449,6 +450,15 @@ module Practis
           return nil if !set_next_list
         end
 
+        # debug
+        if @available_numbers.include?(nil)
+          p "error!! available_numbers is include nil class"
+          pp @available_numbers
+          pp @run_id_queue
+          exit(0)
+        end
+
+
         return nil if @extending
         
         v = @available_numbers.shift
@@ -457,7 +467,7 @@ module Practis
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
 
-        id_index = @id_list_queue[@current_qcounter][:or_ids][@v_index]
+        id_index = @run_id_queue[@current_qcounter][:or_ids][@v_index]
         ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id_index])
 
         condition = [:or]
@@ -487,12 +497,12 @@ module Practis
 
         if already.size != 0
           already.each{|ret|
-            @id_list_queue[@current_qcounter][id_index].push(ret["parameter_id"])
+            @run_id_queue[@current_qcounter][id_index].push(ret["parameter_id"])
           }
         else
-          @id_list_queue[@current_qcounter][id_index].push(id)
+          @run_id_queue[@current_qcounter][id_index].push(id)
         end
-        @id_list_queue[@current_qcounter][id_index].uniq!
+        @run_id_queue[@current_qcounter][id_index].uniq!
 
         return parameter_array
       end
@@ -504,7 +514,7 @@ module Practis
 
       # 
       def get_total
-        @id_list_queue[@current_qcounter][:or_ids].size * @unassigned_total_size
+        @run_id_queue[@current_qcounter][:or_ids].size * @unassigned_total_size
       end
 
       #
@@ -514,17 +524,17 @@ module Practis
 
       #
       def do_variance_analysis
-        count = @id_list_queue[0][:or_ids].inject(0){|sum, oid| sum + @id_list_queue[0][oid].size}
-        return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
+        count = @run_id_queue[0][:or_ids].inject(0){|sum, oid| sum + @run_id_queue[0][oid].size}
+        return false if count < (@run_id_queue[0][:or_ids].size * @unassigned_total_size)
         # analysis
         result_set = []
         count = 0
         parameter_keys = []
         new_param_list = []
         @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
-        @id_list_queue[0][:or_ids].each{|oid|
-          # condition = [:or] + @id_list_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
-          condition = "WHERE result_id IN ( " + @id_list_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
+        @run_id_queue[0][:or_ids].each{|oid|
+          # condition = [:or] + @run_id_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
+          condition = "WHERE result_id IN ( " + @run_id_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
           retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
                                               base_field: :result_id, ref_field: :parameter_id,
                                               condition: condition})
@@ -533,19 +543,19 @@ module Practis
             result_set.push(retval)
           end
         }
-        return false if count < (@id_list_queue[0][:or_ids].size * @unassigned_total_size)
-        if check_duplicate_f_test(@id_list_queue[0])
+        return false if count < (@run_id_queue[0][:or_ids].size * @unassigned_total_size)
+        if check_duplicate_f_test(@run_id_queue[0])
           p "duplicate set of parameter combinations in variance analysis"
           return false 
         end
-        p "list length: #{@id_list_queue.size}, counter: #{@current_qcounter}"
+        p "list length: #{@run_id_queue.size}, counter: #{@current_qcounter}"
         
         # variance analysis
-        f_result = @f_test.run(result_set, parameter_keys, @sql_connector)
+        f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @run_id_queue[0])
 
         # parameter set generation
         condition = [:or]
-        condition += @id_list_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
+        condition += @run_id_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         
         outside_flag = true
@@ -565,7 +575,7 @@ module Practis
                 #   p "exist area: #{exist_ids}"
                 #   exit(0)
                 # end
-                @id_list_queue.push(h)
+                @run_id_queue.push(h)
               }
             end
           end
@@ -585,15 +595,8 @@ module Practis
           }
           old_out_rows = @sql_connector.read_record(:orthogonal, condition)
 
-          prms = parameters_maxFValue(f_result)
-          if prms.size == 1
-            name = prms[0]
-          elsif prms.size >= 2
-            name = prms[rand(prms.size)]
-          else
-            error("parameters are missing!!")
-          end          
-
+          name = greedy_selection(f_result)
+          
           new_param, exist_ids = DOEParameterGenerator.generate_outside(
                                   @sql_connector, old_out_rows, @parameters,
                                   name, @definitions[name])
@@ -602,7 +605,7 @@ module Practis
           elsif !exist_ids.empty?
             exist_ids.each{ |set|
               h = generate_id_data_list(set, f_result[name][:f_value])
-              @id_list_queue.push(h)
+              @run_id_queue.push(h)
             }
           end
 
@@ -620,7 +623,7 @@ module Practis
 
         # extend_otableDB & parameter set store to queue
         if !new_param_list.empty?
-          next_sets = generate_next_search_area(@id_list_queue[0][:or_ids], new_param_list)
+          next_sets = generate_next_search_area(@run_id_queue[0][:or_ids], new_param_list)
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, 0.0)
@@ -628,14 +631,14 @@ module Practis
               #   p "new area: #{next_sets}"
               #   exit(0)
               # end
-              @id_list_queue.push(h)
+              @run_id_queue.push(h)
             end
           }
         end
 
-        @id_list_queue.shift
+        @run_id_queue.shift
 
-        if !@id_list_queue.empty?
+        if !@run_id_queue.empty?
           @current_qcounter -= 1 if @current_qcounter > 0
           @available_numbers = get_total.times.map { |i| i }
         else
@@ -657,18 +660,41 @@ module Practis
       end
 
       # 
-      def parameters_maxFValue(f_result)
+      def greedy_selection(f_result)
         params = []
         name, max_fv = f_result.max_by{ |k, v| v[:f_value] }
         f_result.each{ |k, v|
           params.push(k) if max_fv[:f_value] == v[:f_value]
         }
-        return params
+
+        if 1 < params.size
+          return params[rand(params.size)]
+        else
+          return params[0]
+        end
+      end
+
+      # 
+      def roulette_selection(f_result)
+        sum = f_result.map{|k, v| v[:f_value]}.inject(:+)
+        point = sum*rand
+        needle = 0.0
+        ret = nil
+        f_result.each{|k, v|
+          needle += v[:f_value]
+          if point <= needle
+            ret = k 
+            break
+          end
+        }
+        ret = f_result.last[0] if ret.nil?
+        return ret
       end
 
       # set next list of parameter combinations set 
       def set_next_list
-        if @current_qcounter < @id_list_queue.size - 1
+        # @f_test_queue.push(@run_id_queue.shift)
+        if @current_qcounter < @run_id_queue.size - 1
           @current_qcounter += 1
           @available_numbers = get_total.times.map { |i| i }
           return true
@@ -708,48 +734,56 @@ module Practis
           end
         end
 
-        if !outside_list.empty?
-          condition = [:and]
-          condition += @parameters.map{|k, v|
-            [:or,
-              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
-              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
-            ]
-          }
-          
-          old_out_rows = @sql_connector.read_record(:orthogonal, condition)
-          old_out_ids = old_out_rows.map{|r| r["id"]}
 
-          outside_list.each{|prm|
-            if !prm[:param][:paramDefs].nil?
-              extclm = extend_otableDB(old_out_ids, prm[:case], prm[:param])
-              tmp_area = []
-              if new_outside_area.empty?
-                tmp_area += OrthogonalTable.generate_area(
-                              @sql_connector, old_out_ids, prm, extclm)
-              else
-                tmp_list = new_outside_area.map{|i| i}
-                tmp_list.push(old_out_ids)
-                tmp_list.each{|a|
-                  tmp_area += OrthogonalTable.generate_area(
-                                @sql_connector, a, prm, extclm)
-                }
-              end
-              new_outside_area += tmp_area
-            else
-              p "parameter array is nil"
-            end
-          }
+        if !outside_list.empty?
+        #   condition = [:and]
+        #   condition += @parameters.map{|k, v|
+        #     [:or,
+        #       [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
+        #       [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
+        #     ]
+        #   }
+
+        #   old_out_rows = @sql_connector.read_record(:orthogonal, condition)
+        #   old_out_ids = old_out_rows.map{|r| r["id"]}
+        
+        outside_list.each{|prm| # toriaezu
+          extclm = extend_otableDB(old_rows, prm[:case], prm[:param])
+          new_outside_area += OrthogonalTable.generate_area(@sql_connector,
+                                old_rows, prm, extclm)
+        }
+
+        #   outside_list.each{|prm|
+        #     if !prm[:param][:paramDefs].nil?
+        #       extclm = extend_otableDB(old_out_ids, prm[:case], prm[:param])
+        #       tmp_area = []
+        #       if new_outside_area.empty?
+        #         tmp_area += OrthogonalTable.generate_area(
+        #                       @sql_connector, old_out_ids, prm, extclm)
+        #       else
+        #         tmp_list = new_outside_area.map{|i| i}
+        #         tmp_list.push(old_out_ids)
+        #         tmp_list.each{|a|
+        #           tmp_area += OrthogonalTable.generate_area(
+        #                         @sql_connector, a, prm, extclm)
+        #         }
+        #       end
+        #       new_outside_area += tmp_area
+        #     else
+        #       p "parameter array is nil"
+        #     end
+        #   }
         end
 
         return new_inside_area + new_outside_area
       end
 
       # 
-      def check_duplicate_f_test(list=nil)
+      def check_duplicate_f_test(list=nil)#,p_ranges=nil)
         return false if list.nil?
         condition = [:eq, [:field, "id_combination"]]
-        condition.push(list[:or_ids].map{|id| list[id] }.to_s)
+        # condition.push(list[:or_ids].map{|id| list[id] }.to_s)
+        condition.push(list[:or_ids].sort.to_s)
         retval = @sql_connector.read_record(:f_test, condition)
         return if retval.size > 0 ? true : false
       end
