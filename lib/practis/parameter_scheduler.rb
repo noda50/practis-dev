@@ -447,17 +447,18 @@ module Practis
       #
       def get_paramValues(id=nil)
         if @available_numbers.length <= 0
-          return nil if !set_next_list
+          if !@run_id_queue.empty?
+            count = @run_id_queue[0][:or_ids].inject(0){|sum, oid| sum + @run_id_queue[0][oid].size}
+            if count >= @run_id_queue[0][:or_ids].size * @unassigned_total_size
+              @f_test_queue.push(@run_id_queue.shift)
+              return nil
+            elsif count == 0
+              @available_numbers = get_total.times.map { |i| i }  
+            end
+          else
+            return nil
+          end
         end
-
-        # debug
-        if @available_numbers.include?(nil)
-          p "error!! available_numbers is include nil class"
-          pp @available_numbers
-          pp @run_id_queue
-          exit(0)
-        end
-
 
         return nil if @extending
         
@@ -466,8 +467,7 @@ module Practis
         @allocated_num += 1
         not_allocate_indexes = unassigned_value_to_indexes(v % @unassigned_total_size)
         parameter_array = []
-
-        id_index = @run_id_queue[@current_qcounter][:or_ids][@v_index]
+        id_index = @run_id_queue[0][:or_ids][@v_index]
         ret = @sql_connector.read_record( :orthogonal, [:eq, [:field, "id"], id_index])
 
         condition = [:or]
@@ -497,12 +497,12 @@ module Practis
 
         if already.size != 0
           already.each{|ret|
-            @run_id_queue[@current_qcounter][id_index].push(ret["parameter_id"])
+            @run_id_queue[0][id_index].push(ret["parameter_id"])
           }
         else
-          @run_id_queue[@current_qcounter][id_index].push(id)
+          @run_id_queue[0][id_index].push(id)
         end
-        @run_id_queue[@current_qcounter][id_index].uniq!
+        @run_id_queue[0][id_index].uniq!
 
         return parameter_array
       end
@@ -514,7 +514,7 @@ module Practis
 
       # 
       def get_total
-        @run_id_queue[@current_qcounter][:or_ids].size * @unassigned_total_size
+        @run_id_queue[0][:or_ids].size * @unassigned_total_size
       end
 
       #
@@ -524,17 +524,19 @@ module Practis
 
       #
       def do_variance_analysis
-        count = @run_id_queue[0][:or_ids].inject(0){|sum, oid| sum + @run_id_queue[0][oid].size}
-        return false if count < (@run_id_queue[0][:or_ids].size * @unassigned_total_size)
+        return false if @f_test_queue.empty?
+        count = @f_test_queue[0][:or_ids].inject(0){|sum, oid| sum + @f_test_queue[0][oid].size}
+
+        return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
+
         # analysis
         result_set = []
         count = 0
         parameter_keys = []
         new_param_list = []
         @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
-        @run_id_queue[0][:or_ids].each{|oid|
-          # condition = [:or] + @run_id_queue[0][oid].map { |i|  [:eq, [:field, "result_id"], i]}
-          condition = "WHERE result_id IN ( " + @run_id_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
+        @f_test_queue[0][:or_ids].each{|oid|
+          condition = "WHERE result_id IN ( " + @f_test_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
           retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
                                               base_field: :result_id, ref_field: :parameter_id,
                                               condition: condition})
@@ -543,19 +545,22 @@ module Practis
             result_set.push(retval)
           end
         }
-        return false if count < (@run_id_queue[0][:or_ids].size * @unassigned_total_size)
-        if check_duplicate_f_test(@run_id_queue[0])
+        
+        return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
+        
+        if check_duplicate_f_test(@f_test_queue[0])
           p "duplicate set of parameter combinations in variance analysis"
           return false 
         end
-        p "list length: #{@run_id_queue.size}, counter: #{@current_qcounter}"
+        p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
         
         # variance analysis
-        f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @run_id_queue[0])
+        
+        f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @f_test_queue[0])
 
         # parameter set generation
         condition = [:or]
-        condition += @run_id_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
+        condition += @f_test_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         
         outside_flag = true
@@ -623,7 +628,7 @@ module Practis
 
         # extend_otableDB & parameter set store to queue
         if !new_param_list.empty?
-          next_sets = generate_next_search_area(@run_id_queue[0][:or_ids], new_param_list)
+          next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_param_list)
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, 0.0)
@@ -636,14 +641,8 @@ module Practis
           }
         end
 
-        @run_id_queue.shift
-
-        if !@run_id_queue.empty?
-          @current_qcounter -= 1 if @current_qcounter > 0
-          @available_numbers = get_total.times.map { |i| i }
-        else
-          @eop = true
-        end
+        @f_test_queue.shift
+        @eop = true if @f_test_queue.empty? && @run_id_queue.empty?
 
         return true
       end
@@ -689,18 +688,6 @@ module Practis
         }
         ret = f_result.last[0] if ret.nil?
         return ret
-      end
-
-      # set next list of parameter combinations set 
-      def set_next_list
-        # @f_test_queue.push(@run_id_queue.shift)
-        if @current_qcounter < @run_id_queue.size - 1
-          @current_qcounter += 1
-          @available_numbers = get_total.times.map { |i| i }
-          return true
-        else
-          return false
-        end
       end
 
       # 

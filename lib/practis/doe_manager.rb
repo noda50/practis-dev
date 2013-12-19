@@ -203,43 +203,6 @@ module Practis
       end
     end
     
-    # 
-    def generate_result_list(area, priority=0)
-      result_list = { :area => area, :id => {}, :results => {}, :weight => {}, 
-                      :priority => priority} #, :lerp => false}
-      result_list[:area].each{|a|
-        result_list[:id][a] = []
-        result_list[:results][a] = []
-      }
-      @assign_list.each{|k,v|
-        result_list[:weight] = {} if v==true
-      }
-      return result_list
-    end
-
-    # 
-    def upload_f_test(msg)
-      debug("call upload_f_test")
-      id = msg[:f_test_id].to_i
-      if (retval = 
-          @database_connector.read_record(:f_test, 
-                                          [:eq, [:field, "f_test_id"],
-                                           id])).length != 0
-        error("the f-test result already exist. #{retval}")
-        return -1
-      end
-      debug("upload_f_test")
-      debug("#{pp msg}")
-
-      # msg.each{|f,v| arg_hash[f.to_sym] = v }
-      if (retval = @database_connector.insert_record(
-          :f_test, msg).length != 0)
-        error("fail to insert new f-test result. #{retval}")
-        return -2
-      end
-      return 0
-    end
-
     ##------------------------------------------------------------
      
     private
