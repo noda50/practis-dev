@@ -525,10 +525,7 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
-        count = @f_test_queue[0][:or_ids].inject(0){|sum, oid| sum + @f_test_queue[0][oid].size}
-
-        return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
-
+        
         # analysis
         result_set = []
         count = 0
