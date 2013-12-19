@@ -9,7 +9,7 @@ class FTest
 
   # 
   def initialize
-    @p_sig = 0.005
+    @p_sig = 0.001
     @f_disttable = F_DistributionTable.new(@p_sig)
   end
 

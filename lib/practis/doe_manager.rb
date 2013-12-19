@@ -47,7 +47,6 @@ module Practis
       @scheduler.init_doe(@database_connector, otable, @doe_definitions)
       
       @total_parameters = @paramDefSet.get_total
-      @f_disttable = F_DistributionTable.new(0.01)
     end
 
     ## === methods of manager.rb ===

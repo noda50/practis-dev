@@ -525,7 +525,13 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
-        
+        @f_test_queue.sort!{|x,y| y[:priority] <=> x[:priority]}
+        while check_duplicate_f_test(@f_test_queue[0])
+          p "duplicate set of parameter combinations in variance analysis"
+          pp @f_test_queue[0]
+          @f_test_queue.shift
+        end
+
         # analysis
         result_set = []
         count = 0
@@ -545,10 +551,6 @@ module Practis
         
         return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
         
-        if check_duplicate_f_test(@f_test_queue[0])
-          p "duplicate set of parameter combinations in variance analysis"
-          return false 
-        end
         p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
         
         # variance analysis
@@ -598,6 +600,7 @@ module Practis
           old_out_rows = @sql_connector.read_record(:orthogonal, condition)
 
           name = greedy_selection(f_result)
+          # name = roulette_selection(f_result)
           
           new_param, exist_ids = DOEParameterGenerator.generate_outside(
                                   @sql_connector, old_out_rows, @parameters,
@@ -628,7 +631,7 @@ module Practis
           next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_param_list)
           next_sets.each{|set|
             if !set.empty?
-              h = generate_id_data_list(set, 0.0)
+              h = generate_id_data_list(set, @f_test_queue[0][:priority])
               # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
               #   p "new area: #{next_sets}"
               #   exit(0)
@@ -765,11 +768,9 @@ module Practis
       # 
       def check_duplicate_f_test(list=nil)#,p_ranges=nil)
         return false if list.nil?
-        condition = [:eq, [:field, "id_combination"]]
-        # condition.push(list[:or_ids].map{|id| list[id] }.to_s)
+        condition = [:eq, [:field, 'id_combination']]
         condition.push(list[:or_ids].sort.to_s)
-        retval = @sql_connector.read_record(:f_test, condition)
-        return if retval.size > 0 ? true : false
+        return retval.size > 0 ? true : false
       end
 
       #
