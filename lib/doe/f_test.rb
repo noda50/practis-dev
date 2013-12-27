@@ -73,6 +73,8 @@ class FTest
     @effFacts.each do |ef|
       result[ ef[:name] ] = ef
       result[ ef[:name] ].delete(:name)
+      ef[:f_value] = 0.0 if ef[:f_value].nan?
+      ef[:f_value] = 1000.0 if ef[:f_value].infinite? == 1
     end
 
     upload_f_test(sql_connector, results_set, parameter_keys, result, id_list) if !sql_connector.nil?

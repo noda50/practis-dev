@@ -393,7 +393,6 @@ module Practis
         @f_test=FTest.new
         @eop = false
         @extending = false
-        srand(0)
       end
 
       # 
@@ -402,10 +401,12 @@ module Practis
         @definitions = doe_definitions
         @run_id_queue = []
         @f_test_queue = []
+        @inside_queue = []
+        @outside_queue = []
         @current_qcounter = 0
         
         # init list
-        h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, 0.0)
+        h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, "outside")
         @run_id_queue.push(h)
 
 
@@ -525,18 +526,23 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
-        @f_test_queue.sort!{|x,y| y[:priority] <=> x[:priority]}
+        @f_test_queue.sort!{|x,y| y[:priority] <=> x[:priority]}#sorting
         while check_duplicate_f_test(@f_test_queue[0])
           p "duplicate set of parameter combinations in variance analysis"
           pp @f_test_queue[0]
           @f_test_queue.shift
+          p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
+          break if @f_test_queue.empty?
         end
+        return false if @f_test_queue.empty?
 
         # analysis
         result_set = []
         count = 0
         parameter_keys = []
-        new_param_list = []
+        # new_param_list = []
+        new_inside_list = []
+        new_outside_list = []
         @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
         @f_test_queue[0][:or_ids].each{|oid|
           condition = "WHERE result_id IN ( " + @f_test_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
@@ -570,11 +576,11 @@ module Practis
             new_param, exist_ids = DOEParameterGenerator.generate_inside(
                                     @sql_connector, orthogonal_rows, @parameters,
                                     k, @definitions[k])
-            if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
-              new_param_list.push(new_param)
+            if exist_ids.empty? && !new_param[:param][:paramDefs].empty? # !new_param[:param][:paramDefs].nil?
+              new_inside_list.push(new_param)
             elsif !exist_ids.empty?
               exist_ids.each{|set|
-                h = generate_id_data_list(set, f_result[k][:f_value])
+                h = generate_id_data_list(set, "inside", f_result[k][:f_value])
                 # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
                 #   p "exist area: #{exist_ids}"
                 #   exit(0)
@@ -583,38 +589,48 @@ module Practis
               }
             end
           end
-          params = orthogonal_rows.map {|r| @parameters[k][:correspond][r[k]] }
-          outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
+          # params = orthogonal_rows.map {|r| @parameters[k][:correspond][r[k]] }
+          # outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
         }
 
         # outside
-        p "generate outside parameter: #{outside_flag}"
-        if outside_flag
-          condition = [:and]
-          condition += @parameters.map{|k, v|
-            [:or,
-              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
-              [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
-            ]
-          }
-          old_out_rows = @sql_connector.read_record(:orthogonal, condition)
+        # p "generate outside parameter: #{outside_flag}"
+        if @f_test_queue[0][:toward] == "outside"
+          p "generate outside parameter"
+        # if outside_flag
+          # condition = [:and]
+          # condition += @parameters.map{|k, v|
+          #   [:or,
+          #     [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
+          #     [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
+          #   ]
+          # }
+          # old_out_rows = @sql_connector.read_record(:orthogonal, condition)
 
           name = greedy_selection(f_result)
           # name = roulette_selection(f_result)
-          
           new_param, exist_ids = DOEParameterGenerator.generate_outside(
-                                  @sql_connector, old_out_rows, @parameters,
+                                  @sql_connector, orthogonal_rows, @parameters,# @sql_connector, old_out_rows, @parameters,
                                   name, @definitions[name])
-          if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
-            new_param_list.push(new_param)
-          elsif !exist_ids.empty?
+          # if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
+          #   new_outside_list.push(new_param)
+          # elsif !exist_ids.empty?
+          #   exist_ids.each{ |set|
+          #     h = generate_id_data_list(set, "outside", f_result[name][:f_value])
+          #     @run_id_queue.push(h)
+          #   }
+          # end
+          if !new_param[:param][:paramDefs].empty? #&& !new_param[:param][:paramDefs].nil?
+            new_outside_list.push(new_param)
+          end
+          if !exist_ids.empty?
             exist_ids.each{ |set|
-              h = generate_id_data_list(set, f_result[name][:f_value])
+              h = generate_id_data_list(set, "outside", f_result[name][:f_value])
               @run_id_queue.push(h)
             }
           end
 
-          ## => all of paraameters are generaterd
+          # => all of paraameters are generaterd
           # new_params, exist_ids = DOEParameterGenerator.generate_outside_all(
           #                           @sql_connector, old_out_rows, @parameters,
           #                           @definitions)
@@ -623,15 +639,30 @@ module Practis
           # elsif !exist_ids.flatten.empty?
           #   error("outside check is error")
           # end
-          ## = = = = = = =
+          # = = = = = = =
         end
 
         # extend_otableDB & parameter set store to queue
-        if !new_param_list.empty?
-          next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_param_list)
+        # if !new_param_list.empty?
+        #   next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_param_list)
+        if !new_inside_list.empty?
+          next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_inside_list)
           next_sets.each{|set|
             if !set.empty?
-              h = generate_id_data_list(set, @f_test_queue[0][:priority])
+              h = generate_id_data_list(set, "inside", @f_test_queue[0][:priority])
+              # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
+              #   p "new area: #{next_sets}"
+              #   exit(0)
+              # end
+              @run_id_queue.push(h)
+            end
+          }
+        end
+        if !new_outside_list.empty?
+          next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_outside_list)
+          next_sets.each{|set|
+            if !set.empty?
+              h = generate_id_data_list(set, "outside", @f_test_queue[0][:priority])
               # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
               #   p "new area: #{next_sets}"
               #   exit(0)
@@ -651,9 +682,10 @@ module Practis
       private
 
       # 
-      def generate_id_data_list(id_list, priority=0.0)
+      def generate_id_data_list(id_list, toward=nil, priority=0.0)
         h = {:or_ids => id_list}
         id_list.each{ |id| h[id] = [] }
+        h[:toward] = toward
         h[:priority] = priority
         return h
       end
@@ -723,23 +755,23 @@ module Practis
 
 
         if !outside_list.empty?
-        #   condition = [:and]
-        #   condition += @parameters.map{|k, v|
-        #     [:or,
-        #       [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
-        #       [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
-        #     ]
-        #   }
+          # condition = [:and]
+          # condition += @parameters.map{|k, v|
+          #   [:or,
+          #     [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
+          #     [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
+          #   ]
+          # }
 
-        #   old_out_rows = @sql_connector.read_record(:orthogonal, condition)
-        #   old_out_ids = old_out_rows.map{|r| r["id"]}
-        
+          # old_out_rows = @sql_connector.read_record(:orthogonal, condition)
+          # old_out_ids = old_out_rows.map{|r| r["id"]}
+
         outside_list.each{|prm| # toriaezu
           extclm = extend_otableDB(old_rows, prm[:case], prm[:param])
           new_outside_area += OrthogonalTable.generate_area(@sql_connector,
                                 old_rows, prm, extclm)
         }
-
+        
         #   outside_list.each{|prm|
         #     if !prm[:param][:paramDefs].nil?
         #       extclm = extend_otableDB(old_out_ids, prm[:case], prm[:param])
@@ -770,6 +802,7 @@ module Practis
         return false if list.nil?
         condition = [:eq, [:field, 'id_combination']]
         condition.push(list[:or_ids].sort.to_s)
+        retval = @sql_connector.read_record(:f_test, condition)
         return retval.size > 0 ? true : false
       end
 
@@ -781,7 +814,6 @@ module Practis
 
         old_level = 0
         old_digit_num = 0
-        twice = false
         ext_column = nil
 
         if orthogonal_rows.length == 0
@@ -791,7 +823,7 @@ module Practis
 
         old_level = @parameters[parameter[:name]][:paramDefs].size #old_bits.length
         old_digit_num = orthogonal_rows[0][parameter[:name]].size
-        digit_num = sqrt(old_level + parameter[:paramDefs].size).ceil
+        digit_num = log2(old_level + parameter[:paramDefs].size).ceil
 
         condition = [:or]
         condition += @parameters[parameter[:name]][:correspond].map{|k,v| [:eq, [:field, parameter[:name]], k]}
@@ -810,70 +842,152 @@ module Practis
           @extending = false
         end
 
-        assign_parameter(old_level, add_point_case, parameter[:name], parameter[:paramDefs])
+        assign_parameter(add_point_case, parameter[:name], parameter[:paramDefs])
         
         return @parameters[parameter[:name]]
       end
 
       #
-      def assign_parameter(old_level, add_point_case, name, add_parameters)
+      def assign_parameter(add_point_case, name, add_parameters)
+        min_bit = nil
+        h = {}
         case add_point_case
         when "outside(+)"
           right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
-          if right_digit_of_max[right_digit_of_max.size - 1] == "1"
+          if right_digit_of_max[right_digit_of_max.size-1] == "1"
             add_parameters.sort!
           else
             add_parameters.reverse!
           end
         when "outside(-)"
           right_digit_of_min = @parameters[name][:correspond].min_by(&:last)[0]
-          if right_digit_of_min[right_digit_of_min.size - 1] == "0"
+          if right_digit_of_min[right_digit_of_min.size-1] == "0"
             add_parameters.sort!
           else
             add_parameters.reverse!
           end
         when "inside"
-          digit_num_of_left_point = @parameters[name][:correspond].max_by { |item| (item[1] < add_parameters[0]) ? item[1] : -1}[0]
-          if digit_num_of_left_point[digit_num_of_left_point.size - 1] == "0"
-            add_parameters.reverse!
+          pp @parameters[name][:correspond]
+          pp add_parameters
+          digit_num_of_minus_side = @parameters[name][:correspond].max_by { |item|
+            (item[1] < add_parameters.min) ? item[1] : -1
+          }[0]
+          if digit_num_of_minus_side[digit_num_of_minus_side.size-1] == "0"
+            # add_parameters.reverse!
+            # add_parameters.sort_by!{|v| -v }
+            # min_bit = "1"
+            count = 1
+            add_parameters.each{|v| 
+              h[v] = (count % 2).to_s
+              count += 1
+            }
           else
-            add_parameters.sort!
+            # add_parameters.sort!
+            # min_bit = "0"
+            count = 0
+            add_parameters.each{|v| 
+              h[v] = (count % 2).to_s
+              count += 1
+            }
           end
         when "both side"
-          right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
-          if right_digit_of_max[right_digit_of_max.size - 1] == "1"
-            add_parameters.reverse!
+          if add_parameters.size > 1
+            # right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
+            right_digit = @parameters[name][:correspond].max_by { |item| 
+              item[1] < add_parameters.max ? item[1] : -1 
+            }[0]
+            left_digit = @parameters[name][:correspond].min_by { |item| 
+              item[1] > add_parameters.min ? item[1] : @parameters[name][:correspond].size
+            }[0]
+            if right_digit[right_digit.size-1] == "0"
+              # add_parameters.reverse!
+              h[add_parameters.max] = "1"
+            else
+              # add_parameters.sort!
+              h[add_parameters.max] = "0"
+            end
+            if left_digit[right_digit.size-1] == "0"
+              # add_parameters.reverse!
+              h[add_parameters.min] = "1"
+            else
+              # add_parameters.sort!
+              h[add_parameters.min] = "0"
+            end
           else
-            add_parameters.sort!
+            if @parameters[name][:paramDefs].max < add_parameters[0] #upper
+              right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
+              if right_digit_of_max[right_digit_of_max.size - 1] == "0"
+                h[add_parameters[0]] = "1"
+              else
+                h[add_parameters[0]] = "0"
+              end
+            elsif @parameters[name][:paramDefs].min > add_parameters[0] #lower
+              right_digit_of_min = @parameters[name][:correspond].min_by(&:last)[0]
+              if right_digit_of_min[right_digit_of_min.size - 1] == "0"
+                h[add_parameters[0]] = "1"
+              else
+                h[add_parameters[0]] = "0"
+              end
+            else#med => error
+              error("parameter creation is error")
+              p add_parameters
+              pp @parameters[name]
+              exit(0)
+            end
+            
           end
         else
           error("new parameter could not be assigned to bit on orthogonal table")
         end
+        old_level = @parameters[name][:paramDefs].size
         @parameters[name][:paramDefs] += add_parameters
-        link_parameter(name, add_parameters)
+        link_parameter(name, h)
         @parameters[name]
       end
 
       #
       def update_parameter_correspond(param_name, digit_num, old_digit_num, old_level)
-        old_bit_str = "%0" + old_digit_num.to_s + "b"
-        new_bit_str = "%0" + digit_num.to_s + "b"
-        for i in 0...old_level
-          @parameters[param_name][:correspond][new_bit_str % i] = @parameters[param_name][:correspond][old_bit_str % i]
-          @parameters[param_name][:correspond].delete(old_bit_str % i)
+        old_bit_str = "%0"+old_digit_num.to_s+"b"
+        new_bit_str = "%0"+digit_num.to_s+"b"
+        # for i in 0...old_level
+        for i in 0...(2**old_digit_num)
+          if @parameters[param_name][:correspond].key?(old_bit_str%i)
+            @parameters[param_name][:correspond][(new_bit_str%i)] = @parameters[param_name][:correspond][(old_bit_str%i)]
+            @parameters[param_name][:correspond].delete(old_bit_str%i)
+          end
         end
       end
 
       # 
-      def link_parameter(name, add_paramDefs)
-        digit_num = sqrt(@parameters[name][:paramDefs].size).ceil
-        old_level = @parameters[name][:paramDefs].size - add_paramDefs.size
-
-        for i in old_level...@parameters[name][:paramDefs].size do
-          bit = ("%0" + digit_num.to_s + "b") % i
+      def link_parameter(name, paramDefs_hash)
+        digit_num = log2(@parameters[name][:paramDefs].size).ceil
+        old_level = @parameters[name][:paramDefs].size - paramDefs_hash.size
+        top = @parameters[name][:paramDefs].size
+        bit_i = 0
+        while bit_i < top
+          bit = ("%0" + digit_num.to_s + "b") % bit_i
           if !@parameters[name][:correspond].key?(bit)
-            @parameters[name][:correspond][bit] = @parameters[name][:paramDefs][i]
+            if paramDefs_hash.has_value?(bit[bit.size-1])
+              param = paramDefs_hash.key(bit[bit.size-1])
+              @parameters[name][:correspond][bit] = param
+              paramDefs_hash.delete(param)
+            else
+              p "debug"
+              p paramDefs_hash
+              p top += 1
+              p "bit:#{bit}, last_str:#{bit[bit.size-1]}"
+              exit(0) if top > 100
+            end 
           end
+          bit_i += 1
+        end
+        if @parameters[name][:paramDefs].size != @parameters[name][:correspond].size
+          error("no assignment parameter: 
+            defs_L:#{@parameters[name][:paramDefs].size}, 
+            corr_L:#{@parameters[name][:correspond].size}")
+          pp paramDefs_hash
+          pp @parameters[name]
+          exit(0)
         end
       end
 

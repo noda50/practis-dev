@@ -6,6 +6,9 @@ require 'pp'
 module DOEParameterGenerator
   include Practis
   include Math
+
+  @fstep = 1.0
+  @istep = 10
   
   # search only "Inside" significant parameter
   def self.generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
@@ -22,10 +25,9 @@ module DOEParameterGenerator
     max=nil
     exist_area = []
     new_area = []
-    new_array = nil
+    new_array = []
     new_var = { :case => "inside", 
-                :param => {:name => name, :paramDefs => nil}}
-
+                :param => {:name => name, :paramDefs => [] }}
     var_diff = cast_decimal((param_max - param_min).abs / 3.0)
     return new_var,[] if var_diff <= definition["step_size"]
 
@@ -103,8 +105,8 @@ module DOEParameterGenerator
 
       end
     end
-
-    new_var[:param][:paramDefs] = new_array
+    new_array.compact!
+    new_var[:param][:paramDefs] = new_array    
 
     return new_var, new_area
   end
@@ -120,17 +122,24 @@ module DOEParameterGenerator
       end
     }
     new_var, new_area = [], []
-    if !p_lmts[:bottom] && !p_lmts[:top]
-      #both side
-      new_var, new_area = generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
-    elsif !p_lmts[:top]
-      #outside(+)
-      new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
-    elsif !p_lmts[:bottom]
-      #outside(-)
-      new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
-    end
+    
+    # if !p_lmts[:bottom] && !p_lmts[:top]
+    #   #both side
+    #   new_var, new_area = bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+    # elsif !p_lmts[:top]
+    #   #outside(+)
+    #   new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    # elsif !p_lmts[:bottom]
+    #   #outside(-)
+    #   new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    # end
 
+    #both side
+    if !p_lmts[:bottom] && !p_lmts[:top]
+      new_var, new_area = bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+    else
+      new_var[:param][:paramDefs] = []
+    end
     return new_var, new_area
   end
   
@@ -187,7 +196,7 @@ module DOEParameterGenerator
     max = param.max
     exist_area = []
     new_area = []
-    new_array = nil
+    new_array = []
 
     # if parameters[name][:paramDefs].min <= param.min && param.max <= parameters[name][:paramDefs].max
     #   min = parameters[name][:paramDefs].min
@@ -205,38 +214,32 @@ module DOEParameterGenerator
     #   end
     # end
 
-    # === hard coding ====
-    ##hard coding
-    istep = 9
-    fstep = 0.9
-    ##hard coding
-
     new_upper, new_lower = nil,nil
     if param.min.class == Fixnum
-      if definition["bottom"] > (min - istep).to_i
+      if definition["bottom"] > (param.min - @istep).to_i
         new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - istep).to_i
+        new_lower = (param.min - @istep).to_i
       end
-      if definition["top"] < (max + istep).to_i
+      if definition["top"] < (param.max + @istep).to_i
         new_upper = definition["top"] 
         ## @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + istep).to_i
+        new_upper = (param.max + @istep).to_i
       end
     elsif param.min.class == Float
-      if definition["bottom"] > (min - fstep).round(definition["num_decimal"])
+      if definition["bottom"] > (param.min - @fstep).round(definition["num_decimal"])
         new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - fstep).round(definition["num_decimal"])
+        new_lower = (param.min - @fstep).round(definition["num_decimal"])
       end
-      if definition["top"] < (max + fstep).round(definition["num_decimal"])
+      if definition["top"] < (param.max + @fstep).round(definition["num_decimal"])
         new_upper = definition["top"]
         # @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + fstep).round(definition["num_decimal"])
+        new_upper = (param.max + @fstep).round(definition["num_decimal"])
       end
     end
 
@@ -247,35 +250,43 @@ module DOEParameterGenerator
 
     parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
-      if !parameters[name][:paramDefs].find{|v| v < param.min || param.max < v }.nil?
-        if parameters[name][:paramDefs].include?(new_array[0]) && parameters[name][:paramDefs].include?(new_array[1])
+      # if !parameters[name][:paramDefs].find{|v| v < param.min || param.max < v }.nil?
+        if parameters[name][:paramDefs].include?(new_array.min) || 
+          !(tmp = near_value(new_array.min, parameters[name][:paramDefs], name, definition)).nil?
           min_bit = parameters[name][:correspond].key(new_array.min)
-          max_bit = parameters[name][:correspond].key(new_array.max)
-        else
-          lower_arr, upper_arr = [], []
-          parameters[name][:paramDefs].each{|v|
-            lower_arr.push(v) if v < param.min && new_array.min <= v
-            upper_arr.push(v) if param.min < v && new_array.max <= v
-          }
-          imin = parameters[name][:paramDefs].index(lower_arr.min)
-          imax = parameters[name][:paramDefs].index(upper_arr.max)
-          if (imax - imin) % 2 == 0
-            min_bit = parameters[name][:correspond].key(lower_arr.min)
-            max_bit = parameters[name][:correspond].key(upper_arr.max)
-          else
-            error("index is wrong")
-            error("#{imax}, #{imax}: #{parameters[name]}")
-          end
-
-          # min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
-          # max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
-          # min_bit = parameters[name][:correspond].key(min)
-          # max_bit = parameters[name][:correspond].key(max)
+          new_array.delete(new_array.min)
         end
+        if parameters[name][:paramDefs].include?(new_array.max) || 
+          !(tmp = near_value(new_array.max, parameters[name][:paramDefs], name, definition)).nil?
+          max_bit = parameters[name][:correspond].key(new_array.max)
+          new_array.delete(new_array.max)
+        end
+        # else
+        #   lower_arr, upper_arr = [], []
+        #   parameters[name][:paramDefs].each{|v|
+        #     lower_arr.push(v) if v < param.min && new_array.min <= v
+        #     upper_arr.push(v) if param.min < v && new_array.max <= v
+        #   }
+        #   imin = parameters[name][:paramDefs].index(lower_arr.min)
+        #   imax = parameters[name][:paramDefs].index(upper_arr.max)
+        #   if (imax - imin) % 2 == 0
+        #     min_bit = parameters[name][:correspond].key(lower_arr.min)
+        #     max_bit = parameters[name][:correspond].key(upper_arr.max)
+        #   else
+        #     error("index is wrong")
+        #     error("#{imax}, #{imax}: #{parameters[name]}")
+        #   end
 
-        if !min_bit.nil? && !max_bit.nil?
+        #   min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
+        #   max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
+        #   min_bit = parameters[name][:correspond].key(min)
+        #   max_bit = parameters[name][:correspond].key(max)
+        # end
+
+        if !min_bit.nil?
+          pmin_bit = parameters[name][:correspond].key(param.min)
           condition = [:or]
-          orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], max_bit]]
+          orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], pmin_bit]]
           orthogonal_rows.each{|row|
             andCond = [:and]
             row.each{ |k, v|
@@ -286,28 +297,62 @@ module DOEParameterGenerator
             andCond.push(orCond)
             condition.push(andCond)
           }
-
           exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
           new_area.push(exist_area.map{|r| r["id"]})
-          
-          new_area_a = []
-          new_area_b = []
-
-          exist_area.each{|r|
-            new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "0"
-            new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "1"
-          }
-          orthogonal_rows.map{|r|
-            new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "1"
-            new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
-          }
-
-          new_area.push(new_area_a)
-          new_area.push(new_area_b)
         end
-      end
-    end
 
+        if !max_bit.nil?
+          pmax_bit = parameters[name][:correspond].key(param.max)
+          condition = [:or]
+          orCond = [:or, [:eq, [:field, name], max_bit], [:eq, [:field, name], pmax_bit]]
+          orthogonal_rows.each{|row|
+            andCond = [:and]
+            row.each{ |k, v|
+              if k != "id" and k != "run" and k != name and !v.nil?
+                andCond.push([:eq, [:field, k], v])
+              end
+            }
+            andCond.push(orCond)
+            condition.push(andCond)
+          }
+          exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+          new_area.push(exist_area.map{|r| r["id"]})
+        end
+
+        #   condition = [:or]
+        #   orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], max_bit]]
+        #   orthogonal_rows.each{|row|
+        #     andCond = [:and]
+        #     row.each{ |k, v|
+        #       if k != "id" and k != "run" and k != name and !v.nil?
+        #         andCond.push([:eq, [:field, k], v])
+        #       end
+        #     }
+        #     andCond.push(orCond)
+        #     condition.push(andCond)
+        #   }
+
+        #   exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+        #   new_area.push(exist_area.map{|r| r["id"]})
+          
+        #   new_area_a = []
+        #   new_area_b = []
+
+        #   exist_area.each{|r|
+        #     new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "0"
+        #     new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "1"
+        #   }
+        #   orthogonal_rows.map{|r|
+        #     new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "1"
+        #     new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
+        #   }
+
+        #   new_area.push(new_area_a) if !new_area_a.empty?
+        #   new_area.push(new_area_b) if !new_area_b.empty?
+        # end
+      # end
+    end
+    new_array.compact!
     new_var ={:case => "both side", 
               :param => {:name => name, :paramDefs => new_array}}
     return new_var, new_area
@@ -345,37 +390,33 @@ module DOEParameterGenerator
     end
 
     # === hard coding ====
-    ##hard coding
-    istep = 9
-    fstep = 0.9
-    ##hard coding
 
     new_upper, new_lower = nil,nil
     if param.min.class == Fixnum
-      if definition["bottom"] > (min - istep).to_i
+      if definition["bottom"] > (min - @istep).to_i
         new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - istep).to_i
+        new_lower = (min - @istep).to_i
       end
-      if definition["top"] < (max + istep).to_i
+      if definition["top"] < (max + @istep).to_i
         new_upper = definition["top"] 
         ## @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + istep).to_i
+        new_upper = (max + @istep).to_i
       end
     elsif param.min.class == Float
-      if definition["bottom"] > (min - fstep).round(definition["num_decimal"])
+      if definition["bottom"] > (min - @fstep).round(definition["num_decimal"])
         new_lower = definition["bottom"]
         ## @limit_var[para_name][:touch_low] = true
       else
-        new_lower = (min - fstep).round(definition["num_decimal"])
+        new_lower = (min - @fstep).round(definition["num_decimal"])
       end
-      if definition["top"] < (max + fstep).round(definition["num_decimal"])
+      if definition["top"] < (max + @fstep).round(definition["num_decimal"])
         new_upper = definition["top"]
         # @limit_var[para_name][:touch_high] = true
       else
-        new_upper = (max + fstep).round(definition["num_decimal"])
+        new_upper = (max + @fstep).round(definition["num_decimal"])
       end
     end
 
@@ -391,25 +432,26 @@ module DOEParameterGenerator
           min_bit = parameters[name][:correspond].key(new_array.min)
           max_bit = parameters[name][:correspond].key(new_array.max)
         else
-          lower_arr, upper_arr = [], []
-          parameters[name][:paramDefs].each{|v|
-            lower_arr.push(v) if v < param.min && new_array.min <= v
-            upper_arr.push(v) if param.min < v && new_array.max <= v
-          }
-          imin = parameters[name][:paramDefs].index(lower_arr.min)
-          imax = parameters[name][:paramDefs].index(upper_arr.max)
-          if (imax - imin) % 2 == 0
-            min_bit = parameters[name][:correspond].key(lower_arr.min)
-            max_bit = parameters[name][:correspond].key(upper_arr.max)
-          else
-            error("index is wrong")
-            error("#{imax}, #{imax}: #{parameters[name]}")
-          end
-
-          # min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
-          # max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
-          # min_bit = parameters[name][:correspond].key(min)
-          # max_bit = parameters[name][:correspond].key(max)
+          #
+          min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
+          max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
+          min_bit = parameters[name][:correspond].key(min)
+          max_bit = parameters[name][:correspond].key(max)
+          #
+          # lower_arr, upper_arr = [], []
+          # parameters[name][:paramDefs].each{|v|
+          #   lower_arr.push(v) if v < param.min && new_array.min <= v
+          #   upper_arr.push(v) if param.min < v && new_array.max <= v
+          # }
+          # imin = parameters[name][:paramDefs].index(lower_arr.min)
+          # imax = parameters[name][:paramDefs].index(upper_arr.max)
+          # if (imax - imin) % 2 == 0
+          #   min_bit = parameters[name][:correspond].key(lower_arr.min)
+          #   max_bit = parameters[name][:correspond].key(upper_arr.max)
+          # else
+          #   error("index is wrong")
+          #   error("#{imax}, #{imax}: #{parameters[name]}")
+          # end
         end
 
         if !min_bit.nil? && !max_bit.nil?
@@ -466,15 +508,10 @@ module DOEParameterGenerator
     new_area = []
     new_array = nil
 
-    ##hard coding
-    istep = 9
-    fstep = 0.9
-    ##hard coding
-
     # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
 
     if max.class == Fixnum
-      if (max + 2*istep) > definition["top"]
+      if (max + 2*@istep) > definition["top"]
         dif = ((definition["top"] - max).abs / 2).to_i
         # return [],[] if dif <= definition["step_size"]
         if dif >= definition["step_size"]
@@ -482,10 +519,10 @@ module DOEParameterGenerator
         end
       else
         # new_array = [max + var_diff.to_i, max + (2*var_diff).to_i]
-        new_array = [max + istep, max + 2*istep]
+        new_array = [max + @istep, max + 2*@istep]
       end
     elsif max.class == Float
-      if (max + 2*fstep) > definition["top"]
+      if (max + 2*@fstep) > definition["top"]
         dif = ((definition["top"] - max).abs / 2.0).round(definition["num_decimal"])
         if dif >= definition["step_size"]# return [],[] if dif <= definition["step_size"]
           new_array = [ (max + dif).round(definition["num_decimal"]),
@@ -494,8 +531,8 @@ module DOEParameterGenerator
       else
         # new_array = [ (max + var_diff).round(definition["num_decimal"]), 
         #               (max + 2*var_diff).round(definition["num_decimal"]) ]
-        new_array = [ (max + fstep).round(definition["num_decimal"]),
-                      (max + 2*fstep).round(definition["num_decimal"]) ]
+        new_array = [ (max + @fstep).round(definition["num_decimal"]),
+                      (max + 2*@fstep).round(definition["num_decimal"]) ]
       end
     end
 
@@ -520,15 +557,10 @@ module DOEParameterGenerator
     new_area = []
     new_array = nil
 
-    ##hard coding
-    istep = 9
-    fstep = 0.9
-    ##hard coding
-
     # var_diff = cast_decimal((param.max - param.min).abs / 3.0)
 
     if param.min.class == Fixnum
-      if (min - istep*2) < definition["bottom"]
+      if (min - @istep*2) < definition["bottom"]
         dif = ((definition["bottom"] - min).abs / 2).to_i
         # return [],[] if dif < definition["step_size"]
         if dif >= definition["step_size"]
@@ -536,10 +568,10 @@ module DOEParameterGenerator
         end
       else
         # new_array = [param.min - var_diff.to_i, param.min - (2*var_diff).to_i]
-        new_array = [param.min - 2*istep, param.min - istep]
+        new_array = [param.min - 2*@istep, param.min - @istep]
       end
     elsif param.min.class == Float
-      if (min - fstep*2) < definition["bottom"]
+      if (min - @fstep*2) < definition["bottom"]
         dif = ((definition["bottom"] - min).abs / 2.0).round(definition["num_decimal"])
         if dif >= definition["step_size"]
           new_array = [ (min - 2*dif).round(definition["num_decimal"]), 
@@ -548,8 +580,8 @@ module DOEParameterGenerator
       else
         # new_array = [ (param.min-var_diff).round(definition["num_decimal"]),
         #               (param.min-2*var_diff).round(definition["num_decimal"]) ]
-        new_array = [ (param.min - 2*fstep).round(definition["num_decimal"]), 
-                      (param.min - fstep).round(definition["num_decimal"])]
+        new_array = [ (param.min - 2*@fstep).round(definition["num_decimal"]), 
+                      (param.min - @fstep).round(definition["num_decimal"])]
       end
     end
 
@@ -567,6 +599,17 @@ module DOEParameterGenerator
     else
       return BigDecimal(var.to_s)
     end
+  end
+
+  #
+  def self.near_value(value, paramDefs, name, definition)
+    ret = nil
+    paramDefs.each{|v|
+      if (value - definition["step_size"]) <= v && v <= (value + definition["step_size"])
+        ret = v
+      end
+    }
+    return ret
   end
 
 end
