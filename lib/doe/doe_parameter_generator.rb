@@ -121,7 +121,7 @@ module DOEParameterGenerator
         p_lmts[:top] = true
       end
     }
-    new_var, new_area = [], []
+    new_var, new_area = {}, []
     
     # if !p_lmts[:bottom] && !p_lmts[:top]
     #   #both side
@@ -138,7 +138,7 @@ module DOEParameterGenerator
     if !p_lmts[:bottom] && !p_lmts[:top]
       new_var, new_area = bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
     else
-      new_var[:param][:paramDefs] = []
+      new_var[:param] = {:paramDefs => [] }
     end
     return new_var, new_area
   end
