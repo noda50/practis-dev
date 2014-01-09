@@ -194,9 +194,11 @@ module Practis
           if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")} 
             info("call finalize !")
+            p "call finalize !"
             finalize
           else
             error("all parameter is finished? Huh???")
+            p "all parameter is finished? Huh???"
           end
         end
       end
