@@ -531,32 +531,7 @@ module Practis
       def do_variance_analysis
         return false if @f_test_queue.empty?
         @f_test_queue.sort!{|x,y| y[:priority] <=> x[:priority]}#sorting
-        debug_check_duplicate_f_test
-        # while check_duplicate_f_test(@f_test_queue[0])
-        #   p "duplicate set of parameter combinations in variance analysis"
-        #   pp @f_test_queue[0]
-
-        #   # @f_test_queue.shift
-        #   if @f_test_queue[0][:toward] == "outside" && !@f_test_queue[0][:search_params].empty?
-        #     name = @f_test_queue[0][:search_params].shift
-        #     condition = [:or]
-        #     condition += @f_test_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
-        #     orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
-        #     other_params_list = generate_list_of_outside(orthogonal_rows, name, 0.0)
-        #     next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], other_params_list)
-        #     next_sets.each{|set|
-        #       if !set.empty?
-        #         h = generate_id_data_list(set, "outside", 0.0, @parameters.keys)
-        #         @run_id_queue.push(h)
-        #       end
-        #     }
-        #     @f_test_queue[0][:search_params].empty? ? @f_test_queue.shift : @f_test_queue.push(@f_test_queue.shift)
-        #   else
-        #     @f_test_queue.shift
-        #   end
-        #   p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
-        #   break if @f_test_queue.empty?
-        # end
+        check_duplicate_f_test
         return false if @f_test_queue.empty?
 
         # analysis
@@ -583,7 +558,6 @@ module Practis
         p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
         
         # variance analysis
-        
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @f_test_queue[0])
 
         # parameter set generation
@@ -595,87 +569,17 @@ module Practis
 
         # inside
         new_inside_list = generate_list_of_inside(orthogonal_rows, f_result)
-        # @parameters.each{|k, v|
-        #   if @f_test.check_significant(k, f_result)
-        #     new_param, exist_ids = DOEParameterGenerator.generate_inside(
-        #                             @sql_connector, orthogonal_rows, @parameters,
-        #                             k, @definitions[k])
-        #     if exist_ids.empty? && !new_param[:param][:paramDefs].empty? # !new_param[:param][:paramDefs].nil?
-        #       new_inside_list.push(new_param)
-        #     elsif !exist_ids.empty?
-        #       exist_ids.each{|set|
-        #         h = generate_id_data_list(set, "inside", f_result[k][:f_value], @parameters.keys)
-        #         # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
-        #         #   p "exist area: #{exist_ids}"
-        #         #   exit(0)
-        #         # end
-        #         @run_id_queue.push(h)
-        #       }
-        #     end
-        #   end
-        #   # params = orthogonal_rows.map {|r| @parameters[k][:correspond][r[k]] }
-        #   # outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
-        # }
+        
 
         # outside
         # p "generate outside parameter: #{outside_flag}"
         if @f_test_queue[0][:toward] == "outside"
           p "generate outside parameter"
           name = greedy_selection(f_result)
-          # name = roulette_selection(f_result)
           new_outside_list = generate_list_of_outside(orthogonal_rows, name, f_result[name][:f_value])
-        # # if outside_flag
-        #   # condition = [:and]
-        #   # condition += @parameters.map{|k, v|
-        #   #   [:or,
-        #   #     [:eq, [:field, k], v[:correspond].key(v[:paramDefs].max)], 
-        #   #     [:eq, [:field, k], v[:correspond].key(v[:paramDefs].min)]
-        #   #   ]
-        #   # }
-        #   # old_out_rows = @sql_connector.read_record(:orthogonal, condition)
-
-        #   name = greedy_selection(f_result)
-        #   # name = roulette_selection(f_result)
-        #   new_param, exist_ids = DOEParameterGenerator.generate_outside(
-        #                           @sql_connector, orthogonal_rows, @parameters,# @sql_connector, old_out_rows, @parameters,
-        #                           name, @definitions[name])
-        #   # if exist_ids.empty? && !new_param[:param][:paramDefs].nil?
-        #   #   new_outside_list.push(new_param)
-        #   # elsif !exist_ids.empty?
-        #   #   exist_ids.each{ |set|
-        #   #     h = generate_id_data_list(set, "outside", f_result[name][:f_value], @parameters.keys)
-        #   #     @run_id_queue.push(h)
-        #   #   }
-        #   # end
-        #   if !new_param[:param][:paramDefs].empty? #&& !new_param[:param][:paramDefs].nil?
-        #     new_outside_list.push(new_param)
-        #     p "debug"
-        #     pp @f_test_queue[0]
-        #     pp new_param[:param][:name]
-        #     @f_test_queue[0][:search_params].delete(new_param[:param][:name])
-        #   end
-        #   if !exist_ids.empty?
-        #     exist_ids.each{ |set|
-        #       h = generate_id_data_list(set, "outside", f_result[name][:f_value], @parameters.keys)
-        #       @run_id_queue.push(h)
-        #     }
-        #   end
-
-        #   # => all of paraameters are generaterd
-        #   # new_params, exist_ids = DOEParameterGenerator.generate_outside_all(
-        #   #                           @sql_connector, old_out_rows, @parameters,
-        #   #                           @definitions)
-        #   # if exist_ids.flatten.empty?
-        #   #   new_param_list += new_params
-        #   # elsif !exist_ids.flatten.empty?
-        #   #   error("outside check is error")
-        #   # end
-        #   # = = = = = = =
         end
 
         # extend_otableDB & parameter set store to queue
-        # if !new_param_list.empty?
-        #   next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_param_list)
         if !new_inside_list.empty?
           next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_inside_list)
           next_sets.each{|set|
@@ -785,8 +689,6 @@ module Practis
               }
             end
           end
-          # params = orthogonal_rows.map {|r| @parameters[k][:correspond][r[k]] }
-          # outside_flag = outside_flag && (params.include?(@parameters[k][:paramDefs].max) || params.include?(@parameters[k][:paramDefs].min))
         }
 
         return new_inside_list
@@ -889,17 +791,8 @@ module Practis
         return new_inside_area + new_outside_area
       end
 
-      # delete
-      def check_duplicate_f_test(list=nil)#,p_ranges=nil)
-        return false if list.nil?
-        condition = [:eq, [:field, 'id_combination']]
-        condition.push(list[:or_ids].sort.to_s)
-        retval = @sql_connector.read_record(:f_test, condition)
-        return retval.size > 0 ? true : false
-      end
-
       # 
-      def debug_check_duplicate_f_test
+      def check_duplicate_f_test
         retval = []
         begin
           condition = [:eq, [:field, 'id_combination']]
@@ -933,6 +826,7 @@ module Practis
               @f_test_queue.shift
             end
           end
+          break if @f_test_queue.empty?
         end while retval.size > 0
       end
 
