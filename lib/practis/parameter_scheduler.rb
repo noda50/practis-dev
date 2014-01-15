@@ -676,16 +676,16 @@ module Practis
             new_param, exist_ids = DOEParameterGenerator.generate_inside(
                                     @sql_connector, orthogonal_rows, @parameters,
                                     k, @definitions[k])
-            if exist_ids.empty? && !new_param[:param][:paramDefs].empty? # !new_param[:param][:paramDefs].nil?
+            if exist_ids.empty? && !new_param[:param][:paramDefs].empty?
               new_inside_list.push(new_param)
             elsif !exist_ids.empty?
               exist_ids.each{|set|
-                h = generate_id_data_list(set, "inside", f_result[k][:f_value], @parameters.keys)
-                # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
-                #   p "exist area: #{exist_ids}"
-                #   exit(0)
-                # end
-                @run_id_queue.push(h)
+                chk_cond = [:eq, [:field, 'id_combination']]
+                chk_cond.push(set.sort.to_s)
+                if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
+                  h = generate_id_data_list(set, "inside", f_result[k][:f_value], @parameters.keys)
+                  @run_id_queue.push(h)
+                end
               }
             end
           end
@@ -709,8 +709,12 @@ module Practis
         end
         if !exist_ids.empty?
           exist_ids.each{ |set|
-            h = generate_id_data_list(set, "outside", f_value, @parameters.keys)
-            @run_id_queue.push(h)
+            chk_cond = [:eq, [:field, 'id_combination']]
+            chk_cond.push(set.sort.to_s)
+            if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
+              h = generate_id_data_list(set, "outside", f_value, @parameters.keys)
+              @run_id_queue.push(h)
+            end            
           }
         end
         return new_outside_list
@@ -760,11 +764,11 @@ module Practis
           # old_out_rows = @sql_connector.read_record(:orthogonal, condition)
           # old_out_ids = old_out_rows.map{|r| r["id"]}
 
-        outside_list.each{|prm| # toriaezu
-          extclm = extend_otableDB(old_rows, prm[:case], prm[:param])
-          new_outside_area += OrthogonalTable.generate_area(@sql_connector,
-                                old_rows, prm, extclm)
-        }
+          outside_list.each{|prm| # toriaezu
+            extclm = extend_otableDB(old_rows, prm[:case], prm[:param])
+            new_outside_area += OrthogonalTable.generate_area(@sql_connector,
+                                  old_rows, prm, extclm)
+          }
         
         #   outside_list.each{|prm|
         #     if !prm[:param][:paramDefs].nil?
@@ -794,21 +798,33 @@ module Practis
       # 
       def check_duplicate_f_test
         retval = []
+        max_cout = 10000 # loop check
+        counter = 0 # loop check
         begin
           condition = [:eq, [:field, 'id_combination']]
           condition.push(@f_test_queue[0][:or_ids].sort.to_s)
           retval = @sql_connector.read_record(:f_test, condition)
           if retval.size > 0
             if @f_test_queue[0][:toward] == "outside" && !@f_test_queue[0][:search_params].empty?
-              #
-              max_fv = 0.0
+              # name = @f_test_queue[0][:search_params].shift
+              max_fv = -1.0
+              name = nil
               @f_test_queue[0][:search_params].each{|k|
-                max_fv = retval[0]["f_value_of_"+k.to_s] if max_fv < retval[0]["f_value_of_"+k.to_s]
+                if max_fv < retval[0]["f_value_of_"+k.to_s]
+                  max_fv = retval[0]["f_value_of_"+k.to_s]
+                  name = k
+                end
               }
-              name = retval[0].key(max_fv)
-              name.slice!("f_value_of_")
-              name = @f_test_queue[0][:search_params].shift
+              if !name.nil?
+                @f_test_queue[0][:search_params].delete(name)
+                p "del #{name} from #{@f_test_queue[0]}"
+              else
+                error("no candidates for searching parameters")
+                pp @f_test_queue[0]
+                exit(0)
+              end
               #
+
               condition = [:or]
               condition += @f_test_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
               orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
@@ -817,17 +833,55 @@ module Practis
               next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], other_params_list)
               next_sets.each{|set|
                 if !set.empty?
-                  h = generate_id_data_list(set, "outside", 0.0, @parameters.keys)
-                  @run_id_queue.push(h)
+                  h = generate_id_data_list(set, "outside", max_fv, @parameters.keys)
+                  flag = false
+                  @f_test_queue.each{|item|
+                    if item[:or_ids].sort == h[:or_ids].sort
+                      flag = true
+                      break
+                    end
+                  }
+                  if !flag
+                    @run_id_queue.each{|item|
+                      if item[:or_ids].sort == h[:or_ids].sort
+                        flag = true
+                        break
+                      end
+                    }
+                  end
+                  if !flag
+                    #== check
+                    chk_cond = [:eq, [:field, 'id_combination']]
+                    chk_cond.push(h[:or_ids].sort.to_s)
+                    if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
+                      p "uniq combination: #{h[:or_ids]} is pushed"
+                      @run_id_queue.push(h)
+                    end
+                    #==
+                  end
                 end
               }
-              @f_test_queue[0][:search_params].empty? ? @f_test_queue.shift : @f_test_queue.push(@f_test_queue.shift)
+              if @f_test_queue[0][:search_params].empty?
+                @f_test_queue.shift
+              else
+                p "left parameter is #{@f_test_queue[0]}"
+                @f_test_queue.push(@f_test_queue.shift)
+              end
             else
               @f_test_queue.shift
             end
           end
           break if @f_test_queue.empty?
+          counter += 1
+          if max_cout < counter
+            error("program loop!")
+            pp @f_test_queue
+            pp @f_test_queue[0]
+            pp @paramDefList
+            exit(0)
+          end
         end while retval.size > 0
+        p "dup_check_counter: #{counter}"
       end
 
       #

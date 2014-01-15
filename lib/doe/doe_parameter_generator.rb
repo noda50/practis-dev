@@ -13,6 +13,7 @@ module DOEParameterGenerator
   # search only "Inside" significant parameter
   def self.generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
     param = []
+    orthogonal_rows.map { |row| parameters[name][:correspond][row[name]] }
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
         param.push(parameters[name][:correspond][row[name]])
@@ -29,7 +30,7 @@ module DOEParameterGenerator
     new_var = { :case => "inside", 
                 :param => {:name => name, :paramDefs => [] }}
     var_diff = cast_decimal((param_max - param_min).abs / 3.0)
-    return new_var,[] if var_diff <= definition["step_size"]
+    return new_var,[] if var_diff < definition["step_size"]
 
     if param_min.class == Fixnum
       new_array = [param_min + var_diff.to_i, param_max - var_diff.to_i]
@@ -38,7 +39,7 @@ module DOEParameterGenerator
                     (param_max - var_diff).round(definition["num_decimal"]) ]
     end
 
-    # check already generated parameter
+    # check already generated parameter (update new array)
     parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
       if !parameters[name][:paramDefs].find{ |v| param_min < v && v < param_max }.nil?
@@ -47,19 +48,12 @@ module DOEParameterGenerator
           min_bit = parameters[name][:correspond].key(new_array.min)
           max_bit = parameters[name][:correspond].key(new_array.max)
         else
-          # minp = parameters[name][:paramDefs].min_by{|v| v > param_min ? v : parameters[name][:paramDefs].max}
-          # maxp = parameters[name][:paramDefs].max_by{|v| v < param_max ? v : parameters[name][:paramDefs].min}
           btwn_params = []
-          parameters[name][:paramDefs].each{|v| btwn_params.push(v) if param_min <= v && v <= param_max}
+          parameters[name][:paramDefs].each{|v| btwn_params.push(v) if param_min < v && v < param_max}
           btwn_params.sort!
-          step = btwn_params.size / 3
+          step = btwn_params.size>2 ? btwn_params.size/3 : 1
           minp = btwn_params[step - 1]
-          maxp = btwn_params[btwn_params.size - step - 1]
-          # step = parameters[name][:paramDefs].size / 3
-          # minp = parameters[name][:paramDefs][step - 1]
-          # maxp = parameters[name][:paramDefs][parameters[name][:paramDefs].size - step - 1]
-          # minp = parameters[name][:paramDefs].min_by{|v| v > minp ? v : parameters[name][:paramDefs].max}
-          # maxp = parameters[name][:paramDefs].max_by{|v| v < maxp ? v : parameters[name][:paramDefs].min}
+          maxp = btwn_params[btwn_params.size - step]
 
           if new_array.min <= minp && maxp <= new_array.max
             min_bit = parameters[name][:correspond].key(minp)
@@ -102,7 +96,6 @@ module DOEParameterGenerator
             new_area.push(new_area_b.uniq)
           end
         end
-
       end
     end
     new_array.compact!
@@ -115,7 +108,7 @@ module DOEParameterGenerator
   def self.generate_outside(sql_connetor, orthogonal_rows, parameters, name, definition)
     p_lmts = {:name=>name, :top=>false, :bottom=>false}
     orthogonal_rows.each{|r|
-      if parameters[name][:paramDefs].min <= definition["bottom"]
+      if parameters[name][:correspond][r[name]] <= definition["bottom"]
         p_lmts[:bottom] = true
       elsif parameters[name][:correspond][r[name]] >= definition["top"]
         p_lmts[:top] = true
