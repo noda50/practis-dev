@@ -211,26 +211,22 @@ module DOEParameterGenerator
     if param.min.class == Fixnum
       if definition["bottom"] > (param.min - @istep).to_i
         new_lower = definition["bottom"]
-        ## @limit_var[para_name][:touch_low] = true
       else
         new_lower = (param.min - @istep).to_i
       end
       if definition["top"] < (param.max + @istep).to_i
         new_upper = definition["top"] 
-        ## @limit_var[para_name][:touch_high] = true
       else
         new_upper = (param.max + @istep).to_i
       end
     elsif param.min.class == Float
       if definition["bottom"] > (param.min - @fstep).round(definition["num_decimal"])
         new_lower = definition["bottom"]
-        ## @limit_var[para_name][:touch_low] = true
       else
         new_lower = (param.min - @fstep).round(definition["num_decimal"])
       end
       if definition["top"] < (param.max + @fstep).round(definition["num_decimal"])
         new_upper = definition["top"]
-        # @limit_var[para_name][:touch_high] = true
       else
         new_upper = (param.max + @fstep).round(definition["num_decimal"])
       end
@@ -244,106 +240,77 @@ module DOEParameterGenerator
     parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
       # if !parameters[name][:paramDefs].find{|v| v < param.min || param.max < v }.nil?
-        if parameters[name][:paramDefs].include?(new_array.min) || 
-          !(tmp = near_value(new_array.min, parameters[name][:paramDefs], name, definition)).nil?
-          min_bit = parameters[name][:correspond].key(new_array.min)
-          new_array.delete(new_array.min)
-        end
-        if parameters[name][:paramDefs].include?(new_array.max) || 
-          !(tmp = near_value(new_array.max, parameters[name][:paramDefs], name, definition)).nil?
-          max_bit = parameters[name][:correspond].key(new_array.max)
-          new_array.delete(new_array.max)
-        end
-        # else
-        #   lower_arr, upper_arr = [], []
-        #   parameters[name][:paramDefs].each{|v|
-        #     lower_arr.push(v) if v < param.min && new_array.min <= v
-        #     upper_arr.push(v) if param.min < v && new_array.max <= v
-        #   }
-        #   imin = parameters[name][:paramDefs].index(lower_arr.min)
-        #   imax = parameters[name][:paramDefs].index(upper_arr.max)
-        #   if (imax - imin) % 2 == 0
-        #     min_bit = parameters[name][:correspond].key(lower_arr.min)
-        #     max_bit = parameters[name][:correspond].key(upper_arr.max)
-        #   else
-        #     error("index is wrong")
-        #     error("#{imax}, #{imax}: #{parameters[name]}")
-        #   end
+      if parameters[name][:paramDefs].include?(new_array.min) ||
+        !(tmp = near_value(new_array.min, parameters[name][:paramDefs], name, definition)).nil?
+        min_bit = parameters[name][:correspond].key(new_array.min)
+      # elsif !(tmp = near_value(new_array.min, parameters[name][:paramDefs], name, definition)).nil?
+      #   min_bit = parameters[name][:correspond].key(tmp)
+        new_array.delete(new_array.min)
+      end
+      if parameters[name][:paramDefs].include?(new_array.max) ||
+        !(tmp = near_value(new_array.max, parameters[name][:paramDefs], name, definition)).nil?
+        max_bit = parameters[name][:correspond].key(new_array.max)
+      # elsif !(tmp = near_value(new_array.max, parameters[name][:paramDefs], name, definition)).nil?
+      #   max_bit = parameters[name][:correspond].key(tmp)
+        new_array.delete(new_array.max)
+      end
+      # else
+      #   lower_arr, upper_arr = [], []
+      #   parameters[name][:paramDefs].each{|v|
+      #     lower_arr.push(v) if v < param.min && new_array.min <= v
+      #     upper_arr.push(v) if param.min < v && new_array.max <= v
+      #   }
+      #   imin = parameters[name][:paramDefs].index(lower_arr.min)
+      #   imax = parameters[name][:paramDefs].index(upper_arr.max)
+      #   if (imax - imin) % 2 == 0
+      #     min_bit = parameters[name][:correspond].key(lower_arr.min)
+      #     max_bit = parameters[name][:correspond].key(upper_arr.max)
+      #   else
+      #     error("index is wrong")
+      #     error("#{imax}, #{imax}: #{parameters[name]}")
+      #   end
 
-        #   min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
-        #   max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
-        #   min_bit = parameters[name][:correspond].key(min)
-        #   max_bit = parameters[name][:correspond].key(max)
-        # end
-
-        if !min_bit.nil?
-          pmin_bit = parameters[name][:correspond].key(param.min)
-          condition = [:or]
-          orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], pmin_bit]]
-          orthogonal_rows.each{|row|
-            andCond = [:and]
-            row.each{ |k, v|
-              if k != "id" and k != "run" and k != name and !v.nil?
-                andCond.push([:eq, [:field, k], v])
-              end
-            }
-            andCond.push(orCond)
-            condition.push(andCond)
-          }
-          exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
-          new_area.push(exist_area.map{|r| r["id"]})
-        end
-
-        if !max_bit.nil?
-          pmax_bit = parameters[name][:correspond].key(param.max)
-          condition = [:or]
-          orCond = [:or, [:eq, [:field, name], max_bit], [:eq, [:field, name], pmax_bit]]
-          orthogonal_rows.each{|row|
-            andCond = [:and]
-            row.each{ |k, v|
-              if k != "id" and k != "run" and k != name and !v.nil?
-                andCond.push([:eq, [:field, k], v])
-              end
-            }
-            andCond.push(orCond)
-            condition.push(andCond)
-          }
-          exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
-          new_area.push(exist_area.map{|r| r["id"]})
-        end
-
-        #   condition = [:or]
-        #   orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], max_bit]]
-        #   orthogonal_rows.each{|row|
-        #     andCond = [:and]
-        #     row.each{ |k, v|
-        #       if k != "id" and k != "run" and k != name and !v.nil?
-        #         andCond.push([:eq, [:field, k], v])
-        #       end
-        #     }
-        #     andCond.push(orCond)
-        #     condition.push(andCond)
-        #   }
-
-        #   exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
-        #   new_area.push(exist_area.map{|r| r["id"]})
-          
-        #   new_area_a = []
-        #   new_area_b = []
-
-        #   exist_area.each{|r|
-        #     new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "0"
-        #     new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "1"
-        #   }
-        #   orthogonal_rows.map{|r|
-        #     new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "1"
-        #     new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
-        #   }
-
-        #   new_area.push(new_area_a) if !new_area_a.empty?
-        #   new_area.push(new_area_b) if !new_area_b.empty?
-        # end
+      #   min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
+      #   max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
+      #   min_bit = parameters[name][:correspond].key(min)
+      #   max_bit = parameters[name][:correspond].key(max)
       # end
+
+      if !min_bit.nil?
+        pmin_bit = parameters[name][:correspond].key(param.min)
+        condition = [:or]
+        orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], pmin_bit]]
+        orthogonal_rows.each{|row|
+          andCond = [:and]
+          row.each{ |k, v|
+            if k != "id" and k != "run" and k != name and !v.nil?
+              andCond.push([:eq, [:field, k], v])
+            end
+          }
+          andCond.push(orCond)
+          condition.push(andCond)
+        }
+        exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+        new_area.push(exist_area.map{|r| r["id"]})
+      end
+
+      if !max_bit.nil?
+        pmax_bit = parameters[name][:correspond].key(param.max)
+        condition = [:or]
+        orCond = [:or, [:eq, [:field, name], max_bit], [:eq, [:field, name], pmax_bit]]
+        orthogonal_rows.each{|row|
+          andCond = [:and]
+          row.each{ |k, v|
+            if k != "id" and k != "run" and k != name and !v.nil?
+              andCond.push([:eq, [:field, k], v])
+            end
+          }
+          andCond.push(orCond)
+          condition.push(andCond)
+        }
+        exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+        new_area.push(exist_area.map{|r| r["id"]})
+      end
     end
     new_array.compact!
     new_var ={:case => "both side", 
@@ -598,7 +565,7 @@ module DOEParameterGenerator
   def self.near_value(value, paramDefs, name, definition)
     ret = nil
     paramDefs.each{|v|
-      if (value - definition["step_size"]) <= v && v <= (value + definition["step_size"])
+      if ((value - definition["step_size"]) < v) && (v < (value + definition["step_size"]))
         ret = v
       end
     }
