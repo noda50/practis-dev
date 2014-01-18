@@ -404,6 +404,9 @@ module Practis
         @inside_queue = []
         @outside_queue = []
         @current_qcounter = 0
+
+        @epsilon = 0.2
+        srand(0)
         
         # init list
         # h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, "outside", [])
@@ -530,7 +533,9 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
-        @f_test_queue.sort!{|x,y| y[:priority] <=> x[:priority]}#sorting
+        # @f_test_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } #sorting
+        # index = 0 #(@f_test_queue*rand).to_i
+
         check_duplicate_f_test
         return false if @f_test_queue.empty?
 
@@ -538,7 +543,6 @@ module Practis
         result_set = []
         count = 0
         parameter_keys = []
-        # new_param_list = []
         new_inside_list = []
         new_outside_list = []
         @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
@@ -797,45 +801,63 @@ module Practis
 
       # 
       def check_duplicate_f_test
+        greedy = rand < @epsilon ? false : true
+        # add
+        # index = greedy ? 0 : rand(@f_test_queue.size)
+        tmp_queue = @f_test_queue.select{|x| x[:toward] == "outside"}
+        index = greedy ? 0 : rand(tmp_queue.size)
+
+        # @f_test_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } if greedy #sorting 
+        tmp_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } if greedy #sorting 
+
+
         retval = []
         max_cout = 10000 # loop check
         counter = 0 # loop check
         begin
           condition = [:eq, [:field, 'id_combination']]
-          condition.push(@f_test_queue[0][:or_ids].sort.to_s)
+          # condition.push(@f_test_queue[index][:or_ids].sort.to_s)
+          condition.push(tmp_queue[index][:or_ids].sort.to_s)
           retval = @sql_connector.read_record(:f_test, condition)
           if retval.size > 0
-            if @f_test_queue[0][:toward] == "outside" && !@f_test_queue[0][:search_params].empty?
-              # name = @f_test_queue[0][:search_params].shift
+            # if @f_test_queue[index][:toward] == "outside" && !@f_test_queue[index][:search_params].empty?
+            if tmp_queue[index][:toward] == "outside" && !tmp_queue[index][:search_params].empty?
               max_fv = -1.0
               name = nil
-              @f_test_queue[0][:search_params].each{|k|
+              # @f_test_queue[index][:search_params].each{|k|
+              tmp_queue[index][:search_params].each{|k|
                 if max_fv < retval[0]["f_value_of_"+k.to_s]
                   max_fv = retval[0]["f_value_of_"+k.to_s]
                   name = k
                 end
               }
               if !name.nil?
-                @f_test_queue[0][:search_params].delete(name)
-                p "del #{name} from #{@f_test_queue[0]}"
+                # @f_test_queue[index][:search_params].delete(name)
+                # p "del #{name} from #{@f_test_queue[index]}"
+                tmp_queue[index][:search_params].delete(name)
+                p "del #{name} from #{tmp_queue[index]}"
               else
                 error("no candidates for searching parameters")
-                pp @f_test_queue[0]
+                # pp @f_test_queue[index]
+                pp tmp_queue[index]
                 exit(0)
               end
               #
 
               condition = [:or]
-              condition += @f_test_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
+              # condition += @f_test_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
+              condition += tmp_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
               orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
               f_value = retval[0]["f_value_of_" + name]
               other_params_list = generate_list_of_outside(orthogonal_rows, name, f_value)
-              next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], other_params_list)
+              # next_sets = generate_next_search_area(@f_test_queue[index][:or_ids], other_params_list)
+              next_sets = generate_next_search_area(tmp_queue[index][:or_ids], other_params_list)
               next_sets.each{|set|
                 if !set.empty?
                   h = generate_id_data_list(set, "outside", max_fv, @parameters.keys)
                   flag = false
-                  @f_test_queue.each{|item|
+                  # @f_test_queue.each{|item|
+                  tmp_queue.each{|item|
                     if item[:or_ids].sort == h[:or_ids].sort
                       flag = true
                       break
@@ -861,22 +883,34 @@ module Practis
                   end
                 end
               }
-              if @f_test_queue[0][:search_params].empty?
-                @f_test_queue.shift
+              # if @f_test_queue[index][:search_params].empty?
+              if tmp_queue[index][:search_params].empty?
+                # @f_test_queue.delete_at(index)
+                # index = greedy ? 0 : index = rand(@f_test_queue.size)
+                @f_test_queue.delete(tmp_queue[index])
+                tmp_queue.delete_at(index)
+                index = greedy ? 0 : index = rand(tmp_queue.size)
               else
-                p "left parameter is #{@f_test_queue[0]}"
-                @f_test_queue.push(@f_test_queue.shift)
+                # p "left parameter is #{@f_test_queue[index]}"
+                # @f_test_queue.push(@f_test_queue.shift) if index==0 #debug
+                p "left parameter is #{tmp_queue[index]}"
               end
-            else
-              @f_test_queue.shift
+            # elsif @f_test_queue[index][:search_params].empty?
+            #   @f_test_queue.delete_at(index)
+            #   index = greedy ? 0 : index = rand(@f_test_queue.size)
+            elsif tmp_queue[index][:search_params].empty?
+              @f_test_queue.delete(tmp_queue[index])
+              tmp_queue.delete_at(index)
+              index = greedy ? 0 : index = rand(tmp_queue.size)
             end
           end
-          break if @f_test_queue.empty?
+          # break if @f_test_queue.empty?
+          break if tmp_queue.empty?
           counter += 1
           if max_cout < counter
             error("program loop!")
             pp @f_test_queue
-            pp @f_test_queue[0]
+            pp @f_test_queue[index]
             pp @paramDefList
             exit(0)
           end
