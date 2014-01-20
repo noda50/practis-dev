@@ -37,14 +37,16 @@ a, b, c = nil, nil, nil
 # such as "a" and "b".
 argument_hash[:parameter_set].each do |parameter|
   case parameter[:name]
-  when "v1" then a = parameter[:value].to_f
-  when "v2" then b = parameter[:value].to_f
+  when "property" then a = parameter[:value]
+  # when "v1" then a = parameter[:value].to_f
+  # when "v2" then b = parameter[:value].to_f
   when "seed" then c = parameter[:value].to_i
   end
 end
 
 
-# pre-process
+=begin
+# === pre-process ===
 require 'property_generator'
 
 
@@ -54,13 +56,18 @@ filename = "property.xml"
 
 PropertyGenerator.generate(dirname, mapfilename, filename) # argment
 
+=end
 
-
-# execute 
+# === execute ===
 include Math
-command = 'java -jar work/bin/lib/IteratedPrisonerDilemma.jar ' + a.to_s + @spliter + b.to_s + @spliter + c.to_s
-
-
+system('cd work/bin')
+command = 'java -Xms1024M -Xmx1024M -Djava.library.path=libs/linux/amd64 -cp build/libs/netmas.jar:build/libs/netmas-pathing.jar main cui'
+command = command + ' ' + "sample/kitasenju2/properties_00.xml"
+# value = `#{command}`.chomp.to_f
+# debugpath = ' > ~/cw_log.txt'
+# command = command + debugpath
+p value = `#{command}`
+system('cd ../../')
 # - - - - - - - - - - - - - - - - - -
 
 

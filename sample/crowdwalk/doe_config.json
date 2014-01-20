@@ -1,13 +1,13 @@
 {
-	"v1" : {
-		"is_assigned" : true,
+	"property" : {
+		"is_assigned" : false,
 		"bottom" : -10.0,
 		"top" : 10.0,
 		"step_size" : 0.1,
 		"num_decimal" : 5
 	},
 	"seed" : {
-		"is_assigned" : false,
+		"is_assigned" : true,
 		"bottom" : 0,
 		"top" : 10,
 		"step_size" : 1,

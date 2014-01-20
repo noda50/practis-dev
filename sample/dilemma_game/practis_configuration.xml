@@ -27,7 +27,7 @@
     <config name="parameter_allocation_expired_timeout" type="Integer">300</config>
 
     <!-- scheduler (to be able to use Design of Experiment... writen by matsushima -->
-    <config name="parameter_scheduler" type="String">DesginOfExperimentScheduler</config>
+    <config name="parameter_scheduler" type="String">DOEScheduler</config>
 
     <!-- Specify how to check keep alive.
       database: update the cluster state using database.

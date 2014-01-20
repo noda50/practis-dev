@@ -2,7 +2,23 @@
 <practis>
   <exhaustive>
     <parameters>
-      <parameter name="v1" data_type="Float">
+      <!-- <parameter  name="properties" data_type="String">
+        <conditions>
+          <condition type="include"  range_type="list">
+            <list_values>sample/kitasenju2/properties_00.xml</list_values>
+          </condition>
+        </conditions>
+      </parameter> -->
+      <parameter  name="property" data_type="Integer">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0</start>
+            <end>1</end>
+            <step>1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <!-- <parameter name="v1" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
             <start></start>
@@ -10,7 +26,7 @@
             <step></step>
           </condition>
         </conditions>
-      </parameter>
+      </parameter> -->
       <parameter name="seed" data_type="Integer"> 
         <conditions>
           <condition type="include" range_type="range">
