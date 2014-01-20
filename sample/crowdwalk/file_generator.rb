@@ -1,16 +1,35 @@
 require 'pp'
 require 'rexml/document'
+require 'csv'
 
 module FileGenerator
 
+GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL", 
+											"TIMEEVERY", "LINER_GENERATE_AGENT_RATIO"]
+
+	# 
+	def self.generate_map(dirname="2links", filename="map.xml")
+		doc = REXML::Document.new
+		doc << REXML::XMLDecl.new('1.0', 'UTF-8', 'no')
+		doc << REXML::DocType.new("properties", "SYSTEM \"http://java.sun.com/dtd/properties.dtd\"")
+		# properties.add_element("entry", {'key' => ''}).add_text ""
+		# doc.write STDOUT
+
+		doc.write(File.new(filename, "w"))
+	end
+
 	# generate generation file for crowdwalk
-	def self.genearete_gen()
-		
+	def self.genearete_gen(dirname="2links", filename="gen.csv")
+		CSV.open(filename, "w") do |csv|
+			csv << []
+		end
 	end
 
 	# generate scenario file for crowdwalk
-	def self.generate_scenario()
-		
+	def self.generate_scenario(dirname="2links", filename="scenario.csv")
+		CSV.open(filename, "w") do |csv|
+			csv << [1, 0, "START", " ","18:00", " ", " "]#start"
+		end
 	end
 
 	# generate property file for crowdwalk
@@ -60,11 +79,39 @@ module FileGenerator
 
 		doc.write(File.new(filename, "w"))
 	end
+
+	private
+	# for moji?
+	def generation_pattern(filename, ratioA, ratioB, ratio, model)
+		baseWString = "TIMEEVERY,WEST_STATION_LINKS,18:00:00,18:09:00,60,60,"
+    baseEString = "TIMEEVERY,EAST_STATION_LINKS,18:00:00,18:09:00,60,60,"
+    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_N_NODES,POINT_A,E_POINT_A\n")
+    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MN_NODES,POINT_A,E_POINT_B\n")
+    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MS_NODES,POINT_A,E_POINT_C\n")
+    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_S_NODES,POINT_A,E_POINT_D\n")
+    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_N_NODES,POINT_B,W_POINT_A\n")
+    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MN_NODES,POINT_B,W_POINT_B\n")
+    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MS_NODES,POINT_B,W_POINT_C\n")
+    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_S_NODES,POINT_B,W_POINT_D\n")
+    out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_N_NODES,POINT_C,E_POINT_A\n")
+    out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MN_NODES,POINT_C,E_POINT_B\n")
+    out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MS_NODES,POINT_C,E_POINT_C\n")
+    out.write(baseWString + (((int)(1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_S_NODES,POINT_C,E_POINT_D\n")
+    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_N_NODES,POINT_D,W_POINT_A\n")
+    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MN_NODES,POINT_D,W_POINT_B\n")
+    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MS_NODES,POINT_D,W_POINT_C\n")
+    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_S_NODES,POINT_D,W_POINT_D\n")
+	end
 end
+
+
 
 # for debug 
 if __FILE__ == $0
 	p "debug: property file generation"
 	FileGenerator.generate_property
-
+	p "debug: scenario file generation"
+	FileGenerator.generate_scenario
+	p "debug: map file generation"
+	FileGenerator.generate_map
 end
