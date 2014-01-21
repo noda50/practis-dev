@@ -14,20 +14,37 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		doc << REXML::DocType.new("properties", "SYSTEM \"http://java.sun.com/dtd/properties.dtd\"")
 		# properties.add_element("entry", {'key' => ''}).add_text ""
 		# doc.write STDOUT
-
 		doc.write(File.new(filename, "w"))
 	end
 
-	# generate generation file for crowdwalk
-	def self.genearete_gen(dirname="2links", filename="gen.csv")
-		CSV.open(filename, "w") do |csv|
-			csv << []
+	#
+	def self.copy_map(dirname="2links", filename="map.xml", id=nil)
+		if !id.nil?
+			origin = dirname + "/" + filename
+			filename.slice!('.xml')
+			copy = dirname + "/" + filename + "_#{id}.xml"
+			command = "cp #{origin} #{copy}"
+			system(command)
 		end
+	end
+
+	# generate generation file for crowdwalk
+	def self.generate_gen(dirname="2links", filename="gen.csv", id=nil)
+		if !id.nil?
+			filename.slice!('.csv')
+			gen_file = dirname + "/" + filename + "_#{id}.csv"
+		else
+			gen_file = dirname + "/" + filename
+		end
+		# CSV.open(dirname+"/"+filename, "w") do |csv|
+		# 	csv << []
+		# end
+		generation_moji_pattern(gen_file,0.5,0.5,1.0,"density")
 	end
 
 	# generate scenario file for crowdwalk
 	def self.generate_scenario(dirname="2links", filename="scenario.csv")
-		CSV.open(filename, "w") do |csv|
+		CSV.open("#{dirname}/"+filename, "w") do |csv|
 			csv << [1, 0, "START", " ","18:00", " ", " "]#start"
 		end
 	end
@@ -82,25 +99,49 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 
 	private
 	# for moji?
-	def generation_pattern(filename, ratioA, ratioB, ratio, model)
+	def self.generation_moji_pattern(filename, ratioA, ratioB, ratio, model)
 		baseWString = "TIMEEVERY,WEST_STATION_LINKS,18:00:00,18:09:00,60,60,"
     baseEString = "TIMEEVERY,EAST_STATION_LINKS,18:00:00,18:09:00,60,60,"
-    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_N_NODES,POINT_A,E_POINT_A\n")
-    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MN_NODES,POINT_A,E_POINT_B\n")
-    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MS_NODES,POINT_A,E_POINT_C\n")
-    out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_S_NODES,POINT_A,E_POINT_D\n")
-    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_N_NODES,POINT_B,W_POINT_A\n")
-    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MN_NODES,POINT_B,W_POINT_B\n")
-    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MS_NODES,POINT_B,W_POINT_C\n")
-    out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_S_NODES,POINT_B,W_POINT_D\n")
-    out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_N_NODES,POINT_C,E_POINT_A\n")
-    out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MN_NODES,POINT_C,E_POINT_B\n")
-    out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MS_NODES,POINT_C,E_POINT_C\n")
-    out.write(baseWString + (((int)(1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_S_NODES,POINT_C,E_POINT_D\n")
-    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_N_NODES,POINT_D,W_POINT_A\n")
-    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MN_NODES,POINT_D,W_POINT_B\n")
-    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MS_NODES,POINT_D,W_POINT_C\n")
-    out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_S_NODES,POINT_D,W_POINT_D\n")
+    CSV.open(filename, "w") do |csv|
+			csv << baseWString.split(',')
+			csv << baseWString.split(',') 
+			csv << baseWString.split(',') + [ratioA*ratio, model, "EAST_STATION_N_NODES","POINT_A","E_POINT_A"]
+			csv << baseWString.split(',') + [ratioA*ratio, model, "EAST_STATION_MN_NODES","POINT_A","E_POINT_B"]
+			csv << baseWString.split(',') + [ratioA*ratio, model, "EAST_STATION_MS_NODES","POINT_A","E_POINT_C"]
+			csv << baseWString.split(',') + [ratioA*ratio, model, "EAST_STATION_S_NODES","POINT_A","E_POINT_D"]
+
+			csv << baseEString.split(',') + [ratioB*ratio, model, "WEST_STATION_N_NODES","POINT_B","W_POINT_A"]
+			csv << baseEString.split(',') + [ratioB*ratio, model, "WEST_STATION_MN_NODES","POINT_B","W_POINT_B"]
+			csv << baseEString.split(',') + [ratioB*ratio, model, "WEST_STATION_MS_NODES","POINT_B","W_POINT_C"]
+			csv << baseEString.split(',') + [ratioB*ratio, model, "WEST_STATION_S_NODES","POINT_B","W_POINT_D"]
+
+			csv << baseWString.split(',') + [(1.0 - ratioA)*ratio, model, "EAST_STATION_N_NODES","POINT_C","E_POINT_A"]
+			csv << baseWString.split(',') + [(1.0 - ratioA)*ratio, model, "EAST_STATION_MN_NODES","POINT_C","E_POINT_B"]
+			csv << baseWString.split(',') + [(1.0 - ratioA)*ratio, model, "EAST_STATION_MS_NODES","POINT_C","E_POINT_C"]
+			csv << baseWString.split(',') + [(1.0 - ratioA)*ratio, model, "EAST_STATION_S_NODES","POINT_C","E_POINT_D"]
+
+			csv << baseEString.split(',') + [((1.0 - ratioB)*ratio).to_i, model, "WEST_STATION_N_NODES","POINT_D","W_POINT_A"]
+			csv << baseEString.split(',') + [((1.0 - ratioB)*ratio).to_i, model, "WEST_STATION_MN_NODES","POINT_D","W_POINT_B"]
+			csv << baseEString.split(',') + [((1.0 - ratioB)*ratio).to_i, model, "WEST_STATION_MS_NODES","POINT_D","W_POINT_C"]
+			csv << baseEString.split(',') + [((1.0 - ratioB)*ratio), model, "WEST_STATION_S_NODES","POINT_D","W_POINT_D"]
+		end
+
+    # out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_N_NODES,POINT_A,E_POINT_A\n")
+    # out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MN_NODES,POINT_A,E_POINT_B\n")
+    # out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MS_NODES,POINT_A,E_POINT_C\n")
+    # out.write(baseWString + ((int)(ratioA * 1 * ratio)).toString() + "," + model + ",EAST_STATION_S_NODES,POINT_A,E_POINT_D\n")
+    # out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_N_NODES,POINT_B,W_POINT_A\n")
+    # out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MN_NODES,POINT_B,W_POINT_B\n")
+    # out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MS_NODES,POINT_B,W_POINT_C\n")
+    # out.write(baseEString + ((int)(ratioB * 1 * ratio)).toString() + "," + model + ",WEST_STATION_S_NODES,POINT_B,W_POINT_D\n")
+    # out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_N_NODES,POINT_C,E_POINT_A\n")
+    # out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MN_NODES,POINT_C,E_POINT_B\n")
+    # out.write(baseWString + ((int)((1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_MS_NODES,POINT_C,E_POINT_C\n")
+    # out.write(baseWString + (((int)(1.0 - ratioA) * 1 * ratio)).toString() + "," + model + ",EAST_STATION_S_NODES,POINT_C,E_POINT_D\n")
+    # out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_N_NODES,POINT_D,W_POINT_A\n")
+    # out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MN_NODES,POINT_D,W_POINT_B\n")
+    # out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_MS_NODES,POINT_D,W_POINT_C\n")
+    # out.write(baseEString + (((int)(1.0 - ratioB) * 1 * ratio)).toString() + "," + model + ",WEST_STATION_S_NODES,POINT_D,W_POINT_D\n")
 	end
 end
 
@@ -108,10 +149,14 @@ end
 
 # for debug 
 if __FILE__ == $0
+	dir="debug" #3,4links,4blidges, 
+
 	p "debug: property file generation"
-	FileGenerator.generate_property
+	FileGenerator.generate_property(dir)
 	p "debug: scenario file generation"
-	FileGenerator.generate_scenario
+	FileGenerator.generate_scenario(dir)
 	p "debug: map file generation"
-	FileGenerator.generate_map
+	FileGenerator.copy_map(dir,"map-width-1.xml",00)
+	p "debug: generation file generation "
+	FileGenerator.generate_gen(dir)
 end
