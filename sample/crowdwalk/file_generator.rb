@@ -133,7 +133,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 	# ratioB: OLD_MUNICIPAL_HOUSING_EXIT, 
 	# ratioC: KAMAKURA_Jr_HIGH_EXIT
 	def self.generation_kamakura_pattern(filename, ratioA, ratioB, ratioC, model)
-		zaimoku_num = [1005, 957, 1479, 643, 1385, 1148, 711]
+		zaimoku_num = [1005, 957, 1479, 643, 1385, 1148]
 		omachi5_num = 711
 		# ohmachi is only OHMACHI5
 		exits = {	"NAGHOSHI_CLEAN_CENTER_EXIT" => ratioA,
