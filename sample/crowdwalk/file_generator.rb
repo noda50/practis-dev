@@ -7,7 +7,7 @@ module FileGenerator
 GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL", 
 											"TIMEEVERY", "LINER_GENERATE_AGENT_RATIO"]
 
-	# 
+	# generate map file for crowdwalk
 	def self.generate_map(dirname="2links", filename="map.xml")
 		doc = REXML::Document.new
 		doc << REXML::XMLDecl.new('1.0', 'UTF-8', 'no')
@@ -17,7 +17,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		doc.write(File.new(filename, "w"))
 	end
 
-	#
+	# copy map file for crowdwalk
 	def self.copy_map(dirname="2links", filename="map.xml", id=nil)
 		if !id.nil?
 			origin = dirname + "/" + filename
@@ -25,6 +25,13 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			copy = dirname + "/" + filename + "_#{id}.xml"
 			command = "cp #{origin} #{copy}"
 			system(command)
+
+			p com_sed = "sed -e -i s/kamakura\/gen2/kamakura\/gen_#{id}.csv/g #{copy}"
+			system(com_sed)
+			p com_sed = "sed -e -i s/kamakura\/output_pollution/kamakura\/output_pollution_#{id}.csv/g #{copy}"
+			p system(com_sed)
+			p com_sed = "sed -e -i s/kamakura\/scenario/kamakura\/scenario_#{id}.csv/g #{copy}"
+			system(com_sed)
 		end
 	end
 
@@ -39,19 +46,32 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		# CSV.open(dirname+"/"+filename, "w") do |csv|
 		# 	csv << []
 		# end
-		generation_moji_pattern(gen_file,0.5,0.5,1.0,"density")
+		
+		# generation_moji_pattern(gen_file, 0.5, 0.5, 1.0, "density")
+		generation_kamakura_pattern(gen_file, 0.333, 0.333, 0.333, "density")
 	end
 
 	# generate scenario file for crowdwalk
-	def self.generate_scenario(dirname="2links", filename="scenario.csv")
-		CSV.open("#{dirname}/"+filename, "w") do |csv|
-			csv << [1, 0, "START", " ","18:00", " ", " "]#start"
+	def self.generate_scenario(dirname="2links", filename="scenario.csv", id=nil)
+		if id.nil?
+			CSV.open("#{dirname}/"+filename, "w") do |csv|
+				csv << [1, 0, "START", " ","18:00", " ", " "]#start"
+			end
+		else
+			filename.slice!(".csv")
+			CSV.open("#{dirname}/"+filename+"_#{id}.csv", "w") do |csv|
+				csv << [1, 0, "START", " ","18:00", " ", " "]#start"
+			end
 		end
 	end
 
 	# generate property file for crowdwalk
-	def self.generate_property(	dirname="2links", filename="property.xml", map="map-width-1", 
-															gas="gas", gen="gen", scenario="scenario", seed=2525)
+	def self.generate_property(	dirname="2links", filename="property.xml", map="map-width-1", gen="gen",
+															gas="gas", id=nil, scenario="scenario", seed=2525)
+		if !id.nil?
+			filename.slice!(".xml")
+			filename = filename + "_#{id}.xml"
+		end
 		doc = REXML::Document.new
 		doc << REXML::XMLDecl.new('1.0', 'UTF-8')
 		doc << REXML::DocType.new("properties", "SYSTEM \"http://java.sun.com/dtd/properties.dtd\"")
@@ -61,16 +81,22 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		properties.add_element("comment").add_text "NetmasCuiSimulator"
 		properties.add_element("entry", {'key' => 'debug'}).add_text "false"
 		properties.add_element("entry", {'key' => 'io_handler_type'}).add_text "none"
-		mapfile = dirname + "/" + map + ".xml"
+		mapfile = dirname + "/" + map
+		mapfile += id.nil? ? ".xml" : "_#{id}.xml"
 		properties.add_element("entry", {'key' => 'map_file'}).add_text mapfile
-		gasfile = dirname + "/" + gas + ".csv"
+		gasfile = dirname + "/" + gas
+		gasfile += id.nil? ? ".csv" : "_#{id}.csv"
 		properties.add_element("entry", {'key' => 'pollution_file'}).add_text gasfile
-		genfile = dirname + "/" + gen + ".csv"
+		genfile = dirname + "/" + gen
+		genfile =+  + id.nil? ? ".csv" : "_#{id}.csv"
 		properties.add_element("entry", {'key' => 'generation_file'}).add_text genfile
-		scenariofile = dirname + "/" + scenario + ".csv"
+		scenariofile = dirname + "/" + scenario
+		scenariofile += id.nil? ? ".csv" : "_#{id}.csv"
 		properties.add_element("entry", {'key' => 'scenario_file'}).add_text scenariofile
 		properties.add_element("entry", {'key' => 'timer_enable'}).add_text "false"
-		properties.add_element("entry", {'key' => 'timer_file'}).add_text "/tmp/timer.log"
+		timer_file = dirname + "/" + "timer"
+		timer_file += id.nil? ? ".log" : "_#{id}.log"
+		properties.add_element("entry", {'key' => 'timer_file'}).add_text timer_file
 		properties.add_element("entry", {'key' => 'interval'}).add_text "0"
 		# properties.add_element("entry", {'key' => 'addr'})#.add_text ""
 		# properties.add_element("entry", {'key' => 'port'})#.add_text ""
@@ -81,11 +107,15 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		properties.add_element("entry", {'key' => 'random_navigation'}).add_text "false"
 		properties.add_element("entry", {'key' => 'speed_model'}).add_text "density"
 		# properties.add_element("entry", {'key' => 'density_density_speed_model_macro_timestep'}).add_text "10"
-		properties.add_element("entry", {'key' => 'time_series_log'}).add_text "false"
-		properties.add_element("entry", {'key' => 'time_series_log_path'}).add_text "tmp"
+		properties.add_element("entry", {'key' => 'time_series_log'}).add_text "true"
+		time_series_log = dirname + "/" + "time_series"
+		time_series_log += id.nil? ? ".log" : "_#{id}.log"
+		properties.add_element("entry", {'key' => 'time_series_log_path'}).add_text time_series_log
 		properties.add_element("entry", {'key' => 'damage_speed_zero_log'}).add_text "true"
-		properties.add_element("entry", {'key' => 'damage_speed_zero_log_path'}).add_text "tmp/damage_speed_zero.csv"
-		properties.add_element("entry", {'key' => 'time_series_log_interval'}).add_text "1"
+		damage_speed_zero_log_path = dirname + "/" + "damage_speed_zero"
+		damage_speed_zero_log_path += id.nil? ? ".csv" : "_#{id}.csv"
+		properties.add_element("entry", {'key' => 'damage_speed_zero_log_path'}).add_text damage_speed_zero_log_path
+		# properties.add_element("entry", {'key' => 'time_series_log_interval'}).add_text "1"
 		properties.add_element("entry", {'key' => 'loop_count'}).add_text "1"
 		properties.add_element("entry", {'key' => 'exit_count'}).add_text "0"
 		properties.add_element("entry", {'key' => 'all_agent_speed_zero_break'}).add_text "true"
@@ -98,6 +128,30 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 	end
 
 	private
+
+	# for kamakura
+	# ratioA: NAGHOSHI_CLEAN_CENTER_EXIT,
+	# ratioB: OLD_MUNICIPAL_HOUSING_EXIT, 
+	# ratioC: KAMAKURA_Jr_HIGH_EXIT
+	def self.generation_kamakura_pattern(filename, ratioA, ratioB, ratioC,ratio, model)
+		zaimoku_num = [1005, 957, 1479, 643, 1385, 1148, 711]
+		omachi5_num = 711
+		# ohmachi is only OHMACHI5
+		exits = {	"NAGHOSHI_CLEAN_CENTER_EXIT" => ratioA,
+							"OLD_MUNICIPAL_HOUSING_EXIT" => ratioB,
+							"KAMAKURA_Jr_HIGH_EXIT" => ratioC }
+		CSV.open(filename, "w") do |csv|
+			zaimoku_num.each_with_index{ |num, i|
+				exits.each{|k,v|
+					csv << "TIMEEVERY,ZIMOKU#{n},18:00:00,18:00:00,1,1,#{num*v},#{model},#{k}"
+				}
+			}
+			exits.each{ |k,v|
+				csv << "TIMEEVERY,OHMACHI5,18:00:00,18:00:00,1,1,#{omachi5_num*v},#{model},#{k}"
+			}
+		end
+	end
+
 	# for moji?
 	def self.generation_moji_pattern(filename, ratioA, ratioB, ratio, model)
 		baseWString = "TIMEEVERY,WEST_STATION_LINKS,18:00:00,18:09:00,60,60,"
@@ -149,14 +203,18 @@ end
 
 # for debug 
 if __FILE__ == $0
-	dir="debug" #3,4links,4blidges, 
+	dir="debug/kamakura.practis" #3,4links,4blidges, 
+	id = 0
+	p "debug: scenario file generation"
+	FileGenerator.generate_scenario(dir,"scenario.csv", id)
+
+	p "debug: map file generation"
+	FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", id)
+
+	p "debug: generation file generation "
+	FileGenerator.generate_gen(dir, "gen.csv", id)
 
 	p "debug: property file generation"
-	FileGenerator.generate_property(dir)
-	p "debug: scenario file generation"
-	FileGenerator.generate_scenario(dir)
-	p "debug: map file generation"
-	FileGenerator.copy_map(dir,"map-width-1.xml",00)
-	p "debug: generation file generation "
-	FileGenerator.generate_gen(dir)
+	FileGenerator.generate_property(dir, "property", "2014_0109_kamakura11-3",
+																	"gen","output_pollution", id, 0)
 end
