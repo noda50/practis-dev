@@ -26,17 +26,15 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			copy = dirname + "/" + filename + "_#{id}.xml"
 			command = "cp #{origin} #{copy}"
 			system(command)
-		end
+			if dirname.include?("/")
+				str = dirname.split("/")
+				dirname = str.join("\\/")
+			end
 
-		if dirname.include?("/")
-			str = dirname.split("/")
-			dirname = str.join("\\/")
+			system("sed -i -e \"s/#{dirname}\\/gen2/#{dirname}\\/gen_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
 		end
-
-		system("sed -i -e \"s/#{dirname}\\/gen2/#{dirname}\\/gen_#{id}/g\" #{copy}")
-		system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
-		system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
-		
 	end
 
 	def self.copy_pollution(dirname="2links", filename="pollution.csv", id=nil)
@@ -121,7 +119,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		# properties.add_element("entry", {'key' => "deserialized_file"}).add_text "/tmp/serialized.xml"
 		properties.add_element("entry", {'key' => "randseed"}).add_text "#{seed}"
 		properties.add_element("entry", {'key' => "random_navigation"}).add_text "false"
-		properties.add_element("entry", {'key' => "speed_model"}).add_text "DENSITY"
+		properties.add_element("entry", {'key' => "speed_model"}).add_text "density"
 		# properties.add_element("entry", {'key' => "density_density_speed_model_macro_timestep"}).add_text "10"
 		properties.add_element("entry", {'key' => "time_series_log"}).add_text "true"
 		time_series_log = dirname + "/" + "time_series"
