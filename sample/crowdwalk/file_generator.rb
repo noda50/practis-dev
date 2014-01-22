@@ -39,7 +39,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		
 	end
 
-	def self.copy_polution((dirname="2links", filename="pollution.csv", id=nil))
+	def self.copy_pollution(dirname="2links", filename="pollution.csv", id=nil)
 		if !id.nil?
 			origin = dirname + "/" + filename
 			filename.slice!('.csv')
@@ -82,7 +82,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 	end
 
 	# generate property file for crowdwalk
-	def self.generate_property(	dirname="2links", filename="property.xml", map="map-width-1", gen="gen",
+	def self.generate_property(	dirname="2links", filename="properties.xml", map="map-width-1", gen="gen",
 															gas="gas", id=nil, scenario="scenario", seed=2525)
 		if !id.nil?
 			filename.slice!(".xml")
@@ -275,9 +275,9 @@ if __FILE__ == $0
 	FileGenerator.generate_gen(dir, "gen.csv", id)
 
 	p "debug: gas(pollution) file generation"
-	FileGenerator.copy_polution(dir,"output_pollution", id)
+	FileGenerator.copy_pollution(dir,"output_pollution", id)
 
 	p "debug: property file generation"
-	FileGenerator.generate_property(dir, "properties", "2014_0109_kamakura11-3",
+	FileGenerator.generate_property(dir, "properties.xml", "2014_0109_kamakura11-3",
 																	"gen","output_pollution", id, "scenario", 2525)
 end
