@@ -26,12 +26,14 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			command = "cp #{origin} #{copy}"
 			system(command)
 
-			p com_sed = "sed -e -i s/kamakura\/gen2/kamakura\/gen_#{id}.csv/g #{copy}"
-			system(com_sed)
-			p com_sed = "sed -e -i s/kamakura\/output_pollution/kamakura\/output_pollution_#{id}.csv/g #{copy}"
-			p system(com_sed)
-			p com_sed = "sed -e -i s/kamakura\/scenario/kamakura\/scenario_#{id}.csv/g #{copy}"
-			system(com_sed)
+			if dirname.include?("/")
+				str = dirname.split("/")
+				dirname = str.join("\\/")
+			end
+
+			system("sed -i -e \"s/#{dirname}\\/gen2/#{dirname}\\/gen_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
 		end
 	end
 
@@ -43,10 +45,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		else
 			gen_file = dirname + "/" + filename
 		end
-		# CSV.open(dirname+"/"+filename, "w") do |csv|
-		# 	csv << []
-		# end
-		
+
 		# generation_moji_pattern(gen_file, 0.5, 0.5, 1.0, "density")
 		generation_kamakura_pattern(gen_file, 0.333, 0.333, 0.333, "density")
 	end
@@ -88,7 +87,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		gasfile += id.nil? ? ".csv" : "_#{id}.csv"
 		properties.add_element("entry", {'key' => 'pollution_file'}).add_text gasfile
 		genfile = dirname + "/" + gen
-		genfile =+  + id.nil? ? ".csv" : "_#{id}.csv"
+		genfile += id.nil? ? ".csv" : "_#{id}.csv"
 		properties.add_element("entry", {'key' => 'generation_file'}).add_text genfile
 		scenariofile = dirname + "/" + scenario
 		scenariofile += id.nil? ? ".csv" : "_#{id}.csv"
@@ -124,7 +123,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		# properties.add_element("entry", {'key' => ''}).add_text ""
 		# doc.write STDOUT
 
-		doc.write(File.new(filename, "w"))
+		doc.write(File.new(dirname+"/"+filename, "w"))
 	end
 
 	private
@@ -133,7 +132,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 	# ratioA: NAGHOSHI_CLEAN_CENTER_EXIT,
 	# ratioB: OLD_MUNICIPAL_HOUSING_EXIT, 
 	# ratioC: KAMAKURA_Jr_HIGH_EXIT
-	def self.generation_kamakura_pattern(filename, ratioA, ratioB, ratioC,ratio, model)
+	def self.generation_kamakura_pattern(filename, ratioA, ratioB, ratioC, model)
 		zaimoku_num = [1005, 957, 1479, 643, 1385, 1148, 711]
 		omachi5_num = 711
 		# ohmachi is only OHMACHI5
@@ -143,11 +142,11 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		CSV.open(filename, "w") do |csv|
 			zaimoku_num.each_with_index{ |num, i|
 				exits.each{|k,v|
-					csv << "TIMEEVERY,ZIMOKU#{n},18:00:00,18:00:00,1,1,#{num*v},#{model},#{k}"
+					csv << ["TIMEEVERY","ZIMOKU#{i+1}","18:00:00","18:00:00",1,1,"#{(num*v).to_i}","#{model}","#{k}"]
 				}
 			}
 			exits.each{ |k,v|
-				csv << "TIMEEVERY,OHMACHI5,18:00:00,18:00:00,1,1,#{omachi5_num*v},#{model},#{k}"
+				csv << ["TIMEEVERY","OHMACHI5","18:00:00","18:00:00",1,1,"#{(omachi5_num*v).to_i}","#{model}","#{k}"]
 			}
 		end
 	end
@@ -215,6 +214,6 @@ if __FILE__ == $0
 	FileGenerator.generate_gen(dir, "gen.csv", id)
 
 	p "debug: property file generation"
-	FileGenerator.generate_property(dir, "property", "2014_0109_kamakura11-3",
-																	"gen","output_pollution", id, 0)
+	FileGenerator.generate_property(dir, "properties", "2014_0109_kamakura11-3",
+																	"gen","output_pollution", id, "scenario", id)
 end
