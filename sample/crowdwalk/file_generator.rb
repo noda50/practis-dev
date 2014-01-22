@@ -26,15 +26,26 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			copy = dirname + "/" + filename + "_#{id}.xml"
 			command = "cp #{origin} #{copy}"
 			system(command)
+		end
 
-			if dirname.include?("/")
-				str = dirname.split("/")
-				dirname = str.join("\\/")
-			end
+		if dirname.include?("/")
+			str = dirname.split("/")
+			dirname = str.join("\\/")
+		end
 
-			system("sed -i -e \"s/#{dirname}\\/gen2/#{dirname}\\/gen_#{id}/g\" #{copy}")
-			system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
-			system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
+		system("sed -i -e \"s/#{dirname}\\/gen2/#{dirname}\\/gen_#{id}/g\" #{copy}")
+		system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
+		system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
+		
+	end
+
+	def self.copy_polution((dirname="2links", filename="pollution.csv", id=nil))
+		if !id.nil?
+			origin = dirname + "/" + filename
+			filename.slice!('.csv')
+			copy = dirname + "/" + filename + "_#{id}.csv"
+			command = "cp #{origin} #{copy}"
+			system(command)
 		end
 	end
 
@@ -262,6 +273,9 @@ if __FILE__ == $0
 
 	p "debug: generation file generation "
 	FileGenerator.generate_gen(dir, "gen.csv", id)
+
+	p "debug: gas(pollution) file generation"
+	FileGenerator.copy_polution(dir,"output_pollution", id)
 
 	p "debug: property file generation"
 	FileGenerator.generate_property(dir, "properties", "2014_0109_kamakura11-3",
