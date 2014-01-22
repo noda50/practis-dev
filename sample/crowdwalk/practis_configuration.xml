@@ -59,7 +59,7 @@
     <!-- Executable files and directories -->
     <config name="executable_transfer" type="String">
       <item>sample/crowdwalk/crowdwalk.rb</item>
-      <item>sample/crowdwalk/property_generator.rb</item>
+      <item>sample/crowdwalk/file_generator.rb</item>
       <item>sample/crowdwalk/libs</item>
       <item>sample/crowdwalk/build</item>
       <item>sample/crowdwalk/sample</item>

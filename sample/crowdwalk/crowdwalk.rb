@@ -60,14 +60,15 @@ PropertyGenerator.generate(dirname, mapfilename, filename) # argment
 
 # === execute ===
 include Math
-system('cd work/bin')
-command = 'java -Xms1024M -Xmx1024M -Djava.library.path=libs/linux/amd64 -cp build/libs/netmas.jar:build/libs/netmas-pathing.jar main cui'
-command = command + ' ' + "sample/kitasenju2/properties_00.xml"
+djava = '-Djava.library.path=work/bin/libs/linux/amd64'
+cpath = '-cp work/bin/build/libs/netmas.jar:work/bin/build/libs/netmas-pathing.jar'
+command = 'java -Xms1024M -Xmx1024M ' + djava + ' ' + cpath + ' main cui'
+command = command + ' ' + "work/bin/sample/kitasenju2.practis/properties_00.xml _output_00"
 # value = `#{command}`.chomp.to_f
 # debugpath = ' > ~/cw_log.txt'
 # command = command + debugpath
 p value = `#{command}`
-system('cd ../../')
+# system('cd ../../')
 # - - - - - - - - - - - - - - - - - -
 
 
