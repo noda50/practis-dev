@@ -5,6 +5,6 @@
 <practis>
   <results>
     <!-- <result name="value" data_type="Float" null="NO"></result> -->
-    <result name="value" data_type="String" null="NO"></result>
+    <result name="value" data_type="Float" null="NO"></result>
   </results>
 </practis>

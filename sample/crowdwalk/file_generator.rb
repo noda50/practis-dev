@@ -31,7 +31,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 				dirname = str.join("\\/")
 			end
 
-			system("sed -i -e \"s/#{dirname}\\/gen2/#{dirname}\\/gen_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/gen/#{dirname}\\/gen_#{id}/g\" #{copy}")
 			system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
 			system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
 		end
@@ -177,8 +177,8 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			z2_ratioA, z2_ratioB, z2_ratioC, z3_ratioA, z3_ratioB, z3_ratioC, z4_ratioA,
 			z4_ratioB, z4_ratioC,	z5_ratioA, z5_ratioB, z5_ratioC, z6_ratioA, z6_ratioB,
 			z6_ratioC, o5_ratioA, o5_ratioB, o5_ratioC, model="DENSITY")
-		z_num = [1005, 957, 1479, 643, 1385, 1148]
-		o_num = 711
+		z_num = [1371, 1306, 2018, 878, 1890, 1567] #[1005, 957, 1479, 643, 1385, 1148]
+		o_num = 970#711
 		CSV.open(filename, "w") do |csv|
 			csv << ["TIMEEVERY","ZAIMOKU1","18:00:00","18:00:00",1,1,"#{(z_num[0]*z1_ratioA).to_i}","#{model}","NAGHOSHI_CLEAN_CENTER_EXIT"]
 			csv << ["TIMEEVERY","ZAIMOKU1","18:00:00","18:00:00",1,1,"#{(z_num[0]*z1_ratioB).to_i}","#{model}","OLD_MUNICIPAL_HOUSING_EXIT"]
@@ -261,7 +261,7 @@ end
 
 # for debug 
 if __FILE__ == $0
-	dir="sample/kamakura" #3,4links,4blidges, 
+	dir="work/bin/sample/kamakura.practis" #3,4links,4blidges, 
 	id = 0
 	p "debug: scenario file generation"
 	FileGenerator.generate_scenario(dir,"scenario.csv", id)
@@ -270,10 +270,10 @@ if __FILE__ == $0
 	FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", id)
 
 	p "debug: generation file generation "
-	FileGenerator.generate_gen(dir, "gen.csv", id)
+	FileGenerator.generate_gen(dir, "gen.csv", [], id)
 
 	p "debug: gas(pollution) file generation"
-	FileGenerator.copy_pollution(dir,"output_pollution", id)
+	FileGenerator.copy_pollution(dir,"output_pollution.csv", id)
 
 	p "debug: property file generation"
 	FileGenerator.generate_property(dir, "properties.xml", "2014_0109_kamakura11-3",
