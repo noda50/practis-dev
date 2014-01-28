@@ -407,11 +407,6 @@ module Practis
         @epsilon = 0.2
         srand(0)
         
-        # init list
-        # h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, "outside", [])
-        # @run_id_queue.push(h)
-
-
         @parameters = {}
         @total_indexes = []
         @unassigned = []
@@ -540,9 +535,8 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
-        puts
-        p "variance analysis: f-test queue: "
-        pp @f_test_queue.map{|q| q[:or_ids]}
+        p "variance analysis: f-test queue: "# debug("variance analysis: f-test queue: ")
+        pp @f_test_queue.map{|q| q[:or_ids]} # debug("#{pp @f_test_queue.map{|q| q[:or_ids]}}")
 
         # analysis
         result_set = []
@@ -561,7 +555,7 @@ module Practis
           end
         }
         return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
-        p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
+        debug("list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}")
         
         # variance analysis
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @f_test_queue[0])
@@ -569,109 +563,13 @@ module Practis
         tested_sets = @f_test_queue.shift
         @generation_queue.push(tested_sets)
         return true
-=begin
-        return false if @f_test_queue.empty?
-        # @f_test_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } #sorting
-        # index = 0 #(@f_test_queue*rand).to_i
-
-        check_duplicate_f_test # reduce code!!
-        return false if @f_test_queue.empty? # reduce code!!
-
-        # analysis
-        result_set = []
-        count = 0
-        parameter_keys = []
-        new_inside_list = []
-        new_outside_list = []
-        @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
-        @f_test_queue[0][:or_ids].each{|oid|
-          condition = "WHERE result_id IN ( " + @f_test_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
-          retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
-                                              base_field: :result_id, ref_field: :parameter_id,
-                                              condition: condition})
-          if retval.length >= 0
-            count += retval.length
-            result_set.push(retval)
-          end
-        }
-        
-        return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
-        
-        p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
-        
-        # variance analysis
-        f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @f_test_queue[0])
-
-        # parameter set generation
-        condition = [:or]
-        condition += @f_test_queue[0][:or_ids].map{|i| [:eq, [:field, "id"], i]}
-        orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
-        
-        outside_flag = true
-
-        # inside
-        new_inside_list = generate_list_of_inside(orthogonal_rows, f_result)
-        
-
-        # outside
-        # p "generate outside parameter: #{outside_flag}"
-        if @f_test_queue[0][:toward] == "outside"
-          p "generate outside parameter"
-          name = greedy_selection(f_result)
-          new_outside_list = generate_list_of_outside(orthogonal_rows, name, f_result[name][:f_value])
-        end
-
-        # extend_otableDB & parameter set store to queue
-        if !new_inside_list.empty?
-          next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_inside_list)
-          next_sets.each{|set|
-            if !set.empty?
-              h = generate_id_data_list(set, "inside", @f_test_queue[0][:priority], @parameters.keys)
-              # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
-              #   p "new area: #{next_sets}"
-              #   exit(0)
-              # end
-              @run_id_queue.push(h)
-            end
-          }
-        end
-        if !new_outside_list.empty?
-          next_sets = generate_next_search_area(@f_test_queue[0][:or_ids], new_outside_list)
-          next_sets.each{|set|
-            if !set.empty?
-              h = generate_id_data_list(set, "outside", @f_test_queue[0][:priority], @parameters.keys)
-              # if 0 < h[:or_ids].uniq.size && h[:or_ids].size < 4
-              #   p "new area: #{next_sets}"
-              #   exit(0)
-              # end
-              @run_id_queue.push(h)
-            end
-          }
-        end
-
-        if @f_test_queue[0][:toward] == "outside"
-          @f_test_queue[0][:priority] = 0.0
-          if @f_test_queue[0][:search_params].empty?
-            @f_test_queue.shift
-          else
-            @f_test_queue.push(@f_test_queue.shift)
-          end
-        else
-          @f_test_queue.shift
-        end
-
-        @eop = true if @f_test_queue.empty? && @run_id_queue.empty?
-
-        return true
-=end
       end
 
       # parameter set generation
       def do_parameter_generation
         return false if @generation_queue.empty?
-        puts
-        p "parameter generation: generation queue"
-        pp @generation_queue.map{|q| q[:or_ids]}
+        p "parameter generation: generation queue" # debug("parameter generation: generation queue")
+        pp @generation_queue.map{|q| q[:or_ids]} # debug("#{pp @generation_queue.map{|q| q[:or_ids]}}")
         # select index
         # greedy = rand < @epsilon ? false : true
         index = 0 #greedy ? 0 : rand(@generation_queue.size)
@@ -680,6 +578,7 @@ module Practis
         condition = [:or]
         condition += @generation_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+        check_orthogonal(orthogonal_rows)
         new_inside_list = generate_list_of_inside(orthogonal_rows, @generation_queue[index][:f_result])
         
         # outside
@@ -698,6 +597,32 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "inside", @generation_queue[index][:priority], @parameters.keys)
+              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                p "debug: new inside list"
+                pp new_inside_list
+                p "new param: #{pp new_param}"
+                p "orthogonal"
+                pp orthogonal_rows
+                p "new area:"
+                pp h
+                exit(0)
+              end
+
+              if h[:or_ids].sort == [18, 20, 26, 28]
+                p "error: new area"
+                pp orthogonal_rows
+                pp h
+                pp next_sets
+
+                next_sets.each{|set|
+                  debug_cond = [:or]
+                  debug_cond += set.map{|i| [:eq, [:field, "id"], i]}
+                  pp @sql_connector.read_record(:orthogonal, debug_cond)
+                }
+
+                exit(0)
+              end
+
               @run_id_queue.push(h)
             end
           }
@@ -707,6 +632,23 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "outside", @generation_queue[index][:priority], @parameters.keys)
+              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                p "debug: new out list"
+                pp new_outside_list
+                p "new param: #{pp new_param}"
+                p "orthogonal"
+                pp orthogonal_rows
+                p "new area: "
+                pp h
+                exit(0)
+              end
+              if h[:or_ids].sort == [18, 20, 26, 28]
+                p "error"
+                pp orthogonal_rows
+                pp h
+                pp next_sets
+                exit(0)
+              end
               @run_id_queue.push(h)
             end
           }
@@ -721,12 +663,6 @@ module Practis
         else
           @generation_queue.delete_at(index)
         end
-
-        #deletion
-        # if @generation_queue[index][:toward] != "outside"
-        #   @generation_queue.delete_at(index)
-        # elsif 
-        # end
 
         @eop = true if @run_id_queue.empty? && @f_test_queue.empty? && @generation_queue.empty?
       end
@@ -793,6 +729,25 @@ module Practis
                 chk_cond.push(set.sort.to_s)
                 if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
                   h = generate_id_data_list(set, "inside", f_result[k][:f_value], @parameters.keys)
+
+                  if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                    p "debug: existed inside "
+                    p "exist area: #{exist_ids}"
+                    p "new param: #{pp new_param}"
+                    p "orthogonal"
+                    pp orthogonal_rows
+                    pp h
+                    exit(0)
+                  end
+
+                  if h[:or_ids].sort == [18, 20, 26, 28]
+                    p "error: in exist area"
+                    pp orthogonal_rows
+                    pp h
+                    pp exist_ids
+                    exit(0)
+                  end
+
                   @run_id_queue.push(h)
                 end
               }
@@ -820,6 +775,23 @@ module Practis
             chk_cond.push(set.sort.to_s)
             if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
               h = generate_id_data_list(set, "outside", f_value, @parameters.keys)
+              if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                p "debug existed outside "
+                p "exist area: #{exist_ids}"
+                p "new param: #{pp new_param}"
+                p "orthogonal"
+                pp orthogonal_rows
+                pp h
+                exit(0)
+              end
+
+              if h[:or_ids].sort == [18, 20, 26, 28]
+                p "error"
+                pp orthogonal_rows
+                pp h
+                exit(0)
+              end
+
               @run_id_queue.push(h)
             end            
           }
@@ -912,126 +884,6 @@ module Practis
         else
           return false
         end
-      end
-
-      # 
-      def check_duplicate_f_test_tmp
-        greedy = rand < @epsilon ? false : true
-        # add
-        # index = greedy ? 0 : rand(@f_test_queue.size)
-        tmp_queue = @f_test_queue.select{|x| x[:toward] == "outside"}
-        index = greedy ? 0 : rand(tmp_queue.size)
-
-        # @f_test_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } if greedy #sorting 
-         if greedy #sorting 
-          tmp_queue.sort!{ |x,y| y[:priority] <=> x[:priority] }
-        end
-
-        retval = []
-        max_cout = 10000 # loop check
-        counter = 0 # loop check
-        begin
-          condition = [:eq, [:field, 'id_combination']]
-          # condition.push(@f_test_queue[index][:or_ids].sort.to_s)
-          condition.push(tmp_queue[index][:or_ids].sort.to_s)
-          retval = @sql_connector.read_record(:f_test, condition)
-          if retval.size > 0
-            # if @f_test_queue[index][:toward] == "outside" && !@f_test_queue[index][:search_params].empty?
-            if tmp_queue[index][:toward] == "outside" && !tmp_queue[index][:search_params].empty?
-              max_fv = -1.0
-              name = nil
-              # @f_test_queue[index][:search_params].each{|k|
-              tmp_queue[index][:search_params].each{|k|
-                if max_fv < retval[0]["f_value_of_"+k.to_s]
-                  max_fv = retval[0]["f_value_of_"+k.to_s]
-                  name = k
-                end
-              }
-              if !name.nil?
-                # @f_test_queue[index][:search_params].delete(name)
-                # p "del #{name} from #{@f_test_queue[index]}"
-                tmp_queue[index][:search_params].delete(name)
-                p "del #{name} from #{tmp_queue[index]}"
-              else
-                error("no candidates for searching parameters")
-                # pp @f_test_queue[index]
-                pp tmp_queue[index]
-                exit(0)
-              end
-              #
-
-              condition = [:or]
-              # condition += @f_test_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
-              condition += tmp_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
-              orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
-              f_value = retval[0]["f_value_of_" + name]
-              other_params_list = generate_list_of_outside(orthogonal_rows, name, f_value)
-              # next_sets = generate_next_search_area(@f_test_queue[index][:or_ids], other_params_list)
-              next_sets = generate_next_search_area(tmp_queue[index][:or_ids], other_params_list)
-              next_sets.each{|set|
-                if !set.empty?
-                  h = generate_id_data_list(set, "outside", max_fv, @parameters.keys)
-                  flag = false
-                  # @f_test_queue.each{|item|
-                  tmp_queue.each{|item|
-                    if item[:or_ids].sort == h[:or_ids].sort
-                      flag = true
-                      break
-                    end
-                  }
-                  if !flag
-                    @run_id_queue.each{|item|
-                      if item[:or_ids].sort == h[:or_ids].sort
-                        flag = true
-                        break
-                      end
-                    }
-                  end
-                  if !flag
-                    #== check
-                    chk_cond = [:eq, [:field, 'id_combination']]
-                    chk_cond.push(h[:or_ids].sort.to_s)
-                    if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
-                      p "uniq combination: #{h[:or_ids]} is pushed"
-                      @run_id_queue.push(h)
-                    end
-                    #==
-                  end
-                end
-              }
-              # if @f_test_queue[index][:search_params].empty?
-              if tmp_queue[index][:search_params].empty?
-                # @f_test_queue.delete_at(index)
-                # index = greedy ? 0 : index = rand(@f_test_queue.size)
-                @f_test_queue.delete(tmp_queue[index])
-                tmp_queue.delete_at(index)
-                index = greedy ? 0 : index = rand(tmp_queue.size)
-              else
-                # p "left parameter is #{@f_test_queue[index]}"
-                # @f_test_queue.push(@f_test_queue.shift) if index==0 #debug
-                p "left parameter is #{tmp_queue[index]}"
-              end
-            # elsif @f_test_queue[index][:search_params].empty?
-            #   @f_test_queue.delete_at(index)
-            #   index = greedy ? 0 : index = rand(@f_test_queue.size)
-            elsif tmp_queue[index][:search_params].empty?
-              @f_test_queue.delete(tmp_queue[index])
-              tmp_queue.delete_at(index)
-              index = greedy ? 0 : index = rand(tmp_queue.size)
-            end
-          end
-          # break if @f_test_queue.empty?
-          break if tmp_queue.empty?
-          counter += 1
-          if max_cout < counter
-            error("program loop!")
-            pp @f_test_queue
-            pp @f_test_queue[index]
-            pp @paramDefList
-            exit(0)
-          end
-        end while retval.size > 0
-        p "dup_check_counter: #{counter}"
       end
 
       #
@@ -1282,6 +1134,24 @@ module Practis
           end
         }
         return indexes
+      end
+
+      #
+      def check_orthogonal(rows)
+        v1 = []
+        v2 = []
+        rows.each{|row|
+          v1.push(row["v1"][row["v1"].size - 1])
+          v2.push(row["v2"][row["v2"].size - 1])
+        }
+        v1.uniq!
+        v2.uniq!
+
+        if v1.size != 2 || v2.size != 2
+          p "error"
+          pp rows
+          exit(0)
+        end
       end
     end
   end
