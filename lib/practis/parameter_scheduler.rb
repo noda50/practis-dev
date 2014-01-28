@@ -401,8 +401,7 @@ module Practis
         @definitions = doe_definitions
         @run_id_queue = []
         @f_test_queue = []
-        @inside_queue = []
-        @outside_queue = []
+        @generation_queue = []
         @current_qcounter = 0
 
         @epsilon = 0.2
@@ -458,7 +457,15 @@ module Practis
           if !@run_id_queue.empty?
             count = @run_id_queue[0][:or_ids].inject(0){|sum, oid| sum + @run_id_queue[0][oid].size}
             if count >= @run_id_queue[0][:or_ids].size * @unassigned_total_size
-              @f_test_queue.push(@run_id_queue.shift)
+              # dup check
+              chk = @run_id_queue.shift
+              dup = @f_test_queue.find{|test| test[:or_ids].sort == chk[:or_ids].sort }
+              if dup.nil?
+                @f_test_queue.push(chk)
+              else
+                @f_test_queue.push(chk) if check_duplicate_f_test(chk)
+              end              
+              # dup check (end)
               return nil
             elsif count == 0
               @available_numbers = get_total.times.map { |i| i }  
@@ -533,11 +540,42 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
+        puts
+        p "variance analysis: f-test queue: "
+        pp @f_test_queue.map{|q| q[:or_ids]}
+
+        # analysis
+        result_set = []
+        count = 0
+        parameter_keys = []
+
+        @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
+        @f_test_queue[0][:or_ids].each{|oid|
+          condition = "WHERE result_id IN ( " + @f_test_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
+          retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,
+                                              base_field: :result_id, ref_field: :parameter_id,
+                                              condition: condition})
+          if retval.length >= 0
+            count += retval.length
+            result_set.push(retval)
+          end
+        }
+        return false if count < (@f_test_queue[0][:or_ids].size * @unassigned_total_size)
+        p "list length: #{@f_test_queue.size}, counter: #{@run_id_queue.size}"
+        
+        # variance analysis
+        f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @f_test_queue[0])
+        @f_test_queue[0][:f_result] = f_result
+        tested_sets = @f_test_queue.shift
+        @generation_queue.push(tested_sets)
+        return true
+=begin
+        return false if @f_test_queue.empty?
         # @f_test_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } #sorting
         # index = 0 #(@f_test_queue*rand).to_i
 
-        check_duplicate_f_test
-        return false if @f_test_queue.empty?
+        check_duplicate_f_test # reduce code!!
+        return false if @f_test_queue.empty? # reduce code!!
 
         # analysis
         result_set = []
@@ -625,6 +663,72 @@ module Practis
         @eop = true if @f_test_queue.empty? && @run_id_queue.empty?
 
         return true
+=end
+      end
+
+      # parameter set generation
+      def do_parameter_generation
+        return false if @generation_queue.empty?
+        puts
+        p "parameter generation: generation queue"
+        pp @generation_queue.map{|q| q[:or_ids]}
+        # select index
+        # greedy = rand < @epsilon ? false : true
+        index = 0 #greedy ? 0 : rand(@generation_queue.size)
+
+        # siginificant set is searched inside 
+        condition = [:or]
+        condition += @generation_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
+        orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
+        new_inside_list = generate_list_of_inside(orthogonal_rows, @generation_queue[index][:f_result])
+        
+        # outside
+        new_outside_list = []
+        if @generation_queue[index][:toward] == "outside"
+          p "generate outside parameter"
+          name = greedy_selection(@generation_queue[index])
+          @generation_queue[index][:search_params].delete(name.to_s)
+          new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
+                                @generation_queue[index][:f_result][name.to_s][:f_value], index)
+        end
+
+        # extend_otableDB & parameter set store to queue
+        if !new_inside_list.empty?
+          next_sets = generate_next_search_area(@generation_queue[index][:or_ids], new_inside_list)
+          next_sets.each{|set|
+            if !set.empty?
+              h = generate_id_data_list(set, "inside", @generation_queue[index][:priority], @parameters.keys)
+              @run_id_queue.push(h)
+            end
+          }
+        end
+        if !new_outside_list.empty?
+          next_sets = generate_next_search_area(@generation_queue[index][:or_ids], new_outside_list)
+          next_sets.each{|set|
+            if !set.empty?
+              h = generate_id_data_list(set, "outside", @generation_queue[index][:priority], @parameters.keys)
+              @run_id_queue.push(h)
+            end
+          }
+        end
+
+        if @generation_queue[index][:toward] == "outside"
+          if @generation_queue[index][:search_params].empty?
+            @generation_queue.delete_at(index)
+          # else
+          #   @generation_queue.push(@generation_queue.shift)
+          end
+        else
+          @generation_queue.delete_at(index)
+        end
+
+        #deletion
+        # if @generation_queue[index][:toward] != "outside"
+        #   @generation_queue.delete_at(index)
+        # elsif 
+        # end
+
+        @eop = true if @run_id_queue.empty? && @f_test_queue.empty? && @generation_queue.empty?
       end
 
 
@@ -641,10 +745,11 @@ module Practis
       end
 
       # 
-      def greedy_selection(f_result)
+      def greedy_selection(id_set)
         params = []
-        name, max_fv = f_result.max_by{ |k, v| v[:f_value] }
-        f_result.each{ |k, v|
+        selections = id_set[:f_result].select{|k,v| id_set[:search_params].include?(k.to_s)}
+        name, max_fv = selections.max_by{ |k, v| v[:f_value] }
+        selections.each{ |k, v|
           params.push(k) if max_fv[:f_value] == v[:f_value]
         }
 
@@ -699,7 +804,7 @@ module Practis
       end
 
       #
-      def generate_list_of_outside(orthogonal_rows, name, f_value)
+      def generate_list_of_outside(orthogonal_rows, name, f_value, index=0)
         new_outside_list = []
         new_param, exist_ids = DOEParameterGenerator.generate_outside(
                                 @sql_connector, orthogonal_rows, @parameters,# @sql_connector, old_out_rows, @parameters,
@@ -707,9 +812,7 @@ module Practis
         if !new_param[:param][:paramDefs].empty? #&& !new_param[:param][:paramDefs].nil?
           new_outside_list.push(new_param)
           p "debug"
-          pp @f_test_queue[0]
           pp new_param[:param][:name]
-          @f_test_queue[0][:search_params].delete(new_param[:param][:name])
         end
         if !exist_ids.empty?
           exist_ids.each{ |set|
@@ -800,7 +903,19 @@ module Practis
       end
 
       # 
-      def check_duplicate_f_test
+      def check_duplicate_f_test(chk)
+        condition = [:eq, [:field, 'id_combination']]
+        condition.push(chk[:or_ids].sort.to_s)
+        retval = @sql_connector.read_record(:f_test, condition)
+        if retval.size > 0
+          return true
+        else
+          return false
+        end
+      end
+
+      # 
+      def check_duplicate_f_test_tmp
         greedy = rand < @epsilon ? false : true
         # add
         # index = greedy ? 0 : rand(@f_test_queue.size)
@@ -808,8 +923,9 @@ module Practis
         index = greedy ? 0 : rand(tmp_queue.size)
 
         # @f_test_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } if greedy #sorting 
-        tmp_queue.sort!{ |x,y| y[:priority] <=> x[:priority] } if greedy #sorting 
-
+         if greedy #sorting 
+          tmp_queue.sort!{ |x,y| y[:priority] <=> x[:priority] }
+        end
 
         retval = []
         max_cout = 10000 # loop check

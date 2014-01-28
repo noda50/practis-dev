@@ -176,6 +176,10 @@ module Practis
         @scheduler.do_variance_analysis if !@scheduler.eop
       }
 
+      @mutexAllocateParameter.synchronize{
+        @scheduler.do_parameter_generation if !@scheduler.eop
+      }
+
       debug(cluster_tree.to_s)
       info("not allocated parameters: #{@paramDefSet.get_available}, " +
            "paramValueSet pool: #{@paramValueSet_pool.length}, " + 
