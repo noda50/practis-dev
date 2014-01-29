@@ -454,12 +454,10 @@ module Practis
             if count >= @run_id_queue[0][:or_ids].size * @unassigned_total_size
               # dup check
               chk = @run_id_queue.shift
-              dup = @f_test_queue.find{|test| test[:or_ids].sort == chk[:or_ids].sort }
-              if dup.nil?
-                @f_test_queue.push(chk)
-              else
-                @f_test_queue.push(chk) if check_duplicate_f_test(chk)
-              end              
+              # dup = @f_test_queue.find{|test| test[:or_ids].sort == chk[:or_ids].sort }
+              if @f_test_queue.empty? ||  @f_test_queue.find{|test| test[:or_ids].sort == chk[:or_ids].sort }.nil?#dup.nil?
+                @f_test_queue.push(chk) if !check_duplicate_f_test(chk)
+              end
               # dup check (end)
               return nil
             elsif count == 0
@@ -535,8 +533,8 @@ module Practis
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
-        p "variance analysis: f-test queue: "# debug("variance analysis: f-test queue: ")
-        pp @f_test_queue.map{|q| q[:or_ids]} # debug("#{pp @f_test_queue.map{|q| q[:or_ids]}}")
+        debug("variance analysis: f-test queue: ") # p "variance analysis: f-test queue: "
+        debug("#{pp @f_test_queue.map{|q| q[:or_ids]}}") # pp @f_test_queue.map{|q| q[:or_ids]} 
 
         # analysis
         result_set = []
@@ -561,15 +559,18 @@ module Practis
         f_result = @f_test.run(result_set, parameter_keys, @sql_connector, @f_test_queue[0])
         @f_test_queue[0][:f_result] = f_result
         tested_sets = @f_test_queue.shift
-        @generation_queue.push(tested_sets)
+        if @generation_queue.empty? || @generation_queue.find{|v| v[:or_ids].sort == tested_sets[:or_ids]}.nil?
+          @generation_queue.push(tested_sets) #if !check_duplicate_f_test(tested_sets)
+        end
         return true
       end
 
       # parameter set generation
       def do_parameter_generation
         return false if @generation_queue.empty?
-        p "parameter generation: generation queue" # debug("parameter generation: generation queue")
-        pp @generation_queue.map{|q| q[:or_ids]} # debug("#{pp @generation_queue.map{|q| q[:or_ids]}}")
+        debug("parameter generation: generation queue") #p "parameter generation: generation queue" 
+        debug("#{pp @generation_queue.map{|q| q[:or_ids]}}") #pp @generation_queue.map{|q| q[:or_ids]} 
+        
         # select index
         # greedy = rand < @epsilon ? false : true
         index = 0 #greedy ? 0 : rand(@generation_queue.size)
@@ -578,7 +579,7 @@ module Practis
         condition = [:or]
         condition += @generation_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
-        check_orthogonal(orthogonal_rows)
+        check_orthogonal(orthogonal_rows) # for debug
         new_inside_list = generate_list_of_inside(orthogonal_rows, @generation_queue[index][:f_result])
         
         # outside
@@ -597,32 +598,16 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "inside", @generation_queue[index][:priority], @parameters.keys)
-              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                p "debug: new inside list"
-                pp new_inside_list
-                p "new param: #{pp new_param}"
-                p "orthogonal"
-                pp orthogonal_rows
-                p "new area:"
-                pp h
-                exit(0)
-              end
-
-              if h[:or_ids].sort == [18, 20, 26, 28]
-                p "error: new area"
-                pp orthogonal_rows
-                pp h
-                pp next_sets
-
-                next_sets.each{|set|
-                  debug_cond = [:or]
-                  debug_cond += set.map{|i| [:eq, [:field, "id"], i]}
-                  pp @sql_connector.read_record(:orthogonal, debug_cond)
-                }
-
-                exit(0)
-              end
-
+              # if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+              #   p "debug: new inside list"
+              #   pp new_inside_list
+              #   p "new param: #{pp new_param}"
+              #   p "orthogonal"
+              #   pp orthogonal_rows
+              #   p "new area:"
+              #   pp h
+              #   exit(0)
+              # end
               @run_id_queue.push(h)
             end
           }
@@ -632,23 +617,16 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "outside", @generation_queue[index][:priority], @parameters.keys)
-              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                p "debug: new out list"
-                pp new_outside_list
-                p "new param: #{pp new_param}"
-                p "orthogonal"
-                pp orthogonal_rows
-                p "new area: "
-                pp h
-                exit(0)
-              end
-              if h[:or_ids].sort == [18, 20, 26, 28]
-                p "error"
-                pp orthogonal_rows
-                pp h
-                pp next_sets
-                exit(0)
-              end
+              # if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+              #   p "debug: new out list"
+              #   pp new_outside_list
+              #   p "new param: #{pp new_param}"
+              #   p "orthogonal"
+              #   pp orthogonal_rows
+              #   p "new area: "
+              #   pp h
+              #   exit(0)
+              # end
               @run_id_queue.push(h)
             end
           }
@@ -730,24 +708,15 @@ module Practis
                 if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
                   h = generate_id_data_list(set, "inside", f_result[k][:f_value], @parameters.keys)
 
-                  if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                    p "debug: existed inside "
-                    p "exist area: #{exist_ids}"
-                    p "new param: #{pp new_param}"
-                    p "orthogonal"
-                    pp orthogonal_rows
-                    pp h
-                    exit(0)
-                  end
-
-                  if h[:or_ids].sort == [18, 20, 26, 28]
-                    p "error: in exist area"
-                    pp orthogonal_rows
-                    pp h
-                    pp exist_ids
-                    exit(0)
-                  end
-
+                  # if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                  #   p "debug: existed inside "
+                  #   p "exist area: #{exist_ids}"
+                  #   p "new param: #{pp new_param}"
+                  #   p "orthogonal"
+                  #   pp orthogonal_rows
+                  #   pp h
+                  #   exit(0)
+                  # end
                   @run_id_queue.push(h)
                 end
               }
@@ -775,23 +744,15 @@ module Practis
             chk_cond.push(set.sort.to_s)
             if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
               h = generate_id_data_list(set, "outside", f_value, @parameters.keys)
-              if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                p "debug existed outside "
-                p "exist area: #{exist_ids}"
-                p "new param: #{pp new_param}"
-                p "orthogonal"
-                pp orthogonal_rows
-                pp h
-                exit(0)
-              end
-
-              if h[:or_ids].sort == [18, 20, 26, 28]
-                p "error"
-                pp orthogonal_rows
-                pp h
-                exit(0)
-              end
-
+              # if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+              #   p "debug existed outside "
+              #   p "exist area: #{exist_ids}"
+              #   p "new param: #{pp new_param}"
+              #   p "orthogonal"
+              #   pp orthogonal_rows
+              #   pp h
+              #   exit(0)
+              # end
               @run_id_queue.push(h)
             end            
           }
@@ -901,6 +862,7 @@ module Practis
           return -1
         end
 
+        
         old_level = @parameters[parameter[:name]][:paramDefs].size #old_bits.length
         old_digit_num = orthogonal_rows[0][parameter[:name]].size
         digit_num = log2(old_level + parameter[:paramDefs].size).ceil
@@ -947,23 +909,17 @@ module Practis
             add_parameters.reverse!
           end
         when "inside"
-          pp @parameters[name][:correspond]
-          pp add_parameters
-          digit_num_of_minus_side = @parameters[name][:correspond].max_by { |item|
-            (item[1] < add_parameters.min) ? item[1] : -1
-          }[0]
+          digit_num_of_minus_side = @parameters[name][:correspond].select{|k,v|
+              v < add_parameters.min
+            }.max_by{|_, v| v}
+          digit_num_of_minus_side = digit_num_of_minus_side[0]  
           if digit_num_of_minus_side[digit_num_of_minus_side.size-1] == "0"
-            # add_parameters.reverse!
-            # add_parameters.sort_by!{|v| -v }
-            # min_bit = "1"
             count = 1
             add_parameters.each{|v| 
               h[v] = (count % 2).to_s
               count += 1
             }
           else
-            # add_parameters.sort!
-            # min_bit = "0"
             count = 0
             add_parameters.each{|v| 
               h[v] = (count % 2).to_s
@@ -1014,7 +970,6 @@ module Practis
               pp @parameters[name]
               exit(0)
             end
-            
           end
         else
           error("new parameter could not be assigned to bit on orthogonal table")
@@ -1052,10 +1007,11 @@ module Practis
               @parameters[name][:correspond][bit] = param
               paramDefs_hash.delete(param)
             else
-              p "debug"
-              p paramDefs_hash
-              p top += 1
-              p "bit:#{bit}, last_str:#{bit[bit.size-1]}"
+              # p "debug"
+              # p paramDefs_hash
+              # p top += 1
+              # p "bit:#{bit}, last_str:#{bit[bit.size-1]}"
+              # pp @parameters[name]
               # exit(0) if top > 100
             end 
           end
