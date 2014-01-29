@@ -574,7 +574,7 @@ module Practis
         # select index
         # greedy = rand < @epsilon ? false : true
         index = 0 #greedy ? 0 : rand(@generation_queue.size)
-        @generation_queue.sort_by{|v| v[:priority]}
+        @generation_queue.sort_by{|v| -v[:priority]}
 
         # siginificant set is searched inside 
         condition = [:or]
