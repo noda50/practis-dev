@@ -1008,11 +1008,10 @@ module Practis
               @parameters[name][:correspond][bit] = param
               paramDefs_hash.delete(param)
             else
-              # p "debug"
-              # p paramDefs_hash
-              # p top += 1
-              # p "bit:#{bit}, last_str:#{bit[bit.size-1]}"
-              # pp @parameters[name]
+              top += 1
+              debug("#{paramDefs_hash}, top_count: #{top}")
+              debug("bit:#{bit}, last_str:#{bit[bit.size-1]}")
+              debug("#{pp @parameters[name]}")
               # exit(0) if top > 100
             end 
           end
