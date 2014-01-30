@@ -572,9 +572,19 @@ module Practis
         debug("#{pp @generation_queue.map{|q| q[:or_ids]}}") #pp @generation_queue.map{|q| q[:or_ids]} 
         
         # select index
-        # greedy = rand < @epsilon ? false : true
-        index = 0 #greedy ? 0 : rand(@generation_queue.size)
-        @generation_queue.sort_by{|v| -v[:priority]}
+        greedy = rand < @epsilon ? false : true #true
+        index = greedy ? 0 : rand(@generation_queue.size)
+        # @generation_queue.sort_by!{|v| -v[:priority]}
+        @generation_queue.sort!{|a, b|
+          amax, bmax = -1.0, -1.0
+          a[:f_result].each_value{|v|
+            amax = (v[:f_value] > amax) ? v[:f_value] : amax
+          }
+          b[:f_result].each_value{|v|
+            bmax = (v[:f_value] > bmax) ? v[:f_value] : bmax
+          }
+          bmax <=> amax
+        } if greedy
 
         # siginificant set is searched inside 
         condition = [:or]
