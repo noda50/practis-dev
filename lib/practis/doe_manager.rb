@@ -173,7 +173,9 @@ module Practis
       end
 
       @mutexAllocateParameter.synchronize{
-        @scheduler.do_variance_analysis if !@scheduler.eop
+        while @scheduler.get_analysis_size > 0
+          @scheduler.do_variance_analysis if !@scheduler.eop
+        end
       }
 
       @mutexAllocateParameter.synchronize{

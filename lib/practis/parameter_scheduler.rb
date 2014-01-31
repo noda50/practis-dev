@@ -530,6 +530,14 @@ module Practis
         return @v_index
       end
 
+      def get_analysis_size
+        return @f_test_queue.size
+      end
+
+      def get_generator_size
+        return @generation_queue.size
+      end
+
       #
       def do_variance_analysis
         return false if @f_test_queue.empty?
