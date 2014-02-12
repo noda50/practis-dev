@@ -404,7 +404,7 @@ module Practis
         @generation_queue = []
         @current_qcounter = 0
 
-        @epsilon = 0.2
+        @epsilon = 0.4
         srand(0)
         
         @parameters = {}
@@ -585,11 +585,15 @@ module Practis
         # @generation_queue.sort_by!{|v| -v[:priority]}
         @generation_queue.sort!{|a, b|
           amax, bmax = -1.0, -1.0
-          a[:f_result].each_value{|v|
-            amax = (v[:f_value] > amax) ? v[:f_value] : amax
+          a[:f_result].each{|k, v|
+            if a[:search_params].include?(k)
+              amax = (v[:f_value] > amax) ? v[:f_value] : amax
+            end
           }
-          b[:f_result].each_value{|v|
-            bmax = (v[:f_value] > bmax) ? v[:f_value] : bmax
+          b[:f_result].each{|k, v|
+            if b[:search_params].include?(k)
+              bmax = (v[:f_value] > bmax) ? v[:f_value] : bmax
+            end
           }
           bmax <=> amax
         } if greedy
