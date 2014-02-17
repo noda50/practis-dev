@@ -9,7 +9,7 @@
           </condition>
         </conditions>
       </parameter> -->
-      <parameter  name="property" data_type="Integer">
+      <!-- <parameter  name="property" data_type="Integer">
         <conditions>
           <condition type="include" range_type="range">
             <start>0</start>
@@ -17,16 +17,154 @@
             <step>1</step>
           </condition>
         </conditions>
-      </parameter>
-      <!-- <parameter name="v1" data_type="Float">
+      </parameter> -->
+      <parameter name="z1_weight" data_type="Float">
         <conditions>
           <condition type="include" range_type="range">
-            <start></start>
-            <end></end>
-            <step></step>
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
           </condition>
         </conditions>
-      </parameter> -->
+      </parameter>
+      <parameter name="z1_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z2_weight" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z2_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z3_weight" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z3_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z4_weight" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z4_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z5_weight" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z5_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z6_weight" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="z6_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="o5_weight" data_type="Float">
+        <conditions>
+          <condition type="include" range_type="range">
+            <start>0.5</start>
+            <end>0.6</end>
+            <step>0.1</step>
+          </condition>
+        </conditions>
+      </parameter>
+      <parameter name="o5_prior_exit" data_type="String">
+        <conditions>
+          <condition type="include" range_type="list">
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
+            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
+            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+          </condition>
+        </conditions>
+      </parameter>
       <parameter name="seed" data_type="Integer"> 
         <conditions>
           <condition type="include" range_type="range">

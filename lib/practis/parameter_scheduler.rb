@@ -681,6 +681,20 @@ module Practis
         return h
       end
 
+      #
+      def select_widley
+        # select min or max from each axis
+        edge = []
+        @parameters.each{|name,prm|
+          if rand < 0.5
+            edge.push({name => @parameters[name][:correspond][prm[:paramDefs].min]})
+          else
+            edge.push({name => @parameters[name][:correspond][prm[:paramDefs].max]})
+          end
+        }
+
+      end
+
       # 
       def greedy_selection(id_set)
         params = []

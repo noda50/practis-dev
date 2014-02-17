@@ -1,13 +1,111 @@
 {
-	"property" : {
-		"is_assigned" : false,
-		"bottom" : -10.0,
-		"top" : 10.0,
-		"step_size" : 0.1,
+	// "property" : {
+	// 	"is_assigned" : false,
+	// 	"bottom" : -10.0,
+	// 	"top" : 10.0,
+	// 	"step_size" : 0.1,
+	// 	"num_decimal" : 5
+	// },
+	"z1_weight" : {
+		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
 		"num_decimal" : 5
 	},
-	"seed" : {
+	"z1_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"z2_weight" : {
 		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
+		"num_decimal" : 5
+	},
+	"z2_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"z3_weight" : {
+		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
+		"num_decimal" : 5
+	},
+	"z3_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"z4_weight" : {
+		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
+		"num_decimal" : 5
+	},
+	"z4_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"z5_weight" : {
+		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
+		"num_decimal" : 5
+	},
+	"z5_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"z6_weight" : {
+		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
+		"num_decimal" : 5
+	},
+	"z6_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"o5_weight" : {
+		"is_assigned" : true,
+		"bottom" : 0.333333333333,
+		"top" : 1.0,
+		"step_size" : 0.01,
+		"num_decimal" : 5
+	},
+	"o5_prior_exit" : {
+		"is_assigned" : false,
+		"bottom" : 0,
+		"top" : 0,
+		"step_size" : 0,
+		"num_decimal" : 0
+	},
+	"seed" : {
+		"is_assigned" : false,
 		"bottom" : 0,
 		"top" : 10,
 		"step_size" : 1,

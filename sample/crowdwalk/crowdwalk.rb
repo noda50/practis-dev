@@ -9,6 +9,27 @@ require 'practis/net'
 require 'practis/database'
 require 'pp'
 
+#
+def istEvacuator(div=1.0/3.0, list, total=100)
+  if div.nil? || div < (1.0/3.0)
+    div = 1.0/3.0
+  else
+    div = div.to_f
+  end
+
+  prefer = (total*div).ceil
+  rest = total - prefer
+
+  dist = [prefer, (rest*0.5).to_i, (rest*0.5).to_i]
+  dif = total - dist.inject(:+)
+
+  dist[1] += dif if (dif > 0) && (dif <= (prefer - (rest*0.5).to_i ))
+  ret = {}
+  dist.each_with_index{|v,i| ret[list[i]] = v }
+  return ret
+end
+
+
 # This code is a sample to execute an executable on practis. The functionality
 # quite simply calcuates exp(-(x ^ 2 + y ^ 2)).
 
@@ -32,20 +53,39 @@ end
 # you don't want to be disturbed by them, you can run Java or Python program
 # from here using "system" such as "system('java -cp . yourprog.jar')".
 
-a, seed = nil, nil
-# z1_a, z1_b, z1_c = nil, nil, nil
-# z2_a, z2_b, z2_c = nil, nil, nil
-# z3_a, z3_b, z3_c = nil, nil, nil
-# z4_a, z4_b, z4_c = nil, nil, nil
-# z5_a, z5_b, z5_c = nil, nil, nil
-# z6_a, z6_b, z6_c = nil, nil, nil
-# o5_a, o5_b, o5_c = nil, nil, nil
+z1, z1l, = nil, nil 
+z2, z2l, = nil, nil 
+z3, z3l, = nil, nil 
+z4, z4l, = nil, nil 
+z5, z5l, = nil, nil 
+z6, z6l, = nil, nil 
+o5, o5l, = nil, nil 
+seed = nil
 
 # You can get parameters from argument_hash. This example provides two parameter
 # such as "a" and "b".
 argument_hash[:parameter_set].each do |parameter|
   case parameter[:name]
-  when "property" then a = parameter[:value]
+  when "z1_weight" then z1 = parameter[:value].to_f
+  when "z1_prior_exit" then z1l = parameter[:value].to_a
+  when "z2_weight" then z2 = parameter[:value].to_f
+  when "z1_prior_exit" then z2l = parameter[:value].to_a
+  when "z3_weight" then z3 = parameter[:value].to_f
+  when "z1_prior_exit" then z3l = parameter[:value].to_a
+  when "z4_weight" then z4 = parameter[:value].to_f
+  when "z1_prior_exit" then z4l = parameter[:value].to_a
+  when "z5_weight" then z5 = parameter[:value].to_f
+  when "z1_prior_exit" then z5l = parameter[:value].to_a
+  when "z6_weight" then z6 = parameter[:value].to_f
+  when "z1_prior_exit" then z6l = parameter[:value].to_a
+  when "o5_weight" then o5 = parameter[:value].to_f
+  when "z1_prior_exit" then o5l = parameter[:value].to_a 
+  when "seed" then seed = parameter[:value].to_i
+
+  #
+  # when "property" then a = parameter[:value]
+
+  #
   # when "z1_a" then z1_a = parameter[:value].to_f
   # when "z1_b" then z1_b = parameter[:value].to_f
   # when "z2_a" then z2_a = parameter[:value].to_f
@@ -60,17 +100,9 @@ argument_hash[:parameter_set].each do |parameter|
   # when "z6_b" then z6_b = parameter[:value].to_f
   # when "o5_a" then o5_a = parameter[:value].to_f
   # when "o5_b" then o5_b = parameter[:value].to_f
-  when "seed" then seed = parameter[:value].to_i
+  
   end
 end
-
-# z1_c = (1.0 - (z1_a + z1_b))
-# z2_c = (1.0 - (z1_a + z1_b))
-# z3_c = (1.0 - (z1_a + z1_b))
-# z4_c = (1.0 - (z1_a + z1_b))
-# z5_c = (1.0 - (z1_a + z1_b))
-# z6_c = (1.0 - (z1_a + z1_b))
-# o5_c = (1.0 - (z1_a + z1_b))
 
 
 # === pre-process ===
@@ -78,6 +110,10 @@ require './work/bin/file_generator'
 uid =  argument_hash[:uid]
 
 dir = "work/bin/sample/kamakura.practis"
+
+
+
+
 test_ratio = [0.1, 0.8, 0.1,
               0.05, 0.9, 0.05,
               0.2, 0.3, 0.5,
@@ -98,7 +134,7 @@ include Math
 djava = '-Djava.library.path=work/bin/libs/linux/amd64'
 cpath = '-cp work/bin/build/libs/netmas.jar:work/bin/build/libs/netmas-pathing.jar'
 command = 'java -Xms3072M -Xms3072M ' + djava + ' ' + cpath + ' main cui'
-command = command + ' ' + "work/bin/sample/kamakura.practis/properties_#{a}.xml _output_#{uid}"
+command = command + ' ' + "work/bin/sample/kamakura.practis/properties_#{uid}.xml _output_#{uid}"
 # value = `#{command}`.chomp.to_f
 # debugpath = ' > ~/cw_log.txt'
 # command = command + debugpath
