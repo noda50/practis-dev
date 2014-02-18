@@ -169,7 +169,7 @@
         <conditions>
           <condition type="include" range_type="range">
             <start>0</start>
-            <end>4</end>
+            <end>2</end>
             <step>1</step>
           </condition>
         </conditions>

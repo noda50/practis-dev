@@ -10,23 +10,33 @@ require 'practis/database'
 require 'pp'
 
 #
-def istEvacuator(div=1.0/3.0, list, total=100)
-  if div.nil? || div < (1.0/3.0)
-    div = 1.0/3.0
-  else
-    div = div.to_f
-  end
+def createEvacuator(hash=nil,dir,uid=0)
+  return nil if hash.nil?
+    to_csv = []
+    hash.each{|k, v|
+      exits = v["exit_order"].split(',')
+      div = v["ratio"].to_f
+      div = 1.0/3.0 if div < 1.0/3.0
 
-  prefer = (total*div).ceil
-  rest = total - prefer
+      prefer = (v["total"].to_i*div).ceil
+      rest = v["total"].to_i  - prefer
 
-  dist = [prefer, (rest*0.5).to_i, (rest*0.5).to_i]
-  dif = total - dist.inject(:+)
+      dist = [prefer, (rest*0.5).to_i, (rest*0.5).to_i]
+      dif = v["total"].to_i - dist.inject(:+)
+      dist[1] += dif if (dif > 0) && (dif <= (prefer - (rest*0.5).to_i ))
 
-  dist[1] += dif if (dif > 0) && (dif <= (prefer - (rest*0.5).to_i ))
-  ret = {}
-  dist.each_with_index{|v,i| ret[list[i]] = v }
-  return ret
+      tmplt = ["TIMEEVERY",k,"18:00:00","18:00:00",1,1]
+      
+      dist.each_with_index{|v,i|
+        arr = tmplt + [v, "DENSITY", exits[i]]
+        to_csv.push(arr)
+      }
+    }
+
+    filename = dir + "/gen_#{uid}.csv"
+    CSV.open(filename, "w") { |csv|
+      to_csv.each {|arr| csv << arr }
+    }
 end
 
 
@@ -67,19 +77,19 @@ seed = nil
 argument_hash[:parameter_set].each do |parameter|
   case parameter[:name]
   when "z1_weight" then z1 = parameter[:value].to_f
-  when "z1_prior_exit" then z1l = parameter[:value].to_a
+  when "z1_prior_exit" then z1l = parameter[:value]
   when "z2_weight" then z2 = parameter[:value].to_f
-  when "z1_prior_exit" then z2l = parameter[:value].to_a
+  when "z1_prior_exit" then z2l = parameter[:value]
   when "z3_weight" then z3 = parameter[:value].to_f
-  when "z1_prior_exit" then z3l = parameter[:value].to_a
+  when "z1_prior_exit" then z3l = parameter[:value]
   when "z4_weight" then z4 = parameter[:value].to_f
-  when "z1_prior_exit" then z4l = parameter[:value].to_a
+  when "z1_prior_exit" then z4l = parameter[:value]
   when "z5_weight" then z5 = parameter[:value].to_f
-  when "z1_prior_exit" then z5l = parameter[:value].to_a
+  when "z1_prior_exit" then z5l = parameter[:value]
   when "z6_weight" then z6 = parameter[:value].to_f
-  when "z1_prior_exit" then z6l = parameter[:value].to_a
+  when "z1_prior_exit" then z6l = parameter[:value]
   when "o5_weight" then o5 = parameter[:value].to_f
-  when "z1_prior_exit" then o5l = parameter[:value].to_a 
+  when "z1_prior_exit" then o5l = parameter[:value] 
   when "seed" then seed = parameter[:value].to_i
 
   #
@@ -107,23 +117,67 @@ end
 
 # === pre-process ===
 require './work/bin/file_generator'
-uid =  argument_hash[:uid]
 
+# default (7,328 persons)
+zaimoku, ohmachi5 = [1005, 957, 1479, 643, 1385, 1148], 711
+# # 10,000 persons
+# zaimoku, ohmachi5 = [1371, 1306, 2018, 878, 1890, 1567], 970
+# # 7,500 persons
+# zaimoku, ohmachi5 = [1029, 979, 1514, 658, 1417, 1175], 728
+# # 5,000 persons
+# zaimoku, ohmachi5 = [686, 653, 1009, 439, 945, 783], 485
+# # 2,500 persons
+# zaimoku, ohmachi5 = [343, 326, 505, 219, 472, 392], 243 
+# # each 10 persons
+# zaimoku, ohmachi5 = [10, 10, 10, 10, 10, 10], 10
+
+uid =  argument_hash[:uid]
 dir = "work/bin/sample/kamakura.practis"
 
 
+h = {
+    "ZAIMOKU1" => {
+      "total" => zaimoku[0],
+      "exit_order" => z1l,
+      "ratio" => z1
+    },
+    "ZAIMOKU2" => {
+      "total" => zaimoku[1],
+      "exit_order" => z2l,
+      "ratio" => z2
+    },
+    "ZAIMOKU3" => {
+      "total" => zaimoku[2],
+      "exit_order" => z3l,
+      "ratio" => z3
+    },
+    "ZAIMOKU4" => {
+      "total" => zaimoku[3],
+      "exit_order" => z4l,
+      "ratio" => z4
+    },
+    "ZAIMOKU5" => {
+      "total" => zaimoku[4],
+      "exit_order" => z5l,
+      "ratio" => z5
+    },
+    "ZAIMOKU6" => {
+      "total" => zaimoku[5],
+      "exit_order" => z6l,
+      "ratio" => z6
+    },
+    "OHMACHI5" => {
+      "total" => ohmachi5,
+      "exit_order" => o5l,
+      "ratio" => o5
+    }
+  }
 
 
-test_ratio = [0.1, 0.8, 0.1,
-              0.05, 0.9, 0.05,
-              0.2, 0.3, 0.5,
-              0.4, 0.5, 0.1,
-              0.6, 0.1, 0.3,
-              0.01, 0.45, 0.54,
-              0.2, 0.7, 0.1]
 FileGenerator.generate_scenario(dir,"scenario.csv", uid)
 FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", uid)
-FileGenerator.generate_gen(dir, "gen.csv", test_ratio, uid)
+# FileGenerator.generate_gen(dir, "gen.csv", test_ratio, uid)
+createEvacuator(h, dir, uid)
 FileGenerator.copy_pollution(dir,"output_pollution.csv", uid)
 FileGenerator.generate_property(dir, "properties.xml", "2014_0109_kamakura11-3",
                                 "gen","output_pollution", uid, "scenario", seed)
@@ -133,7 +187,7 @@ FileGenerator.generate_property(dir, "properties.xml", "2014_0109_kamakura11-3",
 include Math
 djava = '-Djava.library.path=work/bin/libs/linux/amd64'
 cpath = '-cp work/bin/build/libs/netmas.jar:work/bin/build/libs/netmas-pathing.jar'
-command = 'java -Xms3072M -Xms3072M ' + djava + ' ' + cpath + ' main cui'
+command = 'java -Xms1024M -Xms1024M ' + djava + ' ' + cpath + ' main cui'
 command = command + ' ' + "work/bin/sample/kamakura.practis/properties_#{uid}.xml _output_#{uid}"
 # value = `#{command}`.chomp.to_f
 # debugpath = ' > ~/cw_log.txt'
