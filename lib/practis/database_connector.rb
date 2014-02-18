@@ -45,6 +45,8 @@ module Practis
             error("type field requires any types. #{paramDef}")
             next
           end
+          # [2014/02/18 H-Matsushima] when type of field is text (String)
+          type_field = "Varchar(255)" if type_field == "text"
           if @database_parser.add_field(
               config.read("#{DB_PARAMETER}_database_name"),
               config.read("#{DB_PARAMETER}_database_tablename"),

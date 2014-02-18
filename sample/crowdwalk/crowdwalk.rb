@@ -9,6 +9,7 @@ require 'practis/net'
 require 'practis/database'
 require 'pp'
 
+
 #
 def createEvacuator(hash=nil,dir,uid=0)
   return nil if hash.nil?
@@ -173,7 +174,7 @@ h = {
     }
   }
 
-
+p "generate file"
 FileGenerator.generate_scenario(dir,"scenario.csv", uid)
 FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", uid)
 # FileGenerator.generate_gen(dir, "gen.csv", test_ratio, uid)
