@@ -175,7 +175,7 @@ include Math
 djava = '-Djava.library.path=work/bin/libs/linux/amd64'
 cpath = '-cp work/bin/build/libs/netmas.jar:work/bin/build/libs/netmas-pathing.jar'
 command = 'java -Xms1024M -Xms1024M ' + djava + ' ' + cpath + ' main cui'
-command = command + ' ' + "work/bin/sample/kamakura.practis/properties_#{uid}.xml _output_#{uid}"
+command = command + ' ' + "work/bin/sample/kamakura.practis/#{uid}/properties_#{uid}.xml _output_#{uid}"
 # value = `#{command}`.chomp.to_f
 # debugpath = ' > ~/cw_log.txt'
 # command = command + debugpath
