@@ -30,12 +30,11 @@
       <parameter name="z1_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>
@@ -51,12 +50,11 @@
       <parameter name="z2_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>
@@ -72,12 +70,11 @@
       <parameter name="z3_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>
@@ -93,12 +90,11 @@
       <parameter name="z4_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>
@@ -114,12 +110,11 @@
       <parameter name="z5_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>
@@ -135,12 +130,11 @@
       <parameter name="z6_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>
@@ -156,12 +150,11 @@
       <parameter name="o5_prior_exit" data_type="String">
         <conditions>
           <condition type="include" range_type="list">
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,KAMAKURA_Jr_HIGH_EXIT"</list_values>
-            <list_values>"OLD_MUNICIPAL_HOUSING_EXIT,KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT,OLD_MUNICIPAL_HOUSING_EXIT"</list_values>
-            <list_values>"KAMAKURA_Jr_HIGH_EXIT,OLD_MUNICIPAL_HOUSING_EXIT,NAGHOSHI_CLEAN_CENTER_EXIT"</list_values>
+            <list_values>
+              <list_value>NAGHOSHI_CLEAN_CENTER_EXIT</list_value>
+              <list_value>OLD_MUNICIPAL_HOUSING_EXIT</list_value>
+              <list_value>KAMAKURA_Jr_HIGH_EXIT</list_value>
+            </list_values>
           </condition>
         </conditions>
       </parameter>

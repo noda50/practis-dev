@@ -10,37 +10,6 @@ require 'practis/database'
 require 'pp'
 
 
-#
-def createEvacuator(hash=nil,dir,uid=0)
-  return nil if hash.nil?
-    to_csv = []
-    hash.each{|k, v|
-      exits = v["exit_order"].split(',')
-      div = v["ratio"].to_f
-      div = 1.0/3.0 if div < 1.0/3.0
-
-      prefer = (v["total"].to_i*div).ceil
-      rest = v["total"].to_i  - prefer
-
-      dist = [prefer, (rest*0.5).to_i, (rest*0.5).to_i]
-      dif = v["total"].to_i - dist.inject(:+)
-      dist[1] += dif if (dif > 0) && (dif <= (prefer - (rest*0.5).to_i ))
-
-      tmplt = ["TIMEEVERY",k,"18:00:00","18:00:00",1,1]
-      
-      dist.each_with_index{|v,i|
-        arr = tmplt + [v, "DENSITY", exits[i]]
-        to_csv.push(arr)
-      }
-    }
-
-    filename = dir + "/gen_#{uid}.csv"
-    CSV.open(filename, "w") { |csv|
-      to_csv.each {|arr| csv << arr }
-    }
-end
-
-
 # This code is a sample to execute an executable on practis. The functionality
 # quite simply calcuates exp(-(x ^ 2 + y ^ 2)).
 
@@ -63,7 +32,40 @@ end
 # Of couse, you need not to use this template. Executor just forks a process. If
 # you don't want to be disturbed by them, you can run Java or Python program
 # from here using "system" such as "system('java -cp . yourprog.jar')".
+EXIT_LIST = [ "NAGHOSHI_CLEAN_CENTER_EXIT", 
+              "OLD_MUNICIPAL_HOUSING_EXIT",
+              "KAMAKURA_Jr_HIGH_EXIT" ]
 
+#
+def createEvacuator(hash=nil, dir, uniqid)
+  return nil if hash.nil? || uniqid.nil?
+    to_csv = []
+    hash.each{|k, v|
+      exits = [v["exit_prior"]]
+      exits += EXIT_LIST.select{|a| a != v["exit_prior"]}
+      div = v["ratio"].to_f
+      div = 1.0/3.0 if div < 1.0/3.0
+
+      prefer = (v["total"].to_i*div).ceil
+      rest = v["total"].to_i  - prefer
+
+      dist = [prefer, (rest*0.5).to_i, (rest*0.5).to_i]
+      dif = v["total"].to_i - dist.inject(:+)
+      dist[1] += dif if (dif > 0) && (dif <= (prefer - (rest*0.5).to_i ))
+
+      tmplt = ["TIMEEVERY",k,"18:00:00","18:00:00",1,1]
+      
+      dist.each_with_index{|v,i|
+        arr = tmplt + [v, "DENSITY", exits[i]]
+        to_csv.push(arr)
+      }
+    }
+
+    filename = dir + "/gen_#{uniqid}.csv"
+    CSV.open(filename, "w") { |csv|
+      to_csv.each {|arr| csv << arr }
+    }
+end
 z1, z1l, = nil, nil 
 z2, z2l, = nil, nil 
 z3, z3l, = nil, nil 
@@ -80,38 +82,22 @@ argument_hash[:parameter_set].each do |parameter|
   when "z1_weight" then z1 = parameter[:value].to_f
   when "z1_prior_exit" then z1l = parameter[:value]
   when "z2_weight" then z2 = parameter[:value].to_f
-  when "z1_prior_exit" then z2l = parameter[:value]
+  when "z2_prior_exit" then z2l = parameter[:value]
   when "z3_weight" then z3 = parameter[:value].to_f
-  when "z1_prior_exit" then z3l = parameter[:value]
+  when "z3_prior_exit" then z3l = parameter[:value]
   when "z4_weight" then z4 = parameter[:value].to_f
-  when "z1_prior_exit" then z4l = parameter[:value]
+  when "z4_prior_exit" then z4l = parameter[:value]
   when "z5_weight" then z5 = parameter[:value].to_f
-  when "z1_prior_exit" then z5l = parameter[:value]
+  when "z5_prior_exit" then z5l = parameter[:value]
   when "z6_weight" then z6 = parameter[:value].to_f
-  when "z1_prior_exit" then z6l = parameter[:value]
+  when "z6_prior_exit" then z6l = parameter[:value]
   when "o5_weight" then o5 = parameter[:value].to_f
-  when "z1_prior_exit" then o5l = parameter[:value] 
+  when "o5_prior_exit" then o5l = parameter[:value] 
   when "seed" then seed = parameter[:value].to_i
 
   #
   # when "property" then a = parameter[:value]
 
-  #
-  # when "z1_a" then z1_a = parameter[:value].to_f
-  # when "z1_b" then z1_b = parameter[:value].to_f
-  # when "z2_a" then z2_a = parameter[:value].to_f
-  # when "z2_b" then z2_b = parameter[:value].to_f
-  # when "z3_a" then z3_a = parameter[:value].to_f
-  # when "z3_b" then z3_b = parameter[:value].to_f
-  # when "z4_a" then z4_a = parameter[:value].to_f
-  # when "z4_b" then z4_b = parameter[:value].to_f
-  # when "z5_a" then z5_a = parameter[:value].to_f
-  # when "z5_b" then z5_b = parameter[:value].to_f
-  # when "z6_a" then z6_a = parameter[:value].to_f
-  # when "z6_b" then z6_b = parameter[:value].to_f
-  # when "o5_a" then o5_a = parameter[:value].to_f
-  # when "o5_b" then o5_b = parameter[:value].to_f
-  
   end
 end
 
@@ -139,37 +125,37 @@ dir = "work/bin/sample/kamakura.practis"
 h = {
     "ZAIMOKU1" => {
       "total" => zaimoku[0],
-      "exit_order" => z1l,
+      "exit_prior" => z1l,
       "ratio" => z1
     },
     "ZAIMOKU2" => {
       "total" => zaimoku[1],
-      "exit_order" => z2l,
+      "exit_prior" => z2l,
       "ratio" => z2
     },
     "ZAIMOKU3" => {
       "total" => zaimoku[2],
-      "exit_order" => z3l,
+      "exit_prior" => z3l,
       "ratio" => z3
     },
     "ZAIMOKU4" => {
       "total" => zaimoku[3],
-      "exit_order" => z4l,
+      "exit_prior" => z4l,
       "ratio" => z4
     },
     "ZAIMOKU5" => {
       "total" => zaimoku[4],
-      "exit_order" => z5l,
+      "exit_prior" => z5l,
       "ratio" => z5
     },
     "ZAIMOKU6" => {
       "total" => zaimoku[5],
-      "exit_order" => z6l,
+      "exit_prior" => z6l,
       "ratio" => z6
     },
     "OHMACHI5" => {
       "total" => ohmachi5,
-      "exit_order" => o5l,
+      "exit_prior" => o5l,
       "ratio" => o5
     }
   }
