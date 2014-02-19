@@ -23,7 +23,8 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		if !id.nil?
 			origin = dirname + "/" + filename
 			filename.slice!('.xml')
-			copy = dirname + "/" + filename + "_#{id}.xml"
+			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
+			copy = dirname + "/#{id}/" + filename + "_#{id}.xml"
 			command = "cp #{origin} #{copy}"
 			system(command)
 			if dirname.include?("/")
@@ -41,7 +42,8 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		if !id.nil?
 			origin = dirname + "/" + filename
 			filename.slice!('.csv')
-			copy = dirname + "/" + filename + "_#{id}.csv"
+			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
+			copy = dirname + "/#{id}/" + filename + "_#{id}.csv"
 			command = "cp #{origin} #{copy}"
 			system(command)
 		end
@@ -73,7 +75,8 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			end
 		else
 			filename.slice!(".csv")
-			CSV.open("#{dirname}/"+filename+"_#{id}.csv", "w") do |csv|
+			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
+			CSV.open("#{dirname}/#{id}/"+filename+"_#{id}.csv", "w") do |csv|
 				csv << [1, 0, "START", nil,"18:00", nil, nil]#start"
 			end
 		end
@@ -84,6 +87,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 															gas="gas", id=nil, scenario="scenario", seed=2525)
 		if !id.nil?
 			filename.slice!(".xml")
+			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
 			filename = filename + "_#{id}.xml"
 		end
 		doc = REXML::Document.new
@@ -95,17 +99,29 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		properties.add_element("comment").add_text "NetmasCuiSimulator"
 		properties.add_element("entry", {'key' => "debug"}).add_text "false"
 		properties.add_element("entry", {'key' => "io_handler_type"}).add_text "none"
-		mapfile = dirname + "/" + map
-		mapfile += id.nil? ? ".xml" : "_#{id}.xml"
+		if id.nil?
+			mapfile = dirname + "/" + map + ".xml"
+		else
+			mapfile = dirname + "/#{id}/" + map + ".xml"
+		end
 		properties.add_element("entry", {'key' => "map_file"}).add_text mapfile
-		gasfile = dirname + "/" + gas
-		gasfile += id.nil? ? ".csv" : "_#{id}.csv"
+		if id.nil?
+			gasfile = dirname + "/" + gas + ".csv"
+		else
+			gasfile = dirname + "/#{id}/" + gas + "_#{id}.csv"
+		end
 		properties.add_element("entry", {'key' => "pollution_file"}).add_text gasfile
-		genfile = dirname + "/" + gen
-		genfile += id.nil? ? ".csv" : "_#{id}.csv"
+		if id.nil?
+			genfile = dirname + "/" + gen + ".csv"
+		else
+			genfile = dirname + "/#{id}/" + gen + "_#{id}.csv"
+		end
 		properties.add_element("entry", {'key' => "generation_file"}).add_text genfile
-		scenariofile = dirname + "/" + scenario
-		scenariofile += id.nil? ? ".csv" : "_#{id}.csv"
+		if id.nil?
+			scenariofile = dirname + "/" + scenario + ".csv"
+		else
+			scenariofile = dirname + "/#{id}/" + scenario + "_#{id}.csv"
+		end
 		properties.add_element("entry", {'key' => "scenario_file"}).add_text scenariofile
 		properties.add_element("entry", {'key' => "timer_enable"}).add_text "false"
 		timer_file = dirname + "/" + "timer"

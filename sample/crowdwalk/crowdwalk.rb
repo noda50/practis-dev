@@ -61,7 +61,7 @@ def createEvacuator(hash=nil, dir, uniqid)
       }
     }
 
-    filename = dir + "/gen_#{uniqid}.csv"
+    filename = dir + "/#{uniqid}/gen_#{uniqid}.csv"
     CSV.open(filename, "w") { |csv|
       to_csv.each {|arr| csv << arr }
     }
@@ -120,7 +120,7 @@ zaimoku, ohmachi5 = [1005, 957, 1479, 643, 1385, 1148], 711
 
 uid =  argument_hash[:uid]
 dir = "work/bin/sample/kamakura.practis"
-
+system("-p #{dir}/#{uid}")
 
 h = {
     "ZAIMOKU1" => {
