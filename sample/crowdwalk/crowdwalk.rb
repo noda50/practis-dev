@@ -119,6 +119,7 @@ zaimoku, ohmachi5 = [1005, 957, 1479, 643, 1385, 1148], 711
 # zaimoku, ohmachi5 = [10, 10, 10, 10, 10, 10], 10
 
 uid =  argument_hash[:uid]
+origin = "sample/kamakura.practis"
 dir = "work/bin/sample/kamakura.practis"
 system("-p #{dir}/#{uid}")
 
@@ -162,10 +163,10 @@ h = {
 
 p "generate file"
 FileGenerator.generate_scenario(dir,"scenario.csv", uid)
-FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", uid)
+FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", origin, uid)
 # FileGenerator.generate_gen(dir, "gen.csv", test_ratio, uid)
 createEvacuator(h, dir, uid)
-FileGenerator.copy_pollution(dir,"output_pollution.csv", uid)
+FileGenerator.copy_pollution(dir,"output_pollution.csv", origin, uid)
 FileGenerator.generate_property(dir, "properties.xml", "2014_0109_kamakura11-3",
                                 "gen","output_pollution", uid, "scenario", seed)
 

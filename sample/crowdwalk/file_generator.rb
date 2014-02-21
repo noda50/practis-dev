@@ -19,9 +19,9 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 	end
 
 	# copy map file for crowdwalk
-	def self.copy_map(dirname="2links", filename="map.xml", id=nil)
+	def self.copy_map(dirname="2links", filename="map.xml", origindir="2links", id=nil)
 		if !id.nil?
-			origin = dirname + "/" + filename
+			origin = origindir + "/" + filename
 			filename.slice!('.xml')
 			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
 			copy = dirname + "/#{id}/" + filename + "_#{id}.xml"
@@ -38,9 +38,9 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		end
 	end
 
-	def self.copy_pollution(dirname="2links", filename="pollution.csv", id=nil)
+	def self.copy_pollution(dirname="2links", filename="pollution.csv", origindir="2links", id=nil)
 		if !id.nil?
-			origin = dirname + "/" + filename
+			origin = origindir + "/" + filename
 			filename.slice!('.csv')
 			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
 			copy = dirname + "/#{id}/" + filename + "_#{id}.csv"
