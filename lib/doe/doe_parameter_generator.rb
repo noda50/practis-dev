@@ -7,7 +7,7 @@ module DOEParameterGenerator
   include Practis
   include Math
 
-  @fstep = 1.0
+  @fstep = 0.1
   @istep = 10
   
   # search only "Inside" significant parameter

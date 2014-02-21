@@ -32,9 +32,9 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 				dirname = str.join("\\/")
 			end
 
-			system("sed -i -e \"s/#{dirname}\\/gen/#{dirname}\\/gen_#{id}/g\" #{copy}")
-			system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/output_pollution_#{id}/g\" #{copy}")
-			system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/scenario_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/gen/#{dirname}\\/#{id}\\/gen_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/output_pollution/#{dirname}\\/#{id}\\/output_pollution_#{id}/g\" #{copy}")
+			system("sed -i -e \"s/#{dirname}\\/scenario/#{dirname}\\/#{id}\\/scenario_#{id}/g\" #{copy}")
 		end
 	end
 
@@ -88,7 +88,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		if !id.nil?
 			filename.slice!(".xml")
 			system("mkdir -p #{dirname}/#{id}") if !File.exists?(dirname+"/#{id}")
-			filename = filename + "_#{id}.xml"
+			savePath = dirname + "/#{id}/" + filename + "_#{id}.xml"
 		end
 		doc = REXML::Document.new
 		doc << REXML::XMLDecl.new('1.0', 'UTF-8')
@@ -102,7 +102,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		if id.nil?
 			mapfile = dirname + "/" + map + ".xml"
 		else
-			mapfile = dirname + "/#{id}/" + map + ".xml"
+			mapfile = dirname + "/#{id}/" + map + "_#{id}.xml"
 		end
 		properties.add_element("entry", {'key' => "map_file"}).add_text mapfile
 		if id.nil?
@@ -158,7 +158,7 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		# output = StringIO.new
 		# pretty_formatter.write(doc, File.new(dirname+"/"+filename, "w"))
 		# # pp output.string
-		f = File.new(dirname+"/"+filename, "w")
+		f = File.new(savePath, "w")
 		doc.write(f)
 		f.flush
 	end
