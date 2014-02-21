@@ -11,7 +11,7 @@
     <config name="execution_name" type="String">crowd_walk</config>
 
     <!-- Specify debug level from FATAL, ERROR, WARN, INFO and DEBUG -->
-    <config name="debug_level" type="String">DEBUG</config>
+    <config name="debug_level" type="String">FATAL</config>
 
     <!-- Logger output option -->
     <!-- <config name="debug_output" type="String">STDERR</config> -->
@@ -21,8 +21,8 @@
     <config name="progress_overview_maxgrid" type="Integer">30</config>
 
     <!-- sleep time of Manager every loop -->
-    <config name="loop_sleep_duration" type="Integer">0</config>
-    <config name="message_handler_duration" type="Integer">10</config>
+    <config name="loop_sleep_duration" type="Integer">5</config>
+    <config name="message_handler_duration" type="Integer">20</config>
     <config name="keepalive_duration" type="Integer">90</config>
     <config name="keepalive_expired_duration" type="Integer">270</config>
     <!-- After this timeout seconds, allocating or executing parameter is assumed as timeout.
