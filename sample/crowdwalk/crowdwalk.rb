@@ -119,7 +119,7 @@ zaimoku, ohmachi5 = [1005, 957, 1479, 643, 1385, 1148], 711
 # zaimoku, ohmachi5 = [10, 10, 10, 10, 10, 10], 10
 
 uid =  argument_hash[:uid]
-origin = "sample/kamakura.practis"
+origin = "sample/crowdwalk/kamakura.practis"
 dir = "work/bin/sample/kamakura.practis"
 system("-p #{dir}/#{uid}")
 
