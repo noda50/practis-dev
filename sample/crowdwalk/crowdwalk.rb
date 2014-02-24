@@ -119,8 +119,8 @@ zaimoku, ohmachi5 = [1005, 957, 1479, 643, 1385, 1148], 711
 # zaimoku, ohmachi5 = [10, 10, 10, 10, 10, 10], 10
 
 uid =  argument_hash[:uid]
-origin = "sample/crowdwalk/sample/kamakura.practis"
-dir = "work/bin/sample/kamakura.practis"
+origin = "sample/crowdwalk/sample/kamakura_practis"
+dir = "work/bin/sample/kamakura_practis"
 system("mkdir -p #{dir}/#{uid}")
 
 h = {
@@ -178,7 +178,7 @@ include Math
 djava = '-Djava.library.path=~/Programs/CrowdWalk/netmas/libs/linux/amd64'
 cpath = '-cp ~/Programs/CrowdWalk/netmas/build/libs/netmas.jar:~/Programs/CrowdWalk/netmas/build/libs/netmas-pathing.jar'
 command = 'java -Xms3072M -Xms3072M ' + djava + ' ' + cpath + ' main cui'
-command = command + ' ' + "work/bin/sample/kamakura.practis/#{uid}/properties_#{uid}.xml _output_#{uid}"
+command = command + ' ' + "work/bin/sample/kamakura_practis/#{uid}/properties_#{uid}.xml _output_#{uid}"
 # value = `#{command}`.chomp.to_f
 # debugpath = ' > ~/cw_log.txt'
 # command = command + debugpath
