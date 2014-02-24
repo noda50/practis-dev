@@ -407,8 +407,6 @@ module Practis
         @epsilon = @definitions.key?("epsilon") ? @definitions["epsilon"] : 0.2
         srand(0)
         DOEParameterGenerator.set_step_size(@definitions)
-        DOEParameterGenerator.get_step
-        exit(0)
         
         @parameters = {}
         @total_indexes = []
