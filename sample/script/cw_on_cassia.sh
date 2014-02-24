@@ -12,9 +12,9 @@ node=('cassia00' 'cassia01' 'cassia02' 'cassia03')
 # executor
 for n in ${node[@]}
 do
-  echo "ssh -i ~/.ssh/${n}_rsa ${n}a -f cd ~/Programs/practis-dev ; ~/.rbenv/shims/ruby bin/executor -a ${n}a -m cassia0a -p 20 &> ~/log${n}.txt &"
-  ssh -i ~/.ssh/${n}_rsa ${n}a -f "cd ~/Programs/practis-dev ; ~/.rbenv/shims/ruby bin/executor -a ${n}a -m cassia0a -p 20 &> ~/log${n}.txt &"
+  echo "ssh -i ~/.ssh/${n}_rsa ${n}b -f cd ~/Programs/practis-dev ; ~/.rbenv/shims/ruby bin/executor -a ${n}a -m cassia0b -p 20 &> ~/log${n}.txt &"
+  ssh -i ~/.ssh/${n}_rsa ${n}a -f "cd ~/Programs/practis-dev ; ~/.rbenv/shims/ruby bin/executor -a ${n}a -m cassia0b -p 20 &> ~/log${n}.txt &"
 done
 # manager
-cd ~/Programs/practis-dev ; nohup ruby bin/doe-manager-web -D sample/crowdwalk -a 150.29.232.52 > ~/log_mngr.txt
+cd ~/Programs/practis-dev ; nohup ruby bin/doe-manager-web -D sample/crowdwalk -a cassia0b -w cassia0.sf00.aist.go.jp > ~/log_mngr.txt
 
