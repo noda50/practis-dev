@@ -53,7 +53,8 @@
       "executable executable_args1 executable_args2 ..." command.
     -->
     
-    <config name="executable_command" type="String">ruby -I lib -I work/bin/build -I work/bin/libs -I  work/bin/sample work/bin/crowdwalk.rb</config>
+    <!-- <config name="executable_command" type="String">ruby -I lib -I work/bin/build -I work/bin/libs -I work/bin/sample work/bin/crowdwalk.rb</config> -->
+    <config name="executable_command" type="String">ruby -I lib -I work/bin/sample work/bin/crowdwalk.rb</config>
 
     <!-- comment out sample: simple_equation
     <config name="executable_command" type="String">ruby -I lib -I work/bin/lib work/bin/simple_equation.rb</config>
@@ -63,8 +64,8 @@
     <config name="executable_transfer" type="String">
       <item>sample/crowdwalk/crowdwalk.rb</item>
       <item>sample/crowdwalk/file_generator.rb</item>
-      <item>sample/crowdwalk/libs</item>
-      <item>sample/crowdwalk/build</item>
+      <!-- <item>sample/crowdwalk/libs</item>
+      <item>sample/crowdwalk/build</item> -->
       <item>sample/crowdwalk/sample</item>
     </config>
 
