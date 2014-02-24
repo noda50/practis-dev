@@ -404,8 +404,11 @@ module Practis
         @generation_queue = []
         @current_qcounter = 0
 
-        @epsilon = 0.4
+        @epsilon = @definitions.key?("epsilon") ? @definitions["epsilon"] : 0.2
         srand(0)
+        DOEParameterGenerator.set_step_size(@definitions)
+        DOEParameterGenerator.get_step
+        exit(0)
         
         @parameters = {}
         @total_indexes = []
@@ -549,7 +552,7 @@ module Practis
         count = 0
         parameter_keys = []
 
-        @definitions.each { |k,v| parameter_keys.push(k) if v["is_assigned"] }
+        @definitions.each { |k,v| parameter_keys.push(k) if v.kind_of?(Hash) && v["is_assigned"] }
         @f_test_queue[0][:or_ids].each{|oid|
           condition = "WHERE result_id IN ( " + @f_test_queue[0][oid].map{|i| "#{i}"}.join(", ") + ")"
           retval = @sql_connector.inner_join_record({base_type: :result, ref_type: :parameter,

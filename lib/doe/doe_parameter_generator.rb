@@ -8,7 +8,13 @@ module DOEParameterGenerator
   include Math
 
   @fstep = 0.1
-  @istep = 10
+  @istep = 1
+
+  #
+  def self.set_step_size(definitions)
+    @fstep = definitions.key?("fstep") ? definitions["fstep"] : 0.1
+    @istep = definitions.key?("istep") ? definitions["istep"] : 1
+  end
   
   # search only "Inside" significant parameter
   def self.generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
