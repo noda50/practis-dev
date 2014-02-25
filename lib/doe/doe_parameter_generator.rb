@@ -195,6 +195,8 @@ module DOEParameterGenerator
       end
       edge.push(h)
     }
+    pp edge
+    pp parameters
     condition = [:and]
     edge.each{ |k, v|
       condition.push([:or, [:eq, [:field, k], v[0]], [:eq, [:field, k], v[0]]])
