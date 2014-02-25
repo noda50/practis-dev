@@ -197,7 +197,7 @@ module DOEParameterGenerator
     }
     condition = [:and]
     edge.each{ |k, v|
-      condition.push([:or, [:eq, [:field, k] v[0]], [:eq, [:field, k] v[0]]])
+      condition.push([:or, [:eq, [:field, k], v[0]], [:eq, [:field, k], v[0]]])
     }    
     pp ret = sql_connector(:orthogonal, condition)
     exit(0)
