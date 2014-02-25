@@ -610,6 +610,7 @@ module Practis
         new_outside_list = []
         if @generation_queue[index][:toward] == "outside"
           p "generate outside parameter"
+          select_widley
           name = greedy_selection(@generation_queue[index])
           @generation_queue[index][:search_params].delete(name.to_s)
           new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
@@ -684,16 +685,7 @@ module Practis
 
       #
       def select_widley
-        # select min or max from each axis
-        edge = []
-        @parameters.each{|name,prm|
-          if rand < 0.5
-            edge.push({name => @parameters[name][:correspond][prm[:paramDefs].min]})
-          else
-            edge.push({name => @parameters[name][:correspond][prm[:paramDefs].max]})
-          end
-        }
-
+        DOEParameterGenerator.generate_wide(@sql_connector, @parameters, @definitions)
       end
 
       # 

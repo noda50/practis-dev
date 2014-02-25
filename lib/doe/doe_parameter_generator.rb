@@ -179,6 +179,30 @@ module DOEParameterGenerator
     return new_var_list, new_area_list #debug
   end
 
+  # 
+  def self.generate_wide(sql_connetor, parameters, definitions)
+    # select min or max from each axis
+    edge = []
+    parameters.each{|name, prm|
+      h = {name => []}
+      if rand < 0.5
+        h[name].push(parameters[name][:correspond][prm[:paramDefs].min])
+        h[name].push(prm[:paramDefs].sort[1])
+      else
+        h[name].push(parameters[name][:correspond][prm[:paramDefs].max])
+        h[name].push(prm[:paramDefs].sort_by{|v| -v }[1])
+        edge.push({name => parameters[name][:correspond][prm[:paramDefs].max]})
+      end
+      edge.push(h)
+    }
+    condition = [:and]
+    edge.each{ |k, v|
+      condition.push([:or, [:eq, [:field, k] v[0]], [:eq, [:field, k] v[0]]])
+    }    
+    pp ret = sql_connector(:orthogonal, condition)
+    exit(0)
+  end
+
 
   private
 
