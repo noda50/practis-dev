@@ -17,7 +17,7 @@ module DOEParameterGenerator
   end
   
   # search only "Inside" significant parameter
-  def self.generate_inside(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_inside(sql_connector, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.map { |row| parameters[name][:correspond][row[name]] }
     orthogonal_rows.each{|row|
@@ -84,7 +84,7 @@ module DOEParameterGenerator
             condition.push(andCond)
           }
 
-          if (exist_area = sql_connetor.read_record(:orthogonal, condition)).length > 0
+          if (exist_area = sql_connector.read_record(:orthogonal, condition)).length > 0
             new_area.push(exist_area.map{|r| r["id"]})
             new_area_a = []
             new_area_b = []
@@ -111,7 +111,7 @@ module DOEParameterGenerator
   end
 
   # 
-  def self.generate_outside(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_outside(sql_connector, orthogonal_rows, parameters, name, definition)
     p_lmts = {:name=>name, :top=>false, :bottom=>false}
     orthogonal_rows.each{|r|
       if parameters[name][:correspond][r[name]] <= definition["bottom"]
@@ -124,18 +124,18 @@ module DOEParameterGenerator
     
     # if !p_lmts[:bottom] && !p_lmts[:top]
     #   #both side
-    #   new_var, new_area = bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+    #   new_var, new_area = bothside(sql_connector, orthogonal_rows, parameters, name, definition)
     # elsif !p_lmts[:top]
     #   #outside(+)
-    #   new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    #   new_var, new_area = generate_outside_plus(sql_connector, orthogonal_rows, parameters, name, definition)
     # elsif !p_lmts[:bottom]
     #   #outside(-)
-    #   new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
+    #   new_var, new_area = generate_outside_minus(sql_connector, orthogonal_rows, parameters, name, definition)
     # end
 
     #both side
     if !p_lmts[:bottom] && !p_lmts[:top]
-      new_var, new_area = bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+      new_var, new_area = bothside(sql_connector, orthogonal_rows, parameters, name, definition)
     else
       new_var[:param] = {:paramDefs => [] }
     end
@@ -143,7 +143,7 @@ module DOEParameterGenerator
   end
   
   # search only "Out side" parameter
-  def self.generate_outside_all(sql_connetor, orthogonal_rows, parameters, definitions)
+  def self.generate_outside_all(sql_connector, orthogonal_rows, parameters, definitions)
     new_var_list, new_area_list = [], []
 
     p_lmts = parameters.map{|k,v| 
@@ -164,13 +164,13 @@ module DOEParameterGenerator
       new_var, new_area = [], []
       if !prm[:bottom] && !prm[:top]
         #both side
-        new_var, new_area = generate_bothside(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
+        new_var, new_area = generate_bothside(sql_connector, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       elsif !prm[:top]
         #outside(+)
-        new_var, new_area = generate_outside_plus(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
+        new_var, new_area = generate_outside_plus(sql_connector, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       elsif !prm[:bottom]
         #outside(-)
-        new_var, new_area = generate_outside_minus(sql_connetor, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
+        new_var, new_area = generate_outside_minus(sql_connector, orthogonal_rows, parameters, prm[:name], definitions[prm[:name]])
       end
       new_var_list.push(new_var) if !new_var.empty?
       new_area_list.push(new_area) if !new_area.empty?
@@ -180,36 +180,37 @@ module DOEParameterGenerator
   end
 
   # 
-  def self.generate_wide(sql_connetor, parameters, definitions)
+  def self.generate_wide(sql_connector, parameters, definitions, prng)
+    # new_area = []
+    # new_array = []
     # select min or max from each axis
-    edge = []
+    edge = {}
     parameters.each{|name, prm|
-      h = {name => []}
-      if rand < 0.5
-        h[name].push(parameters[name][:correspond][prm[:paramDefs].min])
-        h[name].push(prm[:paramDefs].sort[1])
+      edge[name] = []
+      if prng.rand < 0.5
+        edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].min))
+        edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].sort[1]))
       else
-        h[name].push(parameters[name][:correspond][prm[:paramDefs].max])
-        h[name].push(prm[:paramDefs].sort_by{|v| -v }[1])
-        edge.push({name => parameters[name][:correspond][prm[:paramDefs].max]})
+        edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].max))
+        edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].sort_by{|v| -v }[1]))
       end
-      edge.push(h)
     }
-    pp edge
-    pp parameters
     condition = [:and]
     edge.each{ |k, v|
-      condition.push([:or, [:eq, [:field, k], v[0]], [:eq, [:field, k], v[0]]])
-    }    
-    pp ret = sql_connector(:orthogonal, condition)
-    exit(0)
+      condition.push([:or, [:eq, [:field, k], v[0]], [:eq, [:field, k], v[1]]])
+    }
+    ret = sql_connector.read_record(:orthogonal, condition)
+    
+    # new_area.push(ret.map{|r| r["id"]})
+
+    return ret.map{|r| r["id"]}
   end
 
 
   private
 
   # not consider other parameters
-  def self.bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.bothside(sql_connector, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -217,97 +218,61 @@ module DOEParameterGenerator
       end
     }
 
-    min = param.min
-    max = param.max
+    # min = param.min
+    # max = param.max
     exist_area = []
     new_area = []
     new_array = []
 
-    # if parameters[name][:paramDefs].min <= param.min && param.max <= parameters[name][:paramDefs].max
-    #   min = parameters[name][:paramDefs].min
-    #   max = parameters[name][:paramDefs].max
-    # else
-    #   if param.min < parameters[name][:paramDefs].min
-    #   error("param.min: #{param.min}")
-    #   # TODO:
-    #   min = param.min
-    #   end
-    #   if parameters[name][:paramDefs].max < param.max
-    #   error("param.max: #{param.max}")
-    #   # TODO:
-    #   max = param.max
-    #   end
-    # end
-
     new_upper, new_lower = nil,nil
     if param.min.class == Fixnum
-      if definition["bottom"] > (param.min - @istep).to_i
+      if parameters[name][:paramDefs].any?{|v| v <= param.min}
+        new_lower = parameters[name][:paramDefs].select{|v| v < param.min}.max
+      elsif definition["bottom"] > (param.min - @istep).to_i
         new_lower = definition["bottom"]
       else
         new_lower = (param.min - @istep).to_i
       end
-      if definition["top"] < (param.max + @istep).to_i
-        new_upper = definition["top"] 
+
+      if parameters[name][:paramDefs].any?{|v| param.max < v}
+        new_upper = parameters[name][:paramDefs].select{|v| param.max < v }.min
+      elsif definition["top"] < (param.max + @istep).to_i
+        new_upper = definition["top"]
       else
         new_upper = (param.max + @istep).to_i
       end
     elsif param.min.class == Float
-      if definition["bottom"] > (param.min - @fstep).round(definition["num_decimal"])
+      if parameters[name][:paramDefs].any?{|v| v < param.min}
+        new_lower = parameters[name][:paramDefs].select{|v| v < param.min}.max
+      elsif definition["bottom"] > (param.min - @fstep).round(definition["num_decimal"])
         new_lower = definition["bottom"]
       else
         new_lower = (param.min - @fstep).round(definition["num_decimal"])
       end
-      if definition["top"] < (param.max + @fstep).round(definition["num_decimal"])
+      if parameters[name][:paramDefs].any?{|v| param.max < v}
+        new_upper = parameters[name][:paramDefs].select{|v| param.max < v }.min
+      elsif definition["top"] < (param.max + @fstep).round(definition["num_decimal"])
         new_upper = definition["top"]
       else
         new_upper = (param.max + @fstep).round(definition["num_decimal"])
       end
     end
 
-    # === (end) hard coding ====
-
-
-    new_array = [new_lower, new_upper]
-
+    p new_array = [new_lower, new_upper]
+    pp parameters[name][:paramDefs]
     parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
-      # if !parameters[name][:paramDefs].find{|v| v < param.min || param.max < v }.nil?
       if parameters[name][:paramDefs].include?(new_array.min) ||
         !(tmp = near_value(new_array.min, parameters[name][:paramDefs], name, definition)).nil?
         min_bit = parameters[name][:correspond].key(new_array.min)
-      # elsif !(tmp = near_value(new_array.min, parameters[name][:paramDefs], name, definition)).nil?
-      #   min_bit = parameters[name][:correspond].key(tmp)
         new_array.delete(new_array.min)
       end
       if parameters[name][:paramDefs].include?(new_array.max) ||
         !(tmp = near_value(new_array.max, parameters[name][:paramDefs], name, definition)).nil?
         max_bit = parameters[name][:correspond].key(new_array.max)
-      # elsif !(tmp = near_value(new_array.max, parameters[name][:paramDefs], name, definition)).nil?
-      #   max_bit = parameters[name][:correspond].key(tmp)
         new_array.delete(new_array.max)
       end
-      # else
-      #   lower_arr, upper_arr = [], []
-      #   parameters[name][:paramDefs].each{|v|
-      #     lower_arr.push(v) if v < param.min && new_array.min <= v
-      #     upper_arr.push(v) if param.min < v && new_array.max <= v
-      #   }
-      #   imin = parameters[name][:paramDefs].index(lower_arr.min)
-      #   imax = parameters[name][:paramDefs].index(upper_arr.max)
-      #   if (imax - imin) % 2 == 0
-      #     min_bit = parameters[name][:correspond].key(lower_arr.min)
-      #     max_bit = parameters[name][:correspond].key(upper_arr.max)
-      #   else
-      #     error("index is wrong")
-      #     error("#{imax}, #{imax}: #{parameters[name]}")
-      #   end
-
-      #   min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
-      #   max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
-      #   min_bit = parameters[name][:correspond].key(min)
-      #   max_bit = parameters[name][:correspond].key(max)
-      # end
-
+      
       if !min_bit.nil?
         pmin_bit = parameters[name][:correspond].key(param.min)
         condition = [:or]
@@ -322,7 +287,7 @@ module DOEParameterGenerator
           andCond.push(orCond)
           condition.push(andCond)
         }
-        exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+        exist_area = sql_connector.read_record(:orthogonal, condition) # nil check is easier maybe
         new_area.push(exist_area.map{|r| r["id"]})
       end
 
@@ -340,7 +305,7 @@ module DOEParameterGenerator
           andCond.push(orCond)
           condition.push(andCond)
         }
-        exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+        exist_area = sql_connector.read_record(:orthogonal, condition) # nil check is easier maybe
         new_area.push(exist_area.map{|r| r["id"]})
       end
     end
@@ -351,7 +316,7 @@ module DOEParameterGenerator
   end
 
   # search only "Both Side" parameter (consider other parameter's max,min)
-  def self.generate_bothside(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_bothside(sql_connector, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -427,6 +392,8 @@ module DOEParameterGenerator
           #
           min = parameters[name][:paramDefs].min_by{|v| v < param.min ? v : parameters[name][:paramDefs].max}
           max = parameters[name][:paramDefs].max_by{|v| v > param.max ? v : parameters[name][:paramDefs].min}
+          # min = parameters[name][:paramDefs].select{|v| v < param.min }.max
+          # max = parameters[name][:paramDefs].select{|v| v > param.max }.min
           min_bit = parameters[name][:correspond].key(min)
           max_bit = parameters[name][:correspond].key(max)
           #
@@ -460,7 +427,7 @@ module DOEParameterGenerator
             condition.push(andCond)
           }
 
-          exist_area = sql_connetor.read_record(:orthogonal, condition) # nil check is easier maybe
+          exist_area = sql_connector.read_record(:orthogonal, condition) # nil check is easier maybe
           new_area.push(exist_area.map{|r| r["id"]})
           
           new_area_a = []
@@ -487,7 +454,7 @@ module DOEParameterGenerator
   end
 
   # search only "Outside(+)" significant parameter (consider other parameter's max,min)
-  def self.generate_outside_plus(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_outside_plus(sql_connector, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])
@@ -536,7 +503,7 @@ module DOEParameterGenerator
   end
 
   # search only "Outside(-)" significant parameter (consider other parameter's max,min)
-  def self.generate_outside_minus(sql_connetor, orthogonal_rows, parameters, name, definition)
+  def self.generate_outside_minus(sql_connector, orthogonal_rows, parameters, name, definition)
     param = []
     orthogonal_rows.each{|row|
       if !param.include?(parameters[name][:correspond][row[name]])

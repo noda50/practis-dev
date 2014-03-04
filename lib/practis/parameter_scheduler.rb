@@ -405,7 +405,8 @@ module Practis
         @current_qcounter = 0
 
         @epsilon = @definitions.key?("epsilon") ? @definitions["epsilon"] : 0.2
-        srand(0)
+        # srand(0)
+        @prng = Random.new(0)
         DOEParameterGenerator.set_step_size(@definitions)
         
         @parameters = {}
@@ -577,12 +578,12 @@ module Practis
       # parameter set generation
       def do_parameter_generation
         return false if @generation_queue.empty?
-        debug("parameter generation: generation queue") #p "parameter generation: generation queue" 
-        debug("#{pp @generation_queue.map{|q| q[:or_ids]}}") #pp @generation_queue.map{|q| q[:or_ids]} 
+        debug("parameter generation: generation queue")
+        debug("#{pp @generation_queue.map{|q| q[:or_ids]}}")
         
         # select index
-        greedy = rand < @epsilon ? false : true #true
-        index = greedy ? 0 : rand(@generation_queue.size)
+        greedy = @prng.rand < @epsilon ? false : true #true
+        index = greedy ? 0 : @prng.rand(@generation_queue.size)
         # @generation_queue.sort_by!{|v| -v[:priority]}
         @generation_queue.sort!{|a, b|
           amax, bmax = -1.0, -1.0
@@ -603,18 +604,27 @@ module Practis
         condition = [:or]
         condition += @generation_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
-        check_orthogonal(orthogonal_rows) # for debug
+        # for debug
+        debug_check_orthogonal(orthogonal_rows)
         new_inside_list = generate_list_of_inside(orthogonal_rows, @generation_queue[index][:f_result])
         
         # outside
         new_outside_list = []
         if @generation_queue[index][:toward] == "outside"
           p "generate outside parameter"
-          select_widley
-          name = greedy_selection(@generation_queue[index])
-          @generation_queue[index][:search_params].delete(name.to_s)
-          new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
-                                @generation_queue[index][:f_result][name.to_s][:f_value], index)
+          if greedy
+              name = greedy_selection(@generation_queue[index])
+              @generation_queue[index][:search_params].delete(name.to_s)
+              new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
+                                    @generation_queue[index][:f_result][name.to_s][:f_value], index)
+          else
+            if !generate_widely
+              name = greedy_selection(@generation_queue[index])
+              @generation_queue[index][:search_params].delete(name.to_s)
+              new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
+                                    @generation_queue[index][:f_result][name.to_s][:f_value], index)
+            end
+          end
         end
 
         # extend_otableDB & parameter set store to queue
@@ -684,8 +694,19 @@ module Practis
       end
 
       #
-      def select_widley
-        DOEParameterGenerator.generate_wide(@sql_connector, @parameters, @definitions)
+      def generate_widely
+        id_set = DOEParameterGenerator.generate_wide(@sql_connector, @parameters, @definitions, @prng)
+        h = generate_id_data_list(id_set, "outside", 0.0, @parameters.keys)
+
+        if @generation_queue.empty? || @generation_queue.find{|v| v[:or_ids].sort == h[:or_ids]}.nil?
+          if @f_test_queue.empty? ||  @f_test_queue.find{|test| test[:or_ids].sort == h[:or_ids].sort }.nil?
+            if !check_duplicate_f_test(h)
+              @run_id_queue.push(h)
+              return true
+            end
+          end
+        end
+        return false
       end
 
       # 
@@ -698,7 +719,7 @@ module Practis
         }
 
         if 1 < params.size
-          return params[rand(params.size)]
+          return params[@prng.rand(params.size)]
         else
           return params[0]
         end
@@ -707,7 +728,7 @@ module Practis
       # 
       def roulette_selection(f_result)
         sum = f_result.map{|k, v| v[:f_value]}.inject(:+)
-        point = sum*rand
+        point = sum*@prng.rand
         needle = 0.0
         ret = nil
         f_result.each{|k, v|
@@ -761,12 +782,12 @@ module Practis
       def generate_list_of_outside(orthogonal_rows, name, f_value, index=0)
         new_outside_list = []
         new_param, exist_ids = DOEParameterGenerator.generate_outside(
-                                @sql_connector, orthogonal_rows, @parameters,# @sql_connector, old_out_rows, @parameters,
+                                @sql_connector, orthogonal_rows, @parameters,
                                 name, @definitions[name])
-        if !new_param[:param][:paramDefs].empty? #&& !new_param[:param][:paramDefs].nil?
+        if !new_param[:param][:paramDefs].empty?
           new_outside_list.push(new_param)
-          p "debug"
-          pp new_param[:param][:name]
+          # p "debug"
+          # pp new_param[:param][:name]
         end
         if !exist_ids.empty?
           exist_ids.each{ |set|
@@ -957,7 +978,7 @@ module Practis
             }
           end
         when "both side"
-          if add_parameters.size > 1
+          if add_parameters.size == 2
             # right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
             right_digit = @parameters[name][:correspond].max_by { |item| 
               item[1] < add_parameters.max ? item[1] : -1 
@@ -1121,20 +1142,30 @@ module Practis
         return indexes
       end
 
-      #
-      def check_orthogonal(rows)
+      # toy_problem
+      def debug_check_orthogonal(rows)
         v1 = []
         v2 = []
+        params = {"v1" => [], "v2" => []}
         rows.each{|row|
           v1.push(row["v1"][row["v1"].size - 1])
           v2.push(row["v2"][row["v2"].size - 1])
+          params["v1"].push(@parameters["v1"][:correspond][row["v1"]])
+          params["v2"].push(@parameters["v2"][:correspond][row["v2"]])
         }
         v1.uniq!
         v2.uniq!
+        params["v1"].uniq!
+        params["v2"].uniq!
 
         if v1.size != 2 || v2.size != 2
-          p "error"
+          error("")
           pp rows
+          pp params
+          @parameters.each{|k,v|
+            p k
+            pp v[:paramDefs].sort
+          }
           exit(0)
         end
       end
