@@ -532,6 +532,10 @@ module Practis
         return @v_index
       end
 
+      def get_runnable_size
+        return @run_id_queue.size
+      end
+
       def get_analysis_size
         return @f_test_queue.size
       end
@@ -544,7 +548,7 @@ module Practis
       def do_variance_analysis
         return false if @f_test_queue.empty?
         debug("variance analysis: f-test queue: ") # p "variance analysis: f-test queue: "
-        debug("#{pp @f_test_queue.map{|q| q[:or_ids]}}") # pp @f_test_queue.map{|q| q[:or_ids]} 
+        # debug("#{pp @f_test_queue.map{|q| q[:or_ids]}}") # pp @f_test_queue.map{|q| q[:or_ids]} 
 
         # analysis
         result_set = []
@@ -579,7 +583,7 @@ module Practis
       def do_parameter_generation
         return false if @generation_queue.empty?
         debug("parameter generation: generation queue")
-        debug("#{pp @generation_queue.map{|q| q[:or_ids]}}")
+        # debug("#{pp @generation_queue.map{|q| q[:or_ids]}}")
         
         # select index
         greedy = @prng.rand < @epsilon ? false : true #true
@@ -611,7 +615,7 @@ module Practis
         # outside
         new_outside_list = []
         if @generation_queue[index][:toward] == "outside"
-          p "generate outside parameter"
+          # p "generate outside parameter"
           if greedy
               name = greedy_selection(@generation_queue[index])
               @generation_queue[index][:search_params].delete(name.to_s)
@@ -626,7 +630,13 @@ module Practis
             end
           end
         end
-
+        # if !new_outside_list.empty?
+        #   pp new_outside_list
+        #   # if new_outside_list[0][:param][:name] == "v2" && new_outside_list[0][:param][:paramDefs].include?(-0.3)
+        #   #   pp new_outside_list
+        #   #   exit(0)
+        #   # end
+        # end
         # extend_otableDB & parameter set store to queue
         if !new_inside_list.empty?
           next_sets = generate_next_search_area(@generation_queue[index][:or_ids], new_inside_list)
@@ -787,7 +797,7 @@ module Practis
         if !new_param[:param][:paramDefs].empty?
           new_outside_list.push(new_param)
           # p "debug"
-          # pp new_param[:param][:name]
+          # pp new_param[:param]
         end
         if !exist_ids.empty?
           exist_ids.each{ |set|
@@ -1061,7 +1071,7 @@ module Practis
               top += 1
               debug("#{paramDefs_hash}, top_count: #{top}")
               debug("bit:#{bit}, last_str:#{bit[bit.size-1]}")
-              debug("#{pp @parameters[name]}")
+              # debug("#{pp @parameters[name]}")
               # exit(0) if top > 100
             end 
           end

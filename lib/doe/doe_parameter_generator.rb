@@ -160,7 +160,7 @@ module DOEParameterGenerator
     }
 
     p_lmts.each{|prm|
-      p "bottom: #{prm[:bottom]}, top: #{prm[:top]}"
+      # p "bottom: #{prm[:bottom]}, top: #{prm[:top]}"
       new_var, new_area = [], []
       if !prm[:bottom] && !prm[:top]
         #both side
@@ -181,9 +181,6 @@ module DOEParameterGenerator
 
   # 
   def self.generate_wide(sql_connector, parameters, definitions, prng)
-    # new_area = []
-    # new_array = []
-    # select min or max from each axis
     edge = {}
     parameters.each{|name, prm|
       edge[name] = []
@@ -200,8 +197,6 @@ module DOEParameterGenerator
       condition.push([:or, [:eq, [:field, k], v[0]], [:eq, [:field, k], v[1]]])
     }
     ret = sql_connector.read_record(:orthogonal, condition)
-    
-    # new_area.push(ret.map{|r| r["id"]})
 
     return ret.map{|r| r["id"]}
   end
@@ -218,16 +213,21 @@ module DOEParameterGenerator
       end
     }
 
-    # min = param.min
-    # max = param.max
     exist_area = []
     new_area = []
     new_array = []
 
-    new_upper, new_lower = nil,nil
+    new_upper, new_lower = nil, nil
     if param.min.class == Fixnum
-      if parameters[name][:paramDefs].any?{|v| v <= param.min}
-        new_lower = parameters[name][:paramDefs].select{|v| v < param.min}.max
+      if parameters[name][:paramDefs].any?{|v| v < param.min}
+        # new_lower = parameters[name][:paramDefs].select{|v| v < param.min}.max
+        candidates = parameters[name][:paramDefs].select{|v| v < param.min}
+        candidates = candidates.select{|v| 
+          parameters[name][:correspond].key(v)[-1] != parameters[name][:correspond].key(param.min)[-1]
+        }
+        #new_lower = near_value(param.min - @istep, candidates, name, definition)
+        new_lower = candidates.min_by{|v| (v - (param.min - @istep)).abs }
+        new_lower = candidates.max if new_lower.nil?
       elsif definition["bottom"] > (param.min - @istep).to_i
         new_lower = definition["bottom"]
       else
@@ -235,7 +235,14 @@ module DOEParameterGenerator
       end
 
       if parameters[name][:paramDefs].any?{|v| param.max < v}
-        new_upper = parameters[name][:paramDefs].select{|v| param.max < v }.min
+        # new_upper = parameters[name][:paramDefs].select{|v| param.max < v }.min
+        candidates = parameters[name][:paramDefs].select{|v| param.max < v}
+        candidates = candidates.select{|v| 
+          parameters[name][:correspond].key(v)[-1] != parameters[name][:correspond].key(param.max)[-1]
+        }
+        #new_upper = near_value(param.max + @istep, candidates, name, definition)
+        new_upper = candidates.min_by{|v| (v - (param.max + @istep)).abs } 
+        new_upper = candidates.max if new_upper.nil?
       elsif definition["top"] < (param.max + @istep).to_i
         new_upper = definition["top"]
       else
@@ -243,21 +250,36 @@ module DOEParameterGenerator
       end
     elsif param.min.class == Float
       if parameters[name][:paramDefs].any?{|v| v < param.min}
-        new_lower = parameters[name][:paramDefs].select{|v| v < param.min}.max
+        # new_lower = parameters[name][:paramDefs].select{|v| v < param.min}.max
+        candidates = parameters[name][:paramDefs].select{|v| v < param.min}
+        candidates = candidates.select{|v| 
+          parameters[name][:correspond].key(v)[-1] != parameters[name][:correspond].key(param.min)[-1]
+        }
+        #new_lower = near_value((param.min - @fstep), candidates, name, definition)
+        new_lower = candidates.min_by{|v| (v - (param.min - @fstep).round(definition["num_decimal"])).abs }
+        new_lower = candidates.max if new_lower.nil?
       elsif definition["bottom"] > (param.min - @fstep).round(definition["num_decimal"])
         new_lower = definition["bottom"]
       else
         new_lower = (param.min - @fstep).round(definition["num_decimal"])
       end
       if parameters[name][:paramDefs].any?{|v| param.max < v}
-        new_upper = parameters[name][:paramDefs].select{|v| param.max < v }.min
-      elsif definition["top"] < (param.max + @fstep).round(definition["num_decimal"])
+        # new_upper = parameters[name][:paramDefs].select{|v| param.max < v }.min
+        candidates = parameters[name][:paramDefs].select{|v| param.max < v}
+        candidates = candidates.select{|v| 
+          parameters[name][:correspond].key(v)[-1] != parameters[name][:correspond].key(param.max)[-1]
+        }
+        #new_upper = near_value(param.max + @fstep, candidates, name, definition)
+        new_upper = candidates.min_by{|v| (v - (param.max + @fstep)).abs }
+        new_upper = candidates.max if new_upper.nil?
+      elsif definition["top"] < (param.max + @fstep)
         new_upper = definition["top"]
       else
         new_upper = (param.max + @fstep).round(definition["num_decimal"])
       end
     end
 
+    p name
     p new_array = [new_lower, new_upper]
     pp parameters[name][:paramDefs]
     parameters[name][:paramDefs].sort!
@@ -495,7 +517,7 @@ module DOEParameterGenerator
       end
     end
 
-    p "new array: #{new_array}"
+    # p "new array: #{new_array}"
     # var.name
     new_var ={:case => "outside(+)", 
               :param => {:name => name, :paramDefs => new_array}}
@@ -544,7 +566,7 @@ module DOEParameterGenerator
       end
     end
 
-    p "new array: #{new_array}"
+    # p "new array: #{new_array}"
     # var.name
     new_var ={:case => "outside(-)", 
               :param => {:name => name, :paramDefs => new_array}}

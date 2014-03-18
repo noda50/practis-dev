@@ -132,7 +132,7 @@ module Practis
             else
               paramValueSet.state = PARAMETER_STATE_ALLOCATING
               paramValueSetList.push(paramValueSet)
-              @paramValueSet_pool.push(paramValueSet)
+              @paramValueSet_pool.push(paramValueSet) if !@paramValueSet_pool.map{|p| p.uid}.include?(paramValueSet.uid)
               request_number -= 1
             end
           else
@@ -144,7 +144,7 @@ module Practis
               retval.each{ |r|
                 warn("result of read_record under (#{condition}): #{r}")
                 paramValueSet.state = r["state"]
-                @paramValueSet_pool.push(paramValueSet)
+                @paramValueSet_pool.push(paramValueSet) if !@paramValueSet_pool.map{|p| p.uid}.include?(paramValueSet.uid)
               }
             }
             debug("paramValueSet.state = #{paramValueSet.state.inspect}");
@@ -200,7 +200,6 @@ module Practis
           if (retval = allocate_paramValueSets(1, 1)).length == 0
             retval.each {|r| debug("#{r}")} 
             info("call finalize !")
-            p "call finalize !"
             finalize
           else
             error("all parameter is finished? Huh???")
