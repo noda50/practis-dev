@@ -435,7 +435,7 @@ module Practis
           }
         }
         # init list
-        h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, "outside", 0.0, @parameters.keys)
+        h = generate_id_data_list(table[0].size.times.map{ |i| i+1 }, "outside", 1.0, @parameters.keys)
         @run_id_queue.push(h)
 
         upload_initial_orthogonal_db(table)
@@ -619,14 +619,16 @@ module Practis
           if greedy
               name = greedy_selection(@generation_queue[index])
               @generation_queue[index][:search_params].delete(name.to_s)
-              new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
-                                    @generation_queue[index][:f_result][name.to_s][:f_value], index)
+              priority = log2(@generation_queue[index][:f_result][name.to_s][:f_value])*@generation_queue[index][:f_result][name.to_s][:distance]
+              priority = 0.0 if priority < 0.0
+              new_outside_list = generate_list_of_outside(orthogonal_rows, name, priority, index)
           else
             if !generate_widely
               name = greedy_selection(@generation_queue[index])
               @generation_queue[index][:search_params].delete(name.to_s)
-              new_outside_list = generate_list_of_outside(orthogonal_rows, name, 
-                                    @generation_queue[index][:f_result][name.to_s][:f_value], index)
+              priority = log2(@generation_queue[index][:f_result][name.to_s][:f_value])*@generation_queue[index][:f_result][name.to_s][:distance]
+              priority = 0.0 if priority < 0.0
+              new_outside_list = generate_list_of_outside(orthogonal_rows, name, priority, index)
             end
           end
         end
@@ -706,7 +708,7 @@ module Practis
       #
       def generate_widely
         id_set = DOEParameterGenerator.generate_wide(@sql_connector, @parameters, @definitions, @prng)
-        h = generate_id_data_list(id_set, "outside", 0.0, @parameters.keys)
+        h = generate_id_data_list(id_set, "outside", 1.0, @parameters.keys)
 
         if @generation_queue.empty? || @generation_queue.find{|v| v[:or_ids].sort == h[:or_ids]}.nil?
           if @f_test_queue.empty? ||  @f_test_queue.find{|test| test[:or_ids].sort == h[:or_ids].sort }.nil?
@@ -767,7 +769,9 @@ module Practis
                 chk_cond = [:eq, [:field, 'id_combination']]
                 chk_cond.push(set.sort.to_s)
                 if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
-                  h = generate_id_data_list(set, "inside", f_result[k][:f_value], @parameters.keys)
+                  priority = log2(f_result[k][:f_value])*f_result[k][:distance]
+                  priority = 0.0 if priority < 0.0
+                  h = generate_id_data_list(set, "inside", priority, @parameters.keys)
 
                   # if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
                   #   p "debug: existed inside "

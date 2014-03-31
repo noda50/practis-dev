@@ -39,12 +39,15 @@ class FTest
       end
 
       effFact[:effect] = 0.0
+      effFact[:means] = []
       effFact[:results].each_value do |v|
         effFact[:effect] += (v.inject(:+) ** 2).to_f / v.size
+        effFact[:means] << v.inject(:+).to_f / v.size
       end
       effFact[:effect] -= @ct
       effFact[:effect] = 0.0 if effFact[:effect] < 0.0
       effFact[:free] = 1
+      effFact[:distance] = effFact[:means].max - effFact[:means].min
       effFact
     end
 
@@ -74,7 +77,7 @@ class FTest
       result[ ef[:name] ] = ef
       result[ ef[:name] ].delete(:name)
       ef[:f_value] = 0.0 if ef[:f_value].nan?
-      ef[:f_value] = 1000.0 if ef[:f_value].infinite? == 1
+      ef[:f_value] = 3000.0 if ef[:f_value].infinite? == 1
     end
 
     upload_f_test(sql_connector, results_set, parameter_keys, result, id_list) if !sql_connector.nil?
