@@ -593,12 +593,22 @@ module Practis
           amax, bmax = -1.0, -1.0
           a[:f_result].each{|k, v|
             if a[:search_params].include?(k)
-              amax = (v[:f_value] > amax) ? v[:f_value] : amax
+              # amax = (v[:f_value] > amax) ? v[:f_value] : amax
+              prior = log2(v[:f_value])*v[:distance]
+              prior = 0.0 if prior < 0.0
+              if prior > amax
+                amax = prior
+              end
             end
           }
           b[:f_result].each{|k, v|
             if b[:search_params].include?(k)
-              bmax = (v[:f_value] > bmax) ? v[:f_value] : bmax
+              # bmax = (v[:f_value] > bmax) ? v[:f_value] : bmax
+              prior = log2(v[:f_value])*v[:distance]
+              prior = 0.0 if prior < 0.0
+              if prior > bmax
+                bmax = prior
+              end
             end
           }
           bmax <=> amax
