@@ -594,7 +594,7 @@ module Practis
           a[:f_result].each{|k, v|
             if a[:search_params].include?(k)
               # amax = (v[:f_value] > amax) ? v[:f_value] : amax
-              prior = log2(v[:f_value])*v[:distance]
+              prior = log2(v[:f_value])#*v[:distance]
               prior = 0.0 if prior < 0.0
               if prior > amax
                 amax = prior
@@ -604,7 +604,7 @@ module Practis
           b[:f_result].each{|k, v|
             if b[:search_params].include?(k)
               # bmax = (v[:f_value] > bmax) ? v[:f_value] : bmax
-              prior = log2(v[:f_value])*v[:distance]
+              prior = log2(v[:f_value])#*v[:distance]
               prior = 0.0 if prior < 0.0
               if prior > bmax
                 bmax = prior
@@ -629,14 +629,14 @@ module Practis
           if greedy
               name = greedy_selection(@generation_queue[index])
               @generation_queue[index][:search_params].delete(name.to_s)
-              priority = log2(@generation_queue[index][:f_result][name.to_s][:f_value])*@generation_queue[index][:f_result][name.to_s][:distance]
+              priority = log2(@generation_queue[index][:f_result][name.to_s][:f_value])#*@generation_queue[index][:f_result][name.to_s][:distance]
               priority = 0.0 if priority < 0.0
               new_outside_list = generate_list_of_outside(orthogonal_rows, name, priority, index)
           else
             if !generate_widely
               name = greedy_selection(@generation_queue[index])
               @generation_queue[index][:search_params].delete(name.to_s)
-              priority = log2(@generation_queue[index][:f_result][name.to_s][:f_value])*@generation_queue[index][:f_result][name.to_s][:distance]
+              priority = log2(@generation_queue[index][:f_result][name.to_s][:f_value])#*@generation_queue[index][:f_result][name.to_s][:distance]
               priority = 0.0 if priority < 0.0
               new_outside_list = generate_list_of_outside(orthogonal_rows, name, priority, index)
             end
@@ -779,7 +779,7 @@ module Practis
                 chk_cond = [:eq, [:field, 'id_combination']]
                 chk_cond.push(set.sort.to_s)
                 if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
-                  priority = log2(f_result[k][:f_value])*f_result[k][:distance]
+                  priority = log2(f_result[k][:f_value])#*f_result[k][:distance]
                   priority = 0.0 if priority < 0.0
                   h = generate_id_data_list(set, "inside", priority, @parameters.keys)
 
