@@ -9,6 +9,7 @@ require 'doe/f_test'
 require 'doe/doe_parameter_generator'
 require 'csv'
 require 'pp'
+require 'pry'
 
 
 module Practis
@@ -393,6 +394,7 @@ module Practis
         @f_test=FTest.new
         @eop = false
         @extending = false
+        @debugFlag = false
       end
 
       # 
@@ -619,7 +621,7 @@ module Practis
         condition += @generation_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         # for debug
-        debug_check_orthogonal(orthogonal_rows)
+        debug_check_orthogonal(orthogonal_rows, @generation_queue[index])
         new_inside_list = generate_list_of_inside(orthogonal_rows, @generation_queue[index][:f_result])
         
         # outside
@@ -655,16 +657,17 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "inside", @generation_queue[index][:priority], @parameters.keys)
-              # if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-              #   p "debug: new inside list"
-              #   pp new_inside_list
-              #   p "new param: #{pp new_param}"
-              #   p "orthogonal"
-              #   pp orthogonal_rows
-              #   p "new area:"
-              #   pp h
-              #   exit(0)
-              # end
+              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                error("debug: new inside list")
+binding.pry                
+                pp new_inside_list
+                p "new param: #{pp new_param}"
+                p "orthogonal"
+                pp orthogonal_rows
+                p "new area:"
+                pp h
+                exit(0)
+              end
               @run_id_queue.push(h)
             end
           }
@@ -674,16 +677,17 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "outside", @generation_queue[index][:priority], @parameters.keys)
-              # if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-              #   p "debug: new out list"
-              #   pp new_outside_list
-              #   p "new param: #{pp new_param}"
-              #   p "orthogonal"
-              #   pp orthogonal_rows
-              #   p "new area: "
-              #   pp h
-              #   exit(0)
-              # end
+              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                error("debug: new out list")
+binding.pry                
+                pp new_outside_list
+                p "new param: #{pp new_param}"
+                p "orthogonal"
+                pp orthogonal_rows
+                p "new area: "
+                pp h
+                exit(0)
+              end
               @run_id_queue.push(h)
             end
           }
@@ -783,15 +787,17 @@ module Practis
                   priority = 0.0 if priority < 0.0
                   h = generate_id_data_list(set, "inside", priority, @parameters.keys)
 
-                  # if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                  #   p "debug: existed inside "
-                  #   p "exist area: #{exist_ids}"
-                  #   p "new param: #{pp new_param}"
-                  #   p "orthogonal"
-                  #   pp orthogonal_rows
-                  #   pp h
-                  #   exit(0)
-                  # end
+                  if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                    error("debug: existed inside")
+binding.pry                    
+                    p "exist area: #{exist_ids}"
+                    p "new param:"
+                    pp new_param
+                    p "orthogonal"
+                    pp orthogonal_rows
+                    pp h
+                    exit(0)
+                  end
                   @run_id_queue.push(h)
                 end
               }
@@ -819,15 +825,16 @@ module Practis
             chk_cond.push(set.sort.to_s)
             if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
               h = generate_id_data_list(set, "outside", f_value, @parameters.keys)
-              # if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-              #   p "debug existed outside "
-              #   p "exist area: #{exist_ids}"
-              #   p "new param: #{pp new_param}"
-              #   p "orthogonal"
-              #   pp orthogonal_rows
-              #   pp h
-              #   exit(0)
-              # end
+              if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+                error("debug existed outside")
+binding.pry                
+                p "exist area: #{exist_ids}"
+                p "new param: #{pp new_param}"
+                p "orthogonal"
+                pp orthogonal_rows
+                pp h
+                exit(0)
+              end
               @run_id_queue.push(h)
             end            
           }
@@ -931,9 +938,10 @@ module Practis
         old_level = 0
         old_digit_num = 0
         ext_column = nil
-
+        # binding.pry if (parameter[:paramDefs] - @parameters[parameter[:name]][:paramDefs]).empty?
         if orthogonal_rows.length == 0
           error("the no orthogonal array exist.")
+          # binding.pry
           return -1
         end
 
@@ -966,12 +974,18 @@ module Practis
 
       #
       def assign_parameter(add_point_case, name, add_parameters)
+        # if add_parameters.size < 2 && add_point_case == "inside"
+        #   @debugFlag = true
+        # else
+        #   @debugFlag = false
+        # end
+        # binding.pry if @debugFlag
         min_bit = nil
         h = {}
         case add_point_case
         when "outside(+)"
           right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
-          if right_digit_of_max[right_digit_of_max.size-1] == "1"
+          if right_digit_of_max[-1] == "1" #[right_digit_of_max.size-1]
             add_parameters.sort!
           else
             add_parameters.reverse!
@@ -988,7 +1002,7 @@ module Practis
               v < add_parameters.min
             }.max_by{|_, v| v}
           digit_num_of_minus_side = digit_num_of_minus_side[0]  
-          if digit_num_of_minus_side[digit_num_of_minus_side.size-1] == "0"
+          if digit_num_of_minus_side[-1] == "0"#digit_num_of_minus_side[digit_num_of_minus_side.size-1] == "0"
             count = 1
             add_parameters.each{|v| 
               h[v] = (count % 2).to_s
@@ -1010,14 +1024,14 @@ module Practis
             left_digit = @parameters[name][:correspond].min_by { |item| 
               item[1] > add_parameters.min ? item[1] : @parameters[name][:correspond].size
             }[0]
-            if right_digit[right_digit.size-1] == "0"
+            if right_digit[-1] == "0" # [right_digit.size-1]
               # add_parameters.reverse!
               h[add_parameters.max] = "1"
             else
               # add_parameters.sort!
               h[add_parameters.max] = "0"
             end
-            if left_digit[right_digit.size-1] == "0"
+            if left_digit[-1] == "0" # [right_digit.size-1]
               # add_parameters.reverse!
               h[add_parameters.min] = "1"
             else
@@ -1027,20 +1041,21 @@ module Practis
           else
             if @parameters[name][:paramDefs].max < add_parameters[0] #upper
               right_digit_of_max = @parameters[name][:correspond].max_by(&:last)[0]
-              if right_digit_of_max[right_digit_of_max.size - 1] == "0"
+              if right_digit_of_max[-1] == "0" #[right_digit_of_max.size - 1]
                 h[add_parameters[0]] = "1"
               else
                 h[add_parameters[0]] = "0"
               end
             elsif @parameters[name][:paramDefs].min > add_parameters[0] #lower
               right_digit_of_min = @parameters[name][:correspond].min_by(&:last)[0]
-              if right_digit_of_min[right_digit_of_min.size - 1] == "0"
+              if right_digit_of_min[-1] == "0" # [right_digit_of_min.size - 1]
                 h[add_parameters[0]] = "1"
               else
                 h[add_parameters[0]] = "0"
               end
             else#med => error
               error("parameter creation is error")
+              # binding.pry
               p add_parameters
               pp @parameters[name]
               exit(0)
@@ -1052,6 +1067,7 @@ module Practis
         old_level = @parameters[name][:paramDefs].size
         @parameters[name][:paramDefs] += add_parameters
         link_parameter(name, h)
+        # binding.pry if @debugFlag
         @parameters[name]
       end
 
@@ -1070,6 +1086,7 @@ module Practis
 
       # 
       def link_parameter(name, paramDefs_hash)
+        # binding.pry if @debugFlag
         digit_num = log2(@parameters[name][:paramDefs].size).ceil
         old_level = @parameters[name][:paramDefs].size - paramDefs_hash.size
         top = @parameters[name][:paramDefs].size
@@ -1077,14 +1094,14 @@ module Practis
         while bit_i < top
           bit = ("%0" + digit_num.to_s + "b") % bit_i
           if !@parameters[name][:correspond].key?(bit)
-            if paramDefs_hash.has_value?(bit[bit.size-1])
-              param = paramDefs_hash.key(bit[bit.size-1])
+            if paramDefs_hash.has_value?(bit[-1]) #(bit[bit.size-1])
+              param = paramDefs_hash.key(bit[-1]) #(bit[bit.size-1])
               @parameters[name][:correspond][bit] = param
               paramDefs_hash.delete(param)
             else
               top += 1
               debug("#{paramDefs_hash}, top_count: #{top}")
-              debug("bit:#{bit}, last_str:#{bit[bit.size-1]}")
+              debug("bit:#{bit}, last_str:#{bit[-1]}")
               # debug("#{pp @parameters[name]}")
               # exit(0) if top > 100
             end 
@@ -1095,6 +1112,7 @@ module Practis
           error("no assignment parameter: 
             defs_L:#{@parameters[name][:paramDefs].size}, 
             corr_L:#{@parameters[name][:correspond].size}")
+          # binding.pry
           pp paramDefs_hash
           pp @parameters[name]
           exit(0)
@@ -1167,13 +1185,13 @@ module Practis
       end
 
       # toy_problem
-      def debug_check_orthogonal(rows)
+      def debug_check_orthogonal(rows, popout)
         v1 = []
         v2 = []
         params = {"v1" => [], "v2" => []}
         rows.each{|row|
-          v1.push(row["v1"][row["v1"].size - 1])
-          v2.push(row["v2"][row["v2"].size - 1])
+          v1.push(row["v1"][-1]) #[row["v1"].size - 1]
+          v2.push(row["v2"][-1]) #[row["v2"].size - 1]
           params["v1"].push(@parameters["v1"][:correspond][row["v1"]])
           params["v2"].push(@parameters["v2"][:correspond][row["v2"]])
         }
@@ -1184,12 +1202,15 @@ module Practis
 
         if v1.size != 2 || v2.size != 2
           error("")
+          # binding.pry
           pp rows
           pp params
           @parameters.each{|k,v|
             p k
-            pp v[:paramDefs].sort
+            p v[:paramDefs].sort
+            pp v[:correspond].sort
           }
+          pp popout
           exit(0)
         end
       end

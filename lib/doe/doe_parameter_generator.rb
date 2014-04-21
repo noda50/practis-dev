@@ -1,6 +1,7 @@
 require 'practis'
 require 'doe/f_test'
 require 'pp'
+require 'pry'
 
 #
 module DOEParameterGenerator
@@ -44,33 +45,81 @@ module DOEParameterGenerator
       new_array = [ (param_min + var_diff).round(definition["num_decimal"]), 
                     (param_max - var_diff).round(definition["num_decimal"]) ]
     end
-
+    # binding.pry if new_array[0] == new_array[1]
     # check already generated parameter (update new array)
-    parameters[name][:paramDefs].sort!
+    # parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
       if !parameters[name][:paramDefs].find{ |v| param_min < v && v < param_max }.nil?
         min_bit, max_bit = nil, nil
-        if parameters[name][:paramDefs].include?(new_array[0]) && parameters[name][:paramDefs].include?(new_array[1])
-          min_bit = parameters[name][:correspond].key(new_array.min)
-          max_bit = parameters[name][:correspond].key(new_array.max)
-        else
-          btwn_params = []
-          parameters[name][:paramDefs].each{|v| btwn_params.push(v) if param_min < v && v < param_max}
-          btwn_params.sort!
-          step = btwn_params.size>2 ? btwn_params.size/3 : 1
-          minp = btwn_params[step - 1]
-          maxp = btwn_params[btwn_params.size - step]
 
-          if new_array.min <= minp && maxp <= new_array.max
+        # if parameters[name][:paramDefs].include?(new_array[0]) && parameters[name][:paramDefs].include?(new_array[1])
+        #   min_bit = parameters[name][:correspond].key(new_array.min)
+        #   max_bit = parameters[name][:correspond].key(new_array.max)
+        # else
+        min_bit = parameters[name][:correspond].key(new_array.min) if parameters[name][:paramDefs].include?(new_array[0])
+        max_bit = parameters[name][:correspond].key(new_array.max) if parameters[name][:paramDefs].include?(new_array[1])
+        
+        if min_bit.nil? || max_bit.nil?
+          btwn_params = parameters[name][:paramDefs].select{|v| param_min < v && v < param_max}.sort
+          minp, maxp = nil, nil
+          abs = nil
+          if min_bit.nil?
+            lower_candidats = btwn_params.select{|v| 
+              parameters[name][:correspond].key(param_min)[-1] != parameters[name][:correspond].key(v)[-1]}
+            # find near value
+            lower_candidats.each{|v|
+              if abs.nil? || abs > (v - param_min).abs
+                abs = (v - param_min).abs
+                minp = v
+              end
+            }
             min_bit = parameters[name][:correspond].key(minp)
-            max_bit = parameters[name][:correspond].key(maxp)
-          else
-          #   min_bit = parameters[name][:correspond].key(new_array.min)
-          #   max_bit = parameters[name][:correspond].key(new_array.max)
+            new_array[0] = minp
           end
+
+          abs = nil
+          if max_bit.nil?
+            upper_candidats = btwn_params.select{|v| 
+              parameters[name][:correspond].key(param_max)[-1] != parameters[name][:correspond].key(v)[-1]}
+            # find near value
+            upper_candidats.each{|v|
+              if abs.nil? || abs > (v - param_max).abs
+                abs = (v - param_max).abs
+                maxp = v
+              end
+            }
+            max_bit = parameters[name][:correspond].key(maxp)
+            new_array[1] = maxp
+          end
+
+          # new_array = [] if !minp.nil? && !maxp.nil?
+          if !min_bit.nil? && !max_bit.nil?
+            new_array = []
+          else
+            # binding.pry
+            # binding.pry if new_array.include?(nil) || new_array[1] <= new_array[0]          
+          end
+
+          
+
+          # step = btwn_params.size>2 ? btwn_params.size/3 : 2
+          # minp = btwn_params[step - 1]
+          # maxp = btwn_params[-step] #[btwn_params.size - step]
+          # # if new_array.min <= minp && maxp <= new_array.max 
+          # if btwn_params.select{|v| new_array.min <= v && v <= new_array.max}.size > 1
+
+          #   min_bit = parameters[name][:correspond].key(minp)
+          #   max_bit = parameters[name][:correspond].key(maxp)
+          # else
+          # #   min_bit = parameters[name][:correspond].key(new_array.min)
+          # #   max_bit = parameters[name][:correspond].key(new_array.max)
+          # end
         end
 
-        if !min_bit.nil? && !max_bit.nil?
+
+        # binding.pry if min_bit == max_bit && !min_bit.nil? && !max_bit.nil?
+
+        if (!min_bit.nil? && !max_bit.nil?) #&& min_bit != max_bit
           condition = [:or]
           orCond = [:or, [:eq, [:field, name], min_bit], [:eq, [:field, name], max_bit]]
           orthogonal_rows.each{|row|
@@ -90,12 +139,12 @@ module DOEParameterGenerator
             new_area_b = []
 
             exist_area.each{|r|
-              new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "0"
-              new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "1"
+              new_area_a.push(r["id"]) if r[name][-1] == "0" # [r[name].size - 1]
+              new_area_b.push(r["id"]) if r[name][-1] == "1" # [r[name].size - 1]
             }
             orthogonal_rows.map{|r|
-              new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "1"
-              new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
+              new_area_a.push(r["id"]) if r[name][-1] == "1" # [r[name].size - 1]
+              new_area_b.push(r["id"]) if r[name][-1] == "0" # [r[name].size - 1]
             }
 
             new_area.push(new_area_a.uniq)
@@ -104,8 +153,18 @@ module DOEParameterGenerator
         end
       end
     end
+    new_area.each{|area|
+      if area.size != 4 
+        pp exist_area
+        # binding.pry
+        p "min bit: #{min_bit}"
+        p "max bit: #{max_bit}"
+        exit(0)
+      end
+    }
+
     new_array.compact!
-    new_var[:param][:paramDefs] = new_array    
+    new_var[:param][:paramDefs] = new_array
 
     return new_var, new_area
   end
@@ -187,9 +246,35 @@ module DOEParameterGenerator
       if prng.rand < 0.5
         edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].min))
         edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].sort[1]))
+        # lower_candidats = prm[:paramDefs].select{|v| 
+        #   prm[:correspond].key(prm[:paramDefs].min)[-1] != prm[:correspond].key(v)[-1]}
+        # min_1, abs = nil, nil
+        # candidate_value = prm[:paramDefs].min + @istep if prm[:paramDefs].min.class == Float
+        # candidate_value = (prm[:paramDefs].min + @fstep).round(definitions[name]["num_decimal"]) if prm[:paramDefs].min.class == Float
+        # lower_candidats.each{|v|
+        #   if abs.nil? || abs > (v - candidate_value).abs
+        #     abs = (v - candidate_value).abs
+        #     min_1 = v
+        #   end
+        # }
+        # edge[name].push(parameters[name][:correspond].key(min_1)
       else
         edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].max))
-        edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].sort_by{|v| -v }[1]))
+        edge[name].push(parameters[name][:correspond].key(prm[:paramDefs].sort[-2]))
+        # upper_candidats = prm[:paramDefs].select{|v| 
+        #   prm[:correspond].key(prm[:paramDefs].max)[-1] != prm[:correspond].key(v)[-1]}
+        # max_1, abs = nil, nil
+        # candidate_value = prm[:paramDefs].min - @istep if prm[:paramDefs][0].class == Float
+        # candidate_value = (prm[:paramDefs].max - @fstep).round(definitions[name]["num_decimal"]) if prm[:paramDefs][0].class == Float
+        
+
+        # upper_candidats.each{|v|
+        #   if abs.nil? || abs > (v - candidate_value).abs
+        #     abs = (v - candidate_value).abs
+        #     max_1 = v
+        #   end
+        # }
+        # edge[name].push(parameters[name][:correspond].key(max_1)
       end
     }
     condition = [:and]
@@ -279,9 +364,10 @@ module DOEParameterGenerator
       end
     end
 
-    p name
-    p new_array = [new_lower, new_upper]
-    pp parameters[name][:paramDefs]
+    new_array = [new_lower, new_upper]
+    # p name
+    # p new_array = [new_lower, new_upper]
+    # pp parameters[name][:paramDefs].sort
     parameters[name][:paramDefs].sort!
     if 2 < parameters[name][:paramDefs].size
       if parameters[name][:paramDefs].include?(new_array.min) ||
@@ -456,12 +542,12 @@ module DOEParameterGenerator
           new_area_b = []
 
           exist_area.each{|r|
-            new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "0"
-            new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "1"
+            new_area_a.push(r["id"]) if r[name][-1] == "0" # [r[name].size - 1]
+            new_area_b.push(r["id"]) if r[name][-1] == "1" # [r[name].size - 1]
           }
           orthogonal_rows.map{|r|
-            new_area_a.push(r["id"]) if r[name][r[name].size - 1] == "1"
-            new_area_b.push(r["id"]) if r[name][r[name].size - 1] == "0"
+            new_area_a.push(r["id"]) if r[name][-1] == "1" # [r[name].size - 1]
+            new_area_b.push(r["id"]) if r[name][-1] == "0" # [r[name].size - 1]
           }
 
           new_area.push(new_area_a)
@@ -585,6 +671,7 @@ module DOEParameterGenerator
   #
   def self.near_value(value, paramDefs, name, definition)
     ret = nil
+    # binding.pry if value.nil?
     paramDefs.each{|v|
       if ((value - definition["step_size"]) < v) && (v < (value + definition["step_size"]))
         ret = v
