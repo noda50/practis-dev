@@ -56,8 +56,16 @@ module DOEParameterGenerator
         #   min_bit = parameters[name][:correspond].key(new_array.min)
         #   max_bit = parameters[name][:correspond].key(new_array.max)
         # else
-        min_bit = parameters[name][:correspond].key(new_array.min) if parameters[name][:paramDefs].include?(new_array[0])
-        max_bit = parameters[name][:correspond].key(new_array.max) if parameters[name][:paramDefs].include?(new_array[1])
+        if parameters[name][:paramDefs].include?(new_array[0])
+          if parameters[name][:correspond].key(new_array[0])[-1] != parameters[name][:correspond].key(param_min)[-1]
+            min_bit = parameters[name][:correspond].key(new_array.min)
+          end
+        end
+        if parameters[name][:paramDefs].include?(new_array[1])
+          if parameters[name][:correspond].key(new_array[1])[-1] != parameters[name][:correspond].key(param_max)[-1]
+            max_bit = parameters[name][:correspond].key(new_array.max)
+          end
+        end
         
         if min_bit.nil? || max_bit.nil?
           btwn_params = parameters[name][:paramDefs].select{|v| param_min < v && v < param_max}.sort
