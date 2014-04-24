@@ -7,7 +7,6 @@ require 'bigdecimal'
 require 'matrix'
 require 'csv'
 require 'pp'
-require 'pry'
 
 # require 'thread'
 
@@ -48,7 +47,6 @@ module Practis
       otable = OrthogonalTable.generation_orthogonal_table(assigned_params)
       @scheduler.init_doe(@database_connector, otable, @doe_definitions)
       @total_parameters = @paramDefSet.get_total
-      binding.pry
     end
 
     ## === methods of manager.rb ===
