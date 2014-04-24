@@ -420,11 +420,13 @@ module Practis
         @v_index = nil
 
         # parameter assign to table
-        @paramDefList.each_with_index{|paramDef, i|
+        column_id = 0
+        @paramDefList.each{|paramDef|
           chk_arg(Practis::ParamDef, paramDef)
           @total_indexes.push(paramDef.length)
           if @definitions[paramDef.name]["is_assigned"]
-            @parameters[paramDef.name] = {column_id: i, correspond: {}, paramDefs: paramDef.values.sort}
+            @parameters[paramDef.name] = {column_id: column_id, correspond: {}, paramDefs: paramDef.values.sort}
+            column_id += 1
           else
             @unassigned.push({ :name => paramDef.name, :paramDefs => paramDef.values})
             @unassigned_total.push(paramDef.length)
