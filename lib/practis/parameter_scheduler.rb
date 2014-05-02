@@ -621,7 +621,7 @@ module Practis
         condition += @generation_queue[index][:or_ids].map{|i| [:eq, [:field, "id"], i]}
         orthogonal_rows = @sql_connector.read_record(:orthogonal, condition)
         # for debug
-        debug_check_orthogonal(orthogonal_rows, @generation_queue[index])
+        # debug_check_orthogonal(orthogonal_rows, @generation_queue[index])
         new_inside_list = generate_list_of_inside(orthogonal_rows, @generation_queue[index][:f_result])
         
         # outside

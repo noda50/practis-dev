@@ -11,7 +11,7 @@
     <config name="execution_name" type="String">crowd_walk</config>
 
     <!-- Specify debug level from FATAL, ERROR, WARN, INFO and DEBUG -->
-    <config name="debug_level" type="String">FATAL</config>
+    <config name="debug_level" type="String">ERROR</config>
 
     <!-- Logger output option -->
     <!-- <config name="debug_output" type="String">STDERR</config> -->

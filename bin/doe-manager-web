@@ -57,7 +57,7 @@ $webAddr = options[:webAddr] || options[:addr]
 $webPort = options[:webPort] || 4567 # default of sinatra
 ##>>>[2013/08/30 I.Noda]
 
-config_file, database_file, parameter_file, result_file, doe_ini = nil, nil, nil, nil, nil
+config_file, database_file, parameter_file, result_file, doe_conf = nil, nil, nil, nil, nil
 
 if (directory = options[:directory]) and File.directory?(directory)
   config_file = File.join(directory, "practis_configuration.xml")

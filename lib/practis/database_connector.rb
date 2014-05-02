@@ -914,6 +914,7 @@ module Practis
               error("failed query: #{query_string}")
               error(e.backtrace)
               sleep(QUERY_RETRY_DURATION)
+              connect if e.message == "closed MySQL connection"
               raise e if c == 0
             end
           } ###<<<[2013/09/04 I.Noda]>>>

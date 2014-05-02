@@ -163,11 +163,11 @@ h = {
 
 p "generate file"
 FileGenerator.generate_scenario(dir,"scenario.csv", uid)
-FileGenerator.copy_map(dir,"2014_0109_kamakura11-3.xml", origin, uid)
+FileGenerator.copy_map(dir,"2014_0313_kamakura20_width5-5-9.xml", origin, uid)
 # FileGenerator.generate_gen(dir, "gen.csv", test_ratio, uid)
 createEvacuator(h, dir, uid)
-FileGenerator.copy_pollution(dir,"output_pollution.csv", origin, uid)
-FileGenerator.generate_property(dir, "properties.xml", "2014_0109_kamakura11-3",
+# FileGenerator.copy_pollution(dir,"output_pollution.csv", origin, uid)
+FileGenerator.generate_property(dir, "properties.xml", "2014_0313_kamakura20_width5-5-9",
                                 "gen","output_pollution", uid, "scenario", seed)
 
 
@@ -177,7 +177,8 @@ include Math
 # cpath = '-cp work/bin/build/libs/netmas.jar:work/bin/build/libs/netmas-pathing.jar'
 djava = '-Djava.library.path=work/bin/libs/linux/amd64'
 cpath = '-cp work/bin/build/libs/netmas.jar:work/bin/build/libs/netmas-pathing.jar'
-command = 'java -Xms3072M -Xms3072M ' + djava + ' ' + cpath + ' main cui'
+opt = ' -Xms3072M -Xms3072M'
+command = 'java ' + djava + ' ' + cpath + ' main cui'
 command = command + ' ' + "work/bin/sample/kamakura.practis/#{uid}/properties_#{uid}.xml _output_#{uid}"
 # value = `#{command}`.chomp.to_f
 # debugpath = ' > ~/cw_log.txt'
@@ -192,12 +193,19 @@ system(command)
 # fields you defined. This example defines one result field in the
 # configuration named "value".
 
+#value = se.examine
+
 io = File.open("_output_#{uid}.json", 'r')
 parsed = JSON.load(io)
 pp parsed
 value = parsed["tick"].to_f
 
-#value = se.examine
+system("mv _output_#{uid}.json work/bin/sample/kamakura.practis/#{uid}/")
+# system("tar zcvf work/bin/sample/kamakura.practis/#{uid}.tar.gz work/bin/sample/kamakura.practis/#{uid}/")
+system("cd work/bin/sample/kamakura.practis/; tar zcvf #{uid}.tar.gz #{uid}/")
+system("rm -fr work/bin/sample/kamakura.practis/#{uid}" )
+
+
 
 
 

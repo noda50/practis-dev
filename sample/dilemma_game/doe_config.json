@@ -19,5 +19,8 @@
 		"top" : 10,
 		"step_size" : 1,
 		"num_decimal" : 0
-	}
+	},
+	"epsilon" : 0.2,
+	"fstep": 0.1,
+	"istep" : 10
 }

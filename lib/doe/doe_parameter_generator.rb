@@ -52,6 +52,7 @@ module DOEParameterGenerator
       if !parameters[name][:paramDefs].find{ |v| param_min < v && v < param_max }.nil?
         min_bit, max_bit = nil, nil
 
+        # ==== unused ? =============
         # if parameters[name][:paramDefs].include?(new_array[0]) && parameters[name][:paramDefs].include?(new_array[1])
         #   min_bit = parameters[name][:correspond].key(new_array.min)
         #   max_bit = parameters[name][:correspond].key(new_array.max)
@@ -66,6 +67,8 @@ module DOEParameterGenerator
             max_bit = parameters[name][:correspond].key(new_array.max)
           end
         end
+
+        # ===========================
         
         if min_bit.nil? || max_bit.nil?
           btwn_params = parameters[name][:paramDefs].select{|v| param_min < v && v < param_max}.sort

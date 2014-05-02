@@ -105,12 +105,12 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 			mapfile = dirname + "/#{id}/" + map + "_#{id}.xml"
 		end
 		properties.add_element("entry", {'key' => "map_file"}).add_text mapfile
-		if id.nil?
-			gasfile = dirname + "/" + gas + ".csv"
-		else
-			gasfile = dirname + "/#{id}/" + gas + "_#{id}.csv"
-		end
-		properties.add_element("entry", {'key' => "pollution_file"}).add_text gasfile
+		# if id.nil?
+		# 	gasfile = dirname + "/" + gas + ".csv"
+		# else
+		# 	gasfile = dirname + "/#{id}/" + gas + "_#{id}.csv"
+		# end
+		# properties.add_element("entry", {'key' => "pollution_file"}).add_text gasfile
 		if id.nil?
 			genfile = dirname + "/" + gen + ".csv"
 		else
@@ -138,13 +138,16 @@ GENERATION_PATTERN = ["EACH", "RANDOM", "EACHRANDOM", "RANDOMALL",
 		properties.add_element("entry", {'key' => "speed_model"}).add_text "density"
 		# properties.add_element("entry", {'key' => "density_density_speed_model_macro_timestep"}).add_text "10"
 		properties.add_element("entry", {'key' => "time_series_log"}).add_text "true"
-		time_series_log = dirname + "/" + "time_series"
-		time_series_log += id.nil? ? ".log" : "_#{id}.log"
+		if id.nil?
+			time_series_log = dirname + "/" + "time_series"
+		else
+			time_series_log = dirname + "/#{id}/" +"time_series"
+		end
 		properties.add_element("entry", {'key' => "time_series_log_path"}).add_text time_series_log
-		properties.add_element("entry", {'key' => "damage_speed_zero_log"}).add_text "true"
-		damage_speed_zero_log_path = dirname + "/" + "damage_speed_zero"
-		damage_speed_zero_log_path += id.nil? ? ".csv" : "_#{id}.csv"
-		properties.add_element("entry", {'key' => "damage_speed_zero_log_path"}).add_text damage_speed_zero_log_path
+		properties.add_element("entry", {'key' => "damage_speed_zero_log"}).add_text "false"
+		# damage_speed_zero_log_path = dirname + "/" + "damage_speed_zero"
+		# damage_speed_zero_log_path += id.nil? ? ".csv" : "_#{id}.csv"
+		# properties.add_element("entry", {'key' => "damage_speed_zero_log_path"}).add_text damage_speed_zero_log_path
 		properties.add_element("entry", {'key' => "time_series_log_interval"}).add_text "1"
 		properties.add_element("entry", {'key' => "loop_count"}).add_text "1"
 		properties.add_element("entry", {'key' => "exit_count"}).add_text "0"
