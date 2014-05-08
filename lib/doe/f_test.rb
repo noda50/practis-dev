@@ -86,7 +86,9 @@ class FTest
 
   #
   def check_significant(name, f_result)
-    return @f_disttable.get_Fvalue(f_result[name][:free], @e_f, f_result[name][:f_value])
+    numerator = f_result[name][:free] > 50 ? 50 : f_result[name][:free]
+    denominator = @e_f > 100 ? 100 : @e_f
+    return @f_disttable.get_Fvalue(numerator, denominator, f_result[name][:f_value])
   end
 
 
