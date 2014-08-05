@@ -164,15 +164,15 @@ module DOEParameterGenerator
         end
       end
     end
-    new_area.each{|area|
-      if area.size != 4 
-        pp exist_area
-        # binding.pry
-        p "min bit: #{min_bit}"
-        p "max bit: #{max_bit}"
-        exit(0)
-      end
-    }
+    # new_area.each{|area|
+    #   if area.size != 4 
+    #     pp exist_area
+    #     # binding.pry
+    #     p "min bit: #{min_bit}"
+    #     p "max bit: #{max_bit}"
+    #     exit(0)
+    #   end
+    # }
 
     new_array.compact!
     new_var[:param][:paramDefs] = new_array

@@ -659,17 +659,17 @@ module Practis
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "inside", @generation_queue[index][:priority], @parameters.keys)
-              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                error("debug: new inside list")
-binding.pry                
-                pp new_inside_list
-                p "new param: #{pp new_param}"
-                p "orthogonal"
-                pp orthogonal_rows
-                p "new area:"
-                pp h
-                exit(0)
-              end
+#               if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+#                 error("debug: new inside list")
+# binding.pry                
+#                 pp new_inside_list
+#                 p "new param: #{pp new_param}"
+#                 p "orthogonal"
+#                 pp orthogonal_rows
+#                 p "new area:"
+#                 pp h
+#                 exit(0)
+#               end
               @run_id_queue.push(h)
             end
           }
@@ -679,17 +679,17 @@ binding.pry
           next_sets.each{|set|
             if !set.empty?
               h = generate_id_data_list(set, "outside", @generation_queue[index][:priority], @parameters.keys)
-              if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                error("debug: new out list")
-binding.pry                
-                pp new_outside_list
-                p "new param: #{pp new_param}"
-                p "orthogonal"
-                pp orthogonal_rows
-                p "new area: "
-                pp h
-                exit(0)
-              end
+#               if 0 < h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+#                 error("debug: new out list")
+# binding.pry                
+#                 pp new_outside_list
+#                 p "new param: #{pp new_param}"
+#                 p "orthogonal"
+#                 pp orthogonal_rows
+#                 p "new area: "
+#                 pp h
+#                 exit(0)
+#               end
               @run_id_queue.push(h)
             end
           }
@@ -789,17 +789,17 @@ binding.pry
                   priority = 0.0 if priority < 0.0
                   h = generate_id_data_list(set, "inside", priority, @parameters.keys)
 
-                  if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                    error("debug: existed inside")
-binding.pry                    
-                    p "exist area: #{exist_ids}"
-                    p "new param:"
-                    pp new_param
-                    p "orthogonal"
-                    pp orthogonal_rows
-                    pp h
-                    exit(0)
-                  end
+#                   if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+#                     error("debug: existed inside")
+# binding.pry                    
+#                     p "exist area: #{exist_ids}"
+#                     p "new param:"
+#                     pp new_param
+#                     p "orthogonal"
+#                     pp orthogonal_rows
+#                     pp h
+#                     exit(0)
+#                   end
                   @run_id_queue.push(h)
                 end
               }
@@ -827,16 +827,16 @@ binding.pry
             chk_cond.push(set.sort.to_s)
             if (@sql_connector.read_record(:f_test, chk_cond)).size == 0
               h = generate_id_data_list(set, "outside", f_value, @parameters.keys)
-              if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
-                error("debug existed outside")
-binding.pry                
-                p "exist area: #{exist_ids}"
-                p "new param: #{pp new_param}"
-                p "orthogonal"
-                pp orthogonal_rows
-                pp h
-                exit(0)
-              end
+#               if 0 <= h[:or_ids].uniq.size && h[:or_ids].uniq.size < 4
+#                 error("debug existed outside")
+# binding.pry                
+#                 p "exist area: #{exist_ids}"
+#                 p "new param: #{pp new_param}"
+#                 p "orthogonal"
+#                 pp orthogonal_rows
+#                 pp h
+#                 exit(0)
+#               end
               @run_id_queue.push(h)
             end            
           }
